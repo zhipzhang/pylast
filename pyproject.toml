@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "pylast"
+version = "0.1.0"
+description = "Python part of LAST Project"
+authors = ["Zephyr Zhang"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
