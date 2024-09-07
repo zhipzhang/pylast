@@ -14,3 +14,6 @@ python = "^3.9"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+[tool.poetry.scripts]
+corsika_inputgen = "pylast.corsika.corsika_inputgen:main"
+corsika_run      = "pylast.corsika.corsika_run:main"

@@ -1,0 +1,55 @@
+HOST       ubunutu
+USER       zhipz
+RUNNR      1                    
+EVTNR      1                      
+NSHOW      200                   
+PRMPAR     1                   
+ESLOPE    -1.0                
+ERANGE     1      100        
+THETAP     0.0    0.0     
+PHIP       0.     0.     
+VIEWCONE   0.     0.    
+OBSLEV     1800.E2     
+ATMOSPHERE 1 N        
+MAGNET     0.001  0.001  
+ARRANG     0.           
+CERSIZ  1.             
+CERFIL  0             
+CWAVLG  260.  1000.  
+TELESCOPE 6000     0    3000 3000
+TELESCOPE -6000    0    3000 3000
+TELESCOPE  0       6000 3000 3000
+TELESCOPE  0       -6000 3000 3000
+TELESCOPE 6000     0    103000 3000
+TELESCOPE -6000    0    103000 3000
+TELESCOPE  0       6000 103000 3000
+TELESCOPE  0       -6000 103000 3000
+TELESCOPE 6000     0    203000 3000
+TELESCOPE -6000    0    203000 3000
+TELESCOPE  0       6000 203000 3000
+TELESCOPE  0       -6000 203000 3000
+TELESCOPE 6000     0    303000 3000
+TELESCOPE -6000    0    303000 3000
+TELESCOPE  0       6000 303000 3000
+TELESCOPE  0       -6000 303000 3000
+CSCAT   10  800e2  0.              
+FIXHEI  0.  0                     
+FIXCHI  0.                       
+ELMFLG  T   T                   
+RADNKG  200.E2                 
+HADFLG  0  0  0  0  0  2      
+ECUTS   0.3  0.05  0.005  0.005   
+MUADDI  T                        
+MUMULT  T                       
+LONGI   T  20.  F  F           
+MAXPRT  0                     
+ECTMAP  1.E2                 
+TSTART  T                   
+DATBAS  yes                
+DEBUG   F  6  F  1000000  
+TELFIL  iact.zst
+DIRECT  ./
+PAROUT F  F
+IACT SPLIT-ALWAYS
+IACT MAX_BUNCHES 30000000        
+IACT IO_BUFFER 500MB                  
