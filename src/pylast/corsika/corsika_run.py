@@ -2,7 +2,7 @@ import os
 import subprocess
 import argparse
 from pathlib import Path
-from corsika_inputgen import CorsikaAutoInput
+from .corsika_inputgen import CorsikaAutoInput
 
 class CorsikaRun:
     def __init__(self, corsika_path, template_path=None):
@@ -25,7 +25,8 @@ class CorsikaRun:
               f"for f in epos.inics.lhc epos.iniev epos.ini1b epos.inirj.lhc epos.initl epos.param; do " \
               f"  if [ -f {self.corsika_path.parent}/$f ]; then ln -s {self.corsika_path.parent}/$f .; " \
               f"  elif [ -f {self.corsika_path.parent}/../epos/$f ]; then ln -s {self.corsika_path.parent}/../epos/$f .; fi; done && " \
-              f"ln -s {self.corsika_path.parent}/EGS* . && ln -s {self.corsika_path.parent}/atmprof*.dat . )"
+              f"ln -s {self.corsika_path.parent}/EGS* . && ln -s {self.corsika_path.parent}/atmprof*.dat . && " \
+              f"ln -s {self.corsika_path} corsika_executable)"
         
         subprocess.run(cmd, shell=True, check=True)
 
@@ -38,10 +39,11 @@ class CorsikaRun:
 
     def run_corsika(self, input_file):
         output_file = self.work_dir / "corsika.output"
+        corsika_executable = self.work_dir / "corsika_executable"
         
         with output_file.open("w") as out:
             subprocess.run(
-                [str(self.corsika_path)],
+                [str(corsika_executable)],
                 cwd=str(self.work_dir),
                 stdin=input_file.open("r"),
                 stdout=out,

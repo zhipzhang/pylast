@@ -9,11 +9,11 @@ import argparse
 import os
 from pathlib import Path
 
+
 def generate_seed():
     return [
         random.randint(1, 900000000),
         random.randint(0, 999999),
-        random.randint(0, 999999)
     ]
 
 class CorsikaAutoInput:
@@ -84,7 +84,7 @@ class CorsikaAutoInput:
             
             for _ in range(4):
                 seed = generate_seed()
-                self.input_card.append(('SEED', f'{seed[0]:9d} {seed[1]:6d} {seed[2]:6d}'))
+                self.input_card.append(('SEED', f'{seed[0]:9d} {seed[1]:6d} 0'))
 
     def _set_energy_range(self):
         if self.energy_range:
