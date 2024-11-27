@@ -1,0 +1,8 @@
+-xc++
+-std=c++20
+-Iinclude
+-I/Users/zach/miniforge3/lib/python3.1/site-packages/nanobind/include
+-I/Users/zach/miniforge3/include/python3.12
+-I/Users/zach/Projects/Cpp/LAST/src/bernlohr/
+-I/Users/zach/Projects/Cpp/LAST/external/eigen
+-I/Users/zach/Projects/Cpp/LAST/external/spdlog/include

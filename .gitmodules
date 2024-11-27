@@ -1,0 +1,15 @@
+[submodule "src/bernlohr/LACT_hessioxxx"]
+	path = src/bernlohr/LACT_hessioxxx
+	url = https://github.com/zhipzhang/LACT_hessioxxx.git
+[submodule "external/eigen"]
+	path = external/eigen
+	url = https://gitlab.com/libeigen/eigen.git
+[submodule "external/spdlog"]
+	path = external/spdlog
+	url = https://github.com/gabime/spdlog
+[submodule "external/nlohmann_json"]
+	path = external/nlohmann_json
+	url = https://github.com/nlohmann/json.git
+[submodule "external/doctest"]
+	path = external/doctest
+	url = https://github.com/doctest/doctest
