@@ -1,6 +1,7 @@
 #include "SimtelEventSource.hh"
 #include "spdlog/spdlog.h"
 #include "spdlog/fmt/fmt.h"
+#include "nanobind/stl/string.h"
 const std::string ihep_url = "root://eos01.ihep.ac.cn/";
 SimtelEventSource::SimtelEventSource(const string& filename) : EventSource(filename)
 {
@@ -34,7 +35,12 @@ void SimtelEventSource::open_file(const string& filename)
     else
     {
         input_file = fileopen(filename.c_str(), "rb");
-        is_stream = false;
+        if(input_file == NULL)
+        {
+            spdlog::error("Failed to open file: {}", filename);
+            throw std::runtime_error(spdlog::fmt_lib::format("Failed to open local file: {}", filename));
+        }
+        is_stream = true; // Cause for simtel file, it's always be compressed, so it's a stream.
     }
 }
 
