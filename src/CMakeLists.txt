@@ -7,15 +7,12 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/bernlohr/)
 nanobind_add_module(_pylast
     STABLE_ABI
     SimtelEventSource.cpp
+    pylast_bind.cpp
 )
-target_link_libraries(_pylast PRIVATE hessio)
-target_link_libraries(_pylast PUBLIC spdlog::spdlog)
 
-# Ensure the RPATH is set correctly during installation
-set(CMAKE_INSTALL_RPATH "$ORIGIN")
-set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-# Ensure the RPATH is preserved during installation
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+target_link_libraries(_pylast PRIVATE hessio)
+set_property(TARGET _pylast APPEND PROPERTY INSTALL_RPATH "$ORIGIN")
+target_link_libraries(_pylast PUBLIC spdlog::spdlog)
 
 
 install(TARGETS _pylast LIBRARY DESTINATION pylast)

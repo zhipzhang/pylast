@@ -1,5 +1,6 @@
 #include "SimtelEventSource.hh"
 #include "spdlog/spdlog.h"
+#include "spdlog/fmt/fmt.h"
 const std::string ihep_url = "root://eos01.ihep.ac.cn/";
 SimtelEventSource::SimtelEventSource(const string& filename) : EventSource(filename)
 {
@@ -25,7 +26,7 @@ void SimtelEventSource::open_file(const string& filename)
         if(input_file == NULL)
         {
             spdlog::error("Failed to open EOS file: {}", full_path);
-            throw std::runtime_error(std::format("Failed to open EOS file: {}", full_path));
+            throw std::runtime_error(spdlog::fmt_lib::format("Failed to open EOS file: {}", full_path));
         }
         is_stream = true;
         return;
@@ -40,7 +41,7 @@ void SimtelEventSource::open_file(const string& filename)
 
 const std::string SimtelEventSource::print() const
 {
-    return std::format("SimtelEventSource: {}", input_filename);
+    return spdlog::fmt_lib::format("SimtelEventSource: {}", input_filename);
 }
 
 void SimtelEventSource::bind(nb::module_& m)

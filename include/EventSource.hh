@@ -13,7 +13,6 @@
 #pragma once
 
 #include <string>
-#include <format>
 #include "nanobind/nanobind.h"
 
 namespace nb = nanobind;

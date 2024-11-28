@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 
 project(LAST)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 if (NOT SKBUILD)
   message(WARNING "\
   This CMake file is meant to be executed using 'scikit-build-core'.
@@ -34,6 +34,8 @@ if(APPLE)
     add_compile_definitions(_DARWIN_C_SOURCE)
 endif()
 find_package(nanobind CONFIG REQUIRED)
+
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 add_subdirectory(external)
