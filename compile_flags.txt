@@ -1,8 +1,0 @@
--xc++
--std=c++20
--Iinclude
--I/data/home/zzp/miniforge3/lib/python3.10/site-packages/nanobind/include
--I/data/home/zzp/miniforge3/include/python3.10
--I/data/home/zzp/Software/pylast/src/bernlohr/
--I/data/home/zzp/Software/pylast/external/eigen
--I/data/home/zzp/Software/pylast/external/spdlog/include

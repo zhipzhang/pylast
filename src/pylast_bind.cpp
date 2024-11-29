@@ -13,4 +13,5 @@ NB_MODULE(_pylast, m) {
           nb::arg("log_level") = "info", 
           nb::arg("log_file") = "",
           "Initialize the spdlog logger with specified log level. Optionally specify a log file.");
+    SimulationConfiguration::bind(m);
 }

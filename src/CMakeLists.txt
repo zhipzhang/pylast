@@ -9,6 +9,8 @@ nanobind_add_module(_pylast
     SimtelEventSource.cpp
     pylast_bind.cpp
     LoggerInitialize.cpp
+    SimulationConfiguration.cpp
+    EventSource.cpp
 )
 
 target_link_libraries(_pylast PRIVATE hessio)
