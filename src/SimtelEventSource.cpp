@@ -6,6 +6,8 @@
 #include "nanobind/stl/string.h"
 #include "nanobind/stl/vector.h"
 #include <cassert>
+#include "LACT_hessioxxx/include/io_history.h"
+#include "LACT_hessioxxx/include/mc_tel.h"
 const std::string ihep_url = "root://eos01.ihep.ac.cn/";
 SimtelEventSource::SimtelEventSource(const string& filename, int64_t max_events, std::vector<int> subarray) : EventSource(filename, max_events, subarray)
 {
@@ -19,7 +21,9 @@ SimtelEventSource::SimtelEventSource(const string& filename, int64_t max_events,
     iobuf->max_length  = 1000000000L; 
     open_file(input_filename);
     iobuf->input_file = input_file;
+    //read_history();
     init_simulation_config();
+    init_atmosphere_model();
     
 }
 
@@ -130,6 +134,26 @@ void SimtelEventSource::read_mcrunheader()
         spdlog::error("Failed to read mcrunheader");
         throw std::runtime_error("Failed to read mcrunheader");
     }
+}
+void SimtelEventSource::read_history()
+{
+    assert(item_header.type ==IO_TYPE_HISTORY);
+    read_block();
+    ::read_history(iobuf, &history_list);
+}
+void SimtelEventSource::read_atmosphere()
+{
+    while(item_header.type != IO_TYPE_MC_ATMPROF)
+    {
+        read_block();
+    }
+    read_atmprof(iobuf, &atmprof);
+    spdlog::debug("Read corsika atmosphere profile");
+}
+void SimtelEventSource::init_atmosphere_model()
+{
+    read_atmosphere();
+    atmosphere_model = TableAtmosphereModel(atmprof.n_alt, atmprof.alt_km, atmprof.rho, atmprof.thick, atmprof.refidx_m1);
 }
 void SimtelEventSource::init_simulation_config()
 {

@@ -17,6 +17,8 @@
 #include "LACT_hessioxxx/include/io_basic.h"
 #include "EventSource.hh"
 #include <unordered_map>
+#include "LACT_hessioxxx/include/io_history.h"
+#include "LACT_hessioxxx/include/mc_atmprof.h"
 class SimtelEventSource: public EventSource 
 {
 public:
@@ -24,6 +26,7 @@ public:
     SimtelEventSource(const string& filename, int64_t max_events = -1 , std::vector<int> subarray = {});
     ~SimtelEventSource() = default;
     static void bind(nb::module_& m);
+    void print_history();
 private:
     void open_file(const string& filename) override;
     FILE* input_file = nullptr;
@@ -34,9 +37,14 @@ private:
     void read_block();
     virtual void init_simulation_config() override;
     //virtual void init_subarray() override;
+    virtual void init_atmosphere_model() override;
     void set_simulation_config();
     void read_runheader();
     void read_mcrunheader();
+    void read_history();
+    void read_atmosphere();
     std::unordered_map<int, int> tel_id_to_index;
+    HistoryContainer history_list;
+    AtmProf atmprof;
 };
 

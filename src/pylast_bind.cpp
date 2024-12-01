@@ -3,6 +3,7 @@
 #include "EventSource.hh"
 #include "SimtelEventSource.hh"
 #include "LoggerInitialize.hh"
+#include "AtmosphereModel.hh"
 namespace nb = nanobind;
 
 
@@ -14,4 +15,5 @@ NB_MODULE(_pylast, m) {
           nb::arg("log_file") = "",
           "Initialize the spdlog logger with specified log level. Optionally specify a log file.");
     SimulationConfiguration::bind(m);
+    TableAtmosphereModel::bind(m);
 }

@@ -11,11 +11,12 @@ nanobind_add_module(_pylast
     LoggerInitialize.cpp
     SimulationConfiguration.cpp
     EventSource.cpp
+    AtmosphereModel.cpp
 )
 
 target_link_libraries(_pylast PRIVATE hessio)
 set_property(TARGET _pylast APPEND PROPERTY INSTALL_RPATH "$ORIGIN")
-target_link_libraries(_pylast PUBLIC spdlog::spdlog)
+target_link_libraries(_pylast PUBLIC spdlog::spdlog Eigen3::Eigen)
 
 
 install(TARGETS _pylast LIBRARY DESTINATION pylast)
