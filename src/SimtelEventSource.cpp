@@ -3,11 +3,11 @@
 #include "LACT_hessioxxx/include/io_hess.h"
 #include "spdlog/spdlog.h"
 #include "spdlog/fmt/fmt.h"
-#include "nanobind/stl/string.h"
-#include "nanobind/stl/vector.h"
 #include <cassert>
 #include "LACT_hessioxxx/include/io_history.h"
 #include "LACT_hessioxxx/include/mc_tel.h"
+#include "LACT_hessioxxx/include/mc_atmprof.h"
+
 const std::string ihep_url = "root://eos01.ihep.ac.cn/";
 SimtelEventSource::SimtelEventSource(const string& filename, int64_t max_events, std::vector<int> subarray) : EventSource(filename, max_events, subarray)
 {
@@ -21,10 +21,10 @@ SimtelEventSource::SimtelEventSource(const string& filename, int64_t max_events,
     iobuf->max_length  = 1000000000L; 
     open_file(input_filename);
     iobuf->input_file = input_file;
+    atmprof = get_common_atmprof();
     //read_history();
     init_simulation_config();
     init_atmosphere_model();
-    
 }
 
 void SimtelEventSource::open_file(const string& filename)
@@ -143,17 +143,22 @@ void SimtelEventSource::read_history()
 }
 void SimtelEventSource::read_atmosphere()
 {
+    spdlog::debug("Read corsika atmosphere profile");
     while(item_header.type != IO_TYPE_MC_ATMPROF)
     {
         read_block();
     }
-    read_atmprof(iobuf, &atmprof);
-    spdlog::debug("Read corsika atmosphere profile");
+    if (read_atmprof(iobuf, atmprof) != 0)
+    {
+        spdlog::error("Failed to read atmosphere profile");
+        throw std::runtime_error("Failed to read atmosphere profile");
+    }
+    spdlog::debug("finish read atmprof");
 }
 void SimtelEventSource::init_atmosphere_model()
 {
     read_atmosphere();
-    atmosphere_model = TableAtmosphereModel(atmprof.n_alt, atmprof.alt_km, atmprof.rho, atmprof.thick, atmprof.refidx_m1);
+    atmosphere_model = TableAtmosphereModel(atmprof->n_alt, atmprof->alt_km, atmprof->rho, atmprof->thick, atmprof->refidx_m1);
 }
 void SimtelEventSource::init_simulation_config()
 {
@@ -163,7 +168,6 @@ void SimtelEventSource::init_simulation_config()
         spdlog::debug("Read runheader block, block type: {}", item_header.type);
     }
     read_runheader();
-    spdlog::info("Read runheader block, block type: {}", item_header.type);
     while(item_header.type != IO_TYPE_SIMTEL_MCRUNHEADER)
     {
         read_block();
@@ -174,12 +178,10 @@ void SimtelEventSource::init_simulation_config()
 
 void SimtelEventSource::set_simulation_config()
 {
-    spdlog::info("Set simulation config");
     simulation_config.run_number = hsdata->run_header.run;
     simulation_config.corsika_version = hsdata->mc_run_header.shower_prog_vers;
     simulation_config.simtel_version = hsdata->mc_run_header.detector_prog_vers;
     simulation_config.energy_range_min = hsdata->mc_run_header.E_range[0];
-    spdlog::info("Energy range min: {}", simulation_config.energy_range_min);
     simulation_config.energy_range_max = hsdata->mc_run_header.E_range[1];
     simulation_config.prod_site_B_total = hsdata->mc_run_header.B_total;
     simulation_config.prod_site_B_declination = hsdata->mc_run_header.B_declination;
@@ -211,9 +213,20 @@ const std::string SimtelEventSource::print() const
     return spdlog::fmt_lib::format("SimtelEventSource: {}", input_filename);
 }
 
-void SimtelEventSource::bind(nb::module_& m)
+
+SimtelEventSource::~SimtelEventSource()
 {
-    nb::class_<SimtelEventSource, EventSource>(m, "SimtelEventSource")
-        .def(nb::init<const std::string&, int64_t, std::vector<int>>(), nb::arg("filename"), nb::arg("max_events") = -1, nb::arg("subarray")=std::vector<int>{})
-        .def("__repr__", &SimtelEventSource::print);
+    spdlog::debug("Free SimtelEventSource");
+    if(hsdata != NULL)
+    {
+        free(hsdata);
+    }
+    if(input_file != NULL)
+    {
+        fileclose(input_file);
+    }
+    if(iobuf != NULL)
+    {
+        free_io_buffer(iobuf);
+    }
 }

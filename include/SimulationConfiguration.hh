@@ -12,10 +12,6 @@
 #pragma once
 
 #include <string>
-#include "nanobind/nanobind.h"
-
-
-namespace nb = nanobind;
 using std::string;
 
 /**
@@ -132,46 +128,6 @@ public:
     /// @brief More details on high E interaction model (version etc.)
     float corsika_high_E_detail = 0;
 
-    static void bind(nb::module_& m) {
-        nb::class_<SimulationConfiguration>(m, "SimulationConfiguration")
-            .def(nb::init<>())
-            .def_ro("run_number", &SimulationConfiguration::run_number)
-            .def_ro("corsika_version", &SimulationConfiguration::corsika_version)
-            .def_ro("simtel_version", &SimulationConfiguration::simtel_version)
-            .def_ro("energy_range_min", &SimulationConfiguration::energy_range_min)
-            .def_ro("energy_range_max", &SimulationConfiguration::energy_range_max)
-            .def_ro("prod_site_B_total", &SimulationConfiguration::prod_site_B_total)
-            .def_ro("prod_site_B_declination", &SimulationConfiguration::prod_site_B_declination)
-            .def_ro("prod_site_B_inclination", &SimulationConfiguration::prod_site_B_inclination)
-            .def_ro("prod_site_alt", &SimulationConfiguration::prod_site_alt)
-            .def_ro("spectral_index", &SimulationConfiguration::spectral_index)
-            .def_ro("shower_prog_start", &SimulationConfiguration::shower_prog_start)
-            .def_ro("shower_prog_id", &SimulationConfiguration::shower_prog_id)
-            .def_ro("detector_prog_start", &SimulationConfiguration::detector_prog_start)
-            .def_ro("detector_prog_id", &SimulationConfiguration::detector_prog_id)
-            .def_ro("n_showers", &SimulationConfiguration::n_showers)
-            .def_ro("shower_reuse", &SimulationConfiguration::shower_reuse)
-            .def_ro("max_alt", &SimulationConfiguration::max_alt)
-            .def_ro("min_alt", &SimulationConfiguration::min_alt)
-            .def_ro("max_az", &SimulationConfiguration::max_az)
-            .def_ro("min_az", &SimulationConfiguration::min_az)
-            .def_ro("diffuse", &SimulationConfiguration::diffuse)
-            .def_ro("max_viewcone_radius", &SimulationConfiguration::max_viewcone_radius)
-            .def_ro("min_viewcone_radius", &SimulationConfiguration::min_viewcone_radius)
-            .def_ro("max_scatter_range", &SimulationConfiguration::max_scatter_range)
-            .def_ro("min_scatter_range", &SimulationConfiguration::min_scatter_range)
-            .def_ro("core_pos_mode", &SimulationConfiguration::core_pos_mode)
-            .def_ro("atmosphere", &SimulationConfiguration::atmosphere)
-            .def_ro("corsika_iact_options", &SimulationConfiguration::corsika_iact_options)
-            .def_ro("corsika_low_E_model", &SimulationConfiguration::corsika_low_E_model)
-            .def_ro("corsika_high_E_model", &SimulationConfiguration::corsika_high_E_model)
-            .def_ro("corsika_bunchsize", &SimulationConfiguration::corsika_bunchsize)
-            .def_ro("corsika_wlen_min", &SimulationConfiguration::corsika_wlen_min)
-            .def_ro("corsika_wlen_max", &SimulationConfiguration::corsika_wlen_max)
-            .def_ro("corsika_low_E_detail", &SimulationConfiguration::corsika_low_E_detail)
-            .def_ro("corsika_high_E_detail", &SimulationConfiguration::corsika_high_E_detail)
-            .def("__repr__", &SimulationConfiguration::print);
-    }
     const std::string print() const;
 };
 

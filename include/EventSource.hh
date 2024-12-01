@@ -14,12 +14,9 @@
 
 #include <initializer_list>
 #include <string>
-#include "nanobind/nanobind.h"
 #include "SimulationConfiguration.hh"
 #include <vector>
-#include "nanobind/stl/vector.h"
 #include "AtmosphereModel.hh"
-namespace nb = nanobind;
 using std::string;
 class EventSource
 {
@@ -34,15 +31,7 @@ public:
     bool is_stream = false;
 
     SimulationConfiguration simulation_config;
-    static void bind(nb::module_& m) {
-        nb::class_<EventSource>(m, "EventSource")
-            .def_ro("input_filename", &EventSource::input_filename)
-            .def_ro("is_stream", &EventSource::is_stream)
-            .def_ro("max_events", &EventSource::max_events)
-            .def_ro("allowed_tels", &EventSource::allowed_tels)
-            .def_ro("simulation_config", &EventSource::simulation_config)
-            .def_ro("atmosphere_model", &EventSource::atmosphere_model);
-    }
+
     int64_t max_events;
     std::vector<int> allowed_tels;
     TableAtmosphereModel atmosphere_model;

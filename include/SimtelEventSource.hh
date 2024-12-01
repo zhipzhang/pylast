@@ -24,15 +24,14 @@ class SimtelEventSource: public EventSource
 public:
     SimtelEventSource() = default;
     SimtelEventSource(const string& filename, int64_t max_events = -1 , std::vector<int> subarray = {});
-    ~SimtelEventSource() = default;
-    static void bind(nb::module_& m);
+    virtual ~SimtelEventSource() ;
     void print_history();
+    const std::string print() const;
 private:
     void open_file(const string& filename) override;
     FILE* input_file = nullptr;
     IO_BUFFER* iobuf = nullptr;
     IO_ITEM_HEADER item_header;
-    const std::string print() const;
     AllHessData* hsdata = nullptr;
     void read_block();
     virtual void init_simulation_config() override;
@@ -45,6 +44,6 @@ private:
     void read_atmosphere();
     std::unordered_map<int, int> tel_id_to_index;
     HistoryContainer history_list;
-    AtmProf atmprof;
+    AtmProf* atmprof;
 };
 

@@ -10,11 +10,8 @@
  */
 #pragma once
 #include "Eigen/Dense"
-#include "nanobind/nanobind.h"
-#include "nanobind/eigen/dense.h"
 #include <spdlog/fmt/fmt.h>
 
-namespace nb = nanobind;
 
 class TableAtmosphereModel   
 {
@@ -41,23 +38,6 @@ public:
         return table;
     }
 
-    static void bind(nb::module_& m)
-    {
-        nb::class_<TableAtmosphereModel>(m, "TableAtmosphereModel")
-            .def(nb::init<const std::string&>())
-            .def(nb::init<int, double*, double*, double*, double*>())
-            //.def("get_density", &TableAtmosphereModel::get_density)
-            //.def("get_thickness", &TableAtmosphereModel::get_thickness)
-            //.def("get_refidx_m1", &TableAtmosphereModel::get_refidx_m1)
-            .def_ro("input_filename", &TableAtmosphereModel::input_filename)
-            .def_ro("n_alt", &TableAtmosphereModel::n_alt)
-            .def_ro("alt_km", &TableAtmosphereModel::alt_km)
-            .def_ro("rho", &TableAtmosphereModel::rho)
-            .def_ro("thick", &TableAtmosphereModel::thick)
-            .def_ro("refidx_m1", &TableAtmosphereModel::refidx_m1)
-            .def("__repr__", &TableAtmosphereModel::print);
-    }
-private:
     int n_alt;
     /** @brief Altitude above sea level in kilometers */
     Eigen::VectorXd alt_km;
@@ -67,5 +47,5 @@ private:
     Eigen::VectorXd thick;
     /** @brief Index of refraction minus one (n-1) at each altitude level */
     Eigen::VectorXd refidx_m1;
-    std::string input_filename;
+    std::string input_filename = "none";
 };

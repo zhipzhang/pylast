@@ -4,10 +4,10 @@
 TableAtmosphereModel::TableAtmosphereModel(int n_alt, double* alt_km, double* rho, double* thick, double* refidx_m1)
 {
     this->n_alt = n_alt;
-    this->alt_km = Eigen::Map<Eigen::VectorXd>(alt_km, n_alt);
-    this->rho = Eigen::Map<Eigen::VectorXd>(rho, n_alt);
-    this->thick = Eigen::Map<Eigen::VectorXd>(thick, n_alt);
-    this->refidx_m1 = Eigen::Map<Eigen::VectorXd>(refidx_m1, n_alt);
+    this->alt_km = Eigen::VectorXd(Eigen::Map<Eigen::VectorXd>(alt_km, n_alt));
+    this->rho = Eigen::VectorXd(Eigen::Map<Eigen::VectorXd>(rho, n_alt));
+    this->thick = Eigen::VectorXd(Eigen::Map<Eigen::VectorXd>(thick, n_alt));
+    this->refidx_m1 = Eigen::VectorXd(Eigen::Map<Eigen::VectorXd>(refidx_m1, n_alt));
 }
 
 TableAtmosphereModel& TableAtmosphereModel::operator=(TableAtmosphereModel&& other) noexcept
