@@ -36,7 +36,6 @@ public:
     std::vector<int> allowed_tels;
     TableAtmosphereModel atmosphere_model;
 protected:
-    virtual void open_file(const string& filename) = 0;
 
     virtual void init_simulation_config() = 0;
     //virtual void init_subarray() = 0;

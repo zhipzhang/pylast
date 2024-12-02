@@ -8,225 +8,60 @@
 #include "LACT_hessioxxx/include/mc_tel.h"
 #include "LACT_hessioxxx/include/mc_atmprof.h"
 
-const std::string ihep_url = "root://eos01.ihep.ac.cn/";
-SimtelEventSource::SimtelEventSource(const string& filename, int64_t max_events, std::vector<int> subarray) : EventSource(filename, max_events, subarray)
+SimtelEventSource::SimtelEventSource(const std::string& filename, int64_t max_events, std::vector<int> subarray):
+    EventSource(filename, max_events, subarray)
 {
-    if ( (iobuf = allocate_io_buffer(5000000L)) == NULL )
-   {
-      spdlog::error("Cannot allocate I/O buffer");
-      throw std::runtime_error("Cannot allocate I/O buffer");
-   }
-    iobuf->output_file = NULL;
-    // for 1GB file at least.
-    iobuf->max_length  = 1000000000L; 
-    open_file(input_filename);
-    iobuf->input_file = input_file;
-    atmprof = get_common_atmprof();
+    simtel_file_handler = std::make_unique<SimtelFileHandler>(filename, subarray);
+    is_stream = true;
     //read_history();
     init_simulation_config();
     init_atmosphere_model();
 }
 
-void SimtelEventSource::open_file(const string& filename)
-{
-    if (filename.substr(0, 4) == "/eos") {
-        // If filename starts with "eos", prepend the IHEP URL
-        string full_path = ihep_url  + filename;
-        spdlog::info("Opening EOS file: {}", full_path);
-        input_file = fileopen(full_path.c_str(), "rb");
-        if(input_file == NULL)
-        {
-            spdlog::error("Failed to open EOS file: {}", full_path);
-            throw std::runtime_error(spdlog::fmt_lib::format("Failed to open EOS file: {}", full_path));
-        }
-        is_stream = true;
-        return;
-    }
-    else
-    {
-        input_file = fileopen(filename.c_str(), "rb");
-        if(input_file == NULL)
-        {
-            spdlog::error("Failed to open file: {}", filename);
-            throw std::runtime_error(spdlog::fmt_lib::format("Failed to open local file: {}", filename));
-        }
-        is_stream = true; // Cause for simtel file, it's always be compressed, so it's a stream.
-    }
-}
-void SimtelEventSource::read_block()
-{
-    if(find_io_block(iobuf, &item_header)!=0)
-    {
-        spdlog::error("Failed to find IO block");
-        throw std::runtime_error("Failed to find IO block");
-    }
-    if(read_io_block(iobuf, &item_header)!=0)
-    {
-        spdlog::error("Failed to read IO block");
-        throw std::runtime_error("Failed to read IO block");
-    }
-}
-void SimtelEventSource::read_runheader()
-{
-    assert(item_header.type == IO_TYPE_SIMTEL_RUNHEADER);
-    hsdata = (AllHessData* ) calloc(1, sizeof(AllHessData));
-    if(hsdata == NULL)
-    {
-        spdlog::error("Failed to allocate memory for hsdata");
-        throw std::runtime_error("Failed to allocate memory for hsdata");
-    }
-    if(read_simtel_runheader(iobuf, &hsdata->run_header) < 0)
-    {
-        spdlog::error("Failed to read runheader");
-        throw std::runtime_error("Failed to read runheader");
-    }
-    for(auto itel = 0; itel < hsdata->run_header.ntel; itel++)
-    {
-        if(!is_subarray_selected(hsdata->run_header.tel_id[itel])) continue;
-        int tel_id = hsdata->run_header.tel_id[itel];
-        spdlog::info("Initialize telescope id: {}", tel_id);
-        tel_id_to_index[tel_id] = itel;
-        hsdata->camera_set[itel].tel_id = tel_id;
-        hsdata->camera_org[itel].tel_id = tel_id;
-        hsdata->pixel_disabled[itel].tel_id = tel_id;
-        hsdata->pixel_set[itel].tel_id  = tel_id;
-        hsdata->cam_soft_set[itel].tel_id = tel_id;
-        hsdata->tracking_set[itel].tel_id = tel_id;
-        hsdata->point_cor[itel].tel_id = tel_id;
-        hsdata->event.num_tel++;
-        hsdata->event.teldata[itel].tel_id = tel_id;
-        hsdata->event.trackdata[itel].tel_id = tel_id;
-        hsdata->event.teldata[itel].raw = (AdcData*) calloc(1, sizeof(AdcData));
-        if(hsdata->event.teldata[itel].raw == NULL)
-        {
-            spdlog::error("Failed to allocate memory for raw adc data");
-            throw std::runtime_error("Failed to allocate memory for raw adc data");
-        }
-        hsdata->event.teldata[itel].raw->tel_id = tel_id;
-        hsdata->event.teldata[itel].pixtm = (PixelTiming*) calloc(1, sizeof(PixelTiming));
-        if(hsdata->event.teldata[itel].pixtm == NULL)
-        {
-            spdlog::error("Failed to allocate memory for pixel timing data");
-            throw std::runtime_error("Failed to allocate memory for pixel timing data");
-        }
-        hsdata->event.teldata[itel].pixtm->tel_id = tel_id;
-        hsdata->event.teldata[itel].img = (ImgData*) calloc(1, sizeof(ImgData));
-        if(hsdata->event.teldata[itel].img == NULL)
-        {
-            spdlog::error("Failed to allocate memory for image data");
-            throw std::runtime_error("Failed to allocate memory for image data");
-        }
-        hsdata->event.teldata[itel].img->tel_id = tel_id;
-        hsdata->event.teldata[itel].max_image_sets = 0;
-        hsdata->event.teldata[itel].img[0].tel_id = tel_id;
-        hsdata->event.teldata[itel].img[1].tel_id = tel_id;
-        hsdata->tel_moni[itel].tel_id = tel_id;
-        hsdata->tel_lascal[itel].tel_id = tel_id;
 
-    }
-
-}
-void SimtelEventSource::read_mcrunheader()
-{
-    assert(item_header.type == IO_TYPE_SIMTEL_MCRUNHEADER);
-    if(read_simtel_mcrunheader(iobuf, &hsdata->mc_run_header) < 0)
-    {
-        spdlog::error("Failed to read mcrunheader");
-        throw std::runtime_error("Failed to read mcrunheader");
-    }
-}
-void SimtelEventSource::read_history()
-{
-    assert(item_header.type ==IO_TYPE_HISTORY);
-    read_block();
-    ::read_history(iobuf, &history_list);
-}
-void SimtelEventSource::read_atmosphere()
-{
-    spdlog::debug("Read corsika atmosphere profile");
-    while(item_header.type != IO_TYPE_MC_ATMPROF)
-    {
-        read_block();
-    }
-    if (read_atmprof(iobuf, atmprof) != 0)
-    {
-        spdlog::error("Failed to read atmosphere profile");
-        throw std::runtime_error("Failed to read atmosphere profile");
-    }
-    spdlog::debug("finish read atmprof");
-}
 void SimtelEventSource::init_atmosphere_model()
 {
-    read_atmosphere();
-    atmosphere_model = TableAtmosphereModel(atmprof->n_alt, atmprof->alt_km, atmprof->rho, atmprof->thick, atmprof->refidx_m1);
+    atmosphere_model = TableAtmosphereModel(simtel_file_handler->atmprof->n_alt, simtel_file_handler->atmprof->alt_km, simtel_file_handler->atmprof->rho, simtel_file_handler->atmprof->thick, simtel_file_handler->atmprof->refidx_m1);
 }
 void SimtelEventSource::init_simulation_config()
 {
-    while(item_header.type != IO_TYPE_SIMTEL_RUNHEADER)
-    {
-        read_block();
-        spdlog::debug("Read runheader block, block type: {}", item_header.type);
-    }
-    read_runheader();
-    while(item_header.type != IO_TYPE_SIMTEL_MCRUNHEADER)
-    {
-        read_block();
-    }
-    read_mcrunheader();
     set_simulation_config();
 }
 
 void SimtelEventSource::set_simulation_config()
 {
-    simulation_config.run_number = hsdata->run_header.run;
-    simulation_config.corsika_version = hsdata->mc_run_header.shower_prog_vers;
-    simulation_config.simtel_version = hsdata->mc_run_header.detector_prog_vers;
-    simulation_config.energy_range_min = hsdata->mc_run_header.E_range[0];
-    simulation_config.energy_range_max = hsdata->mc_run_header.E_range[1];
-    simulation_config.prod_site_B_total = hsdata->mc_run_header.B_total;
-    simulation_config.prod_site_B_declination = hsdata->mc_run_header.B_declination;
-    simulation_config.prod_site_B_inclination = hsdata->mc_run_header.B_inclination;
-    simulation_config.prod_site_alt = hsdata->mc_run_header.obsheight;
-    simulation_config.spectral_index = hsdata->mc_run_header.spectral_index;
-    simulation_config.shower_prog_start = hsdata->mc_run_header.shower_prog_start;
-    simulation_config.shower_prog_id = hsdata->mc_run_header.shower_prog_id;
-    simulation_config.detector_prog_start = hsdata->mc_run_header.detector_prog_start;
-    simulation_config.n_showers = hsdata->mc_run_header.num_showers;
-    simulation_config.shower_reuse = hsdata->mc_run_header.num_use;
-    simulation_config.max_alt = hsdata->mc_run_header.alt_range[1];
-    simulation_config.min_alt = hsdata->mc_run_header.alt_range[0];
-    simulation_config.max_az = hsdata->mc_run_header.az_range[1];
-    simulation_config.min_az = hsdata->mc_run_header.az_range[0];
-    simulation_config.diffuse = hsdata->mc_run_header.diffuse;
-    simulation_config.max_viewcone_radius = hsdata->mc_run_header.viewcone[1];
-    simulation_config.min_viewcone_radius = hsdata->mc_run_header.viewcone[0];
-    simulation_config.atmosphere = hsdata->mc_run_header.atmosphere;
-    simulation_config.corsika_iact_options = hsdata->mc_run_header.corsika_iact_options;
-    simulation_config.corsika_bunchsize = static_cast<int>(hsdata->mc_run_header.corsika_bunchsize);
-    simulation_config.corsika_low_E_model = hsdata->mc_run_header.corsika_low_E_model;
-    simulation_config.corsika_high_E_model = hsdata->mc_run_header.corsika_high_E_model;
-    simulation_config.corsika_wlen_min = hsdata->mc_run_header.corsika_wlen_min;
-    simulation_config.corsika_wlen_max = hsdata->mc_run_header.corsika_wlen_max;
+    simulation_config.run_number = simtel_file_handler->hsdata->run_header.run;
+    simulation_config.corsika_version = simtel_file_handler->hsdata->mc_run_header.shower_prog_vers;
+    simulation_config.simtel_version = simtel_file_handler->hsdata->mc_run_header.detector_prog_vers;
+    simulation_config.energy_range_min = simtel_file_handler->hsdata->mc_run_header.E_range[0];
+    simulation_config.energy_range_max = simtel_file_handler->hsdata->mc_run_header.E_range[1];
+    simulation_config.prod_site_B_total = simtel_file_handler->hsdata->mc_run_header.B_total;
+    simulation_config.prod_site_B_declination = simtel_file_handler->hsdata->mc_run_header.B_declination;
+    simulation_config.prod_site_B_inclination = simtel_file_handler->hsdata->mc_run_header.B_inclination;
+    simulation_config.prod_site_alt = simtel_file_handler->hsdata->mc_run_header.obsheight;
+    simulation_config.spectral_index = simtel_file_handler->hsdata->mc_run_header.spectral_index;
+    simulation_config.shower_prog_start = simtel_file_handler->hsdata->mc_run_header.shower_prog_start;
+    simulation_config.shower_prog_id = simtel_file_handler->hsdata->mc_run_header.shower_prog_id;
+    simulation_config.detector_prog_start = simtel_file_handler->hsdata->mc_run_header.detector_prog_start;
+    simulation_config.n_showers = simtel_file_handler->hsdata->mc_run_header.num_showers;
+    simulation_config.shower_reuse = simtel_file_handler->hsdata->mc_run_header.num_use;
+    simulation_config.max_alt = simtel_file_handler->hsdata->mc_run_header.alt_range[1];
+    simulation_config.min_alt = simtel_file_handler->hsdata->mc_run_header.alt_range[0];
+    simulation_config.max_az = simtel_file_handler->hsdata->mc_run_header.az_range[1];
+    simulation_config.min_az = simtel_file_handler->hsdata->mc_run_header.az_range[0];
+    simulation_config.diffuse = simtel_file_handler->hsdata->mc_run_header.diffuse;
+    simulation_config.max_viewcone_radius = simtel_file_handler->hsdata->mc_run_header.viewcone[1];
+    simulation_config.min_viewcone_radius = simtel_file_handler->hsdata->mc_run_header.viewcone[0];
+    simulation_config.atmosphere = simtel_file_handler->hsdata->mc_run_header.atmosphere;
+    simulation_config.corsika_iact_options = simtel_file_handler->hsdata->mc_run_header.corsika_iact_options;
+    simulation_config.corsika_bunchsize = static_cast<int>(simtel_file_handler->hsdata->mc_run_header.corsika_bunchsize);
+    simulation_config.corsika_low_E_model = simtel_file_handler->hsdata->mc_run_header.corsika_low_E_model;
+    simulation_config.corsika_high_E_model = simtel_file_handler->hsdata->mc_run_header.corsika_high_E_model;
+    simulation_config.corsika_wlen_min = simtel_file_handler->hsdata->mc_run_header.corsika_wlen_min;
+    simulation_config.corsika_wlen_max = simtel_file_handler->hsdata->mc_run_header.corsika_wlen_max;
 }
 const std::string SimtelEventSource::print() const
 {
     return spdlog::fmt_lib::format("SimtelEventSource: {}", input_filename);
 }
 
-
-SimtelEventSource::~SimtelEventSource()
-{
-    spdlog::debug("Free SimtelEventSource");
-    if(hsdata != NULL)
-    {
-        free(hsdata);
-    }
-    if(input_file != NULL)
-    {
-        fileclose(input_file);
-    }
-    if(iobuf != NULL)
-    {
-        free_io_buffer(iobuf);
-    }
-}

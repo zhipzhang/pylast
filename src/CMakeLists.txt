@@ -12,6 +12,7 @@ nanobind_add_module(_pylast
     SimulationConfiguration.cpp
     EventSource.cpp
     AtmosphereModel.cpp
+    SimtelFileHandler.cpp
 )
 
 target_link_libraries(_pylast PRIVATE hessio)
