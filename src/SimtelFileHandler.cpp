@@ -20,7 +20,7 @@ SimtelFileHandler::SimtelFileHandler(const std::string& filename, std::vector<in
     read_runheader();
     read_mcrunheader();
     read_atmosphere();
-    read_camera_settings();
+    read_telescope_settings();
 }
 void SimtelFileHandler::open_file(const std::string& filename) {
     if (filename.substr(0, 4) == "/eos") {
@@ -55,6 +55,22 @@ void SimtelFileHandler::read_block() {
         spdlog::error("Failed to read IO block");
         throw std::runtime_error("Failed to read IO block");
     }
+}
+void SimtelFileHandler::read_telescope_settings() {
+    spdlog::debug("Begin read telescope settings block");
+    read_block();
+    while(item_header.type == IO_TYPE_SIMTEL_CAMSETTINGS) 
+    {
+        read_camera_settings();
+        read_camera_organisation();
+        read_pixel_settings();
+        read_pixel_disabled();
+        read_camera_software_settings();
+        read_tracking_settings();
+        read_pointing_corrections();
+        read_block();
+    }
+    spdlog::debug("End read telescope settings block");
 }
 void SimtelFileHandler::read_runheader() {
     spdlog::debug("Read runheader block");
@@ -132,11 +148,14 @@ void SimtelFileHandler::read_atmosphere() {
         throw std::runtime_error("Failed to read atmosphere");
     }
 }
+/**
+ * @brief Camera settings is the first item in telescope settings block, we need handle it before others
+ * 
+ */
 void SimtelFileHandler::read_camera_settings() {
     spdlog::debug("Read camera settings block");
-    while(item_header.type != IO_TYPE_SIMTEL_CAMSETTINGS) {
-        read_block();
-    }
+    // For camera setting, we need read block before call read_simtel_camsettings
+    assert(item_header.type == IO_TYPE_SIMTEL_CAMSETTINGS);
     int tel_id = item_header.ident;
     spdlog::debug("Read camera settings for tel_id: {}", tel_id);
     auto it = tel_id_to_index.find(tel_id);
@@ -145,12 +164,122 @@ void SimtelFileHandler::read_camera_settings() {
         return;
     }
     int itel = it->second;
-    spdlog::debug("Read camera settings for tel_id: {}", tel_id);
     if(read_simtel_camsettings(iobuf, &hsdata->camera_set[itel]) < 0) {
         spdlog::error("Failed to read camera settings");
         throw std::runtime_error("Failed to read camera settings");
     }
 
+}
+void SimtelFileHandler::read_camera_organisation() {
+    spdlog::debug("Read camera organisation block");
+    while(item_header.type != IO_TYPE_SIMTEL_CAMORGAN) {
+        read_block();
+    }
+    int tel_id = item_header.ident;
+    spdlog::debug("Read camera organisation for tel_id: {}", tel_id);
+    auto it = tel_id_to_index.find(tel_id);
+    if(it == tel_id_to_index.end()) {
+        spdlog::warn("Skip camera organisation for tel_id: {}", tel_id);
+        return;
+    }
+    int itel = it->second;
+    if(read_simtel_camorgan(iobuf, &hsdata->camera_org[itel]) < 0) {
+        spdlog::error("Failed to read camera organisation");
+        throw std::runtime_error("Failed to read camera organisation");
+    }
+}
+void SimtelFileHandler::read_pixel_settings() {
+    spdlog::debug("Read pixel settings block");
+    while(item_header.type != IO_TYPE_SIMTEL_PIXELSET) {
+        read_block();
+    }
+    int tel_id = item_header.ident;
+    spdlog::debug("Read pixel settings for tel_id: {}", tel_id);
+    auto it = tel_id_to_index.find(tel_id);
+    if(it == tel_id_to_index.end()) {
+        spdlog::warn("Skip pixel settings for tel_id: {}", tel_id);
+        return;
+    }
+    int itel = it->second;
+    if(read_simtel_pixelset(iobuf, &hsdata->pixel_set[itel]) < 0) {
+        spdlog::error("Failed to read pixel settings");
+        throw std::runtime_error("Failed to read pixel settings");
+    }   
+}
+void SimtelFileHandler::read_pixel_disabled() {
+    spdlog::debug("Read pixel disabled block");
+    while(item_header.type != IO_TYPE_SIMTEL_PIXELDISABLE) {
+        read_block();
+    }
+    int tel_id = item_header.ident;
+    spdlog::debug("Read pixel disabled for tel_id: {}", tel_id);
+    auto it = tel_id_to_index.find(tel_id);
+    if(it == tel_id_to_index.end()) {
+        spdlog::warn("Skip pixel disabled for tel_id: {}", tel_id);
+        return;
+    }
+    int itel = it->second;
+    if(read_simtel_pixeldis(iobuf, &hsdata->pixel_disabled[itel]) < 0) {
+        spdlog::error("Failed to read pixel disabled");
+        throw std::runtime_error("Failed to read pixel disabled");
+    }
+}
+
+void SimtelFileHandler::read_camera_software_settings() {
+    spdlog::debug("Read camera software settings block");
+    while(item_header.type != IO_TYPE_SIMTEL_CAMSOFTSET) {
+        read_block();
+    }
+    int tel_id = item_header.ident;
+    spdlog::debug("Read camera software settings for tel_id: {}", tel_id);
+    auto it = tel_id_to_index.find(tel_id);
+    if(it == tel_id_to_index.end()) {
+        spdlog::warn("Skip camera software settings for tel_id: {}", tel_id);
+        return;
+    }
+    int itel = it->second;
+    if(read_simtel_camsoftset(iobuf, &hsdata->cam_soft_set[itel]) < 0) {
+        spdlog::error("Failed to read camera software settings");
+        throw std::runtime_error("Failed to read camera software settings");
+    }
+}
+
+void SimtelFileHandler::read_pointing_corrections() {
+    spdlog::debug("Read pointing corrections block");
+    while(item_header.type != IO_TYPE_SIMTEL_POINTINGCOR) {
+        read_block();
+    }
+    int tel_id = item_header.ident;
+    spdlog::debug("Read pointing corrections for tel_id: {}", tel_id);
+    auto it = tel_id_to_index.find(tel_id);
+    if(it == tel_id_to_index.end()) {
+        spdlog::warn("Skip pointing corrections for tel_id: {}", tel_id);
+        return;
+    }
+    int itel = it->second;
+    if(read_simtel_pointingcor(iobuf, &hsdata->point_cor[itel]) < 0) {
+        spdlog::error("Failed to read pointing corrections");
+        throw std::runtime_error("Failed to read pointing corrections");
+    }
+}
+
+void SimtelFileHandler::read_tracking_settings() {
+    spdlog::debug("Read tracking settings block");
+    while(item_header.type != IO_TYPE_SIMTEL_TRACKSET) {
+        read_block();
+    }
+    int tel_id = item_header.ident;
+    spdlog::debug("Read tracking settings for tel_id: {}", tel_id);
+    auto it = tel_id_to_index.find(tel_id);
+    if(it == tel_id_to_index.end()) {
+        spdlog::warn("Skip tracking settings for tel_id: {}", tel_id);
+        return;
+    }
+    int itel = it->second;
+    if(read_simtel_trackset(iobuf, &hsdata->tracking_set[itel]) < 0) {
+        spdlog::error("Failed to read tracking settings");
+        throw std::runtime_error("Failed to read tracking settings");
+    }
 }
 bool SimtelFileHandler::is_subarray_selected(int tel_id) {
     if(allowed_tels.empty()) return true;

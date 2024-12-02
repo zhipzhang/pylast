@@ -41,6 +41,13 @@ private:
     void read_mcrunheader();
     void read_atmosphere();
     void read_camera_settings();
+    void read_camera_organisation();
+    void read_pixel_settings();
+    void read_pixel_disabled();
+    void read_camera_software_settings();
+    void read_pointing_corrections();
+    void read_tracking_settings();
+    void read_telescope_settings();
     AtmProf* atmprof;
     
 };
