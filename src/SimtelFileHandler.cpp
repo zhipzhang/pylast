@@ -1,4 +1,5 @@
 #include "SimtelFileHandler.hh"
+#include "LACT_hessioxxx/include/io_history.h"
 #include "LACT_hessioxxx/include/mc_atmprof.h"
 #include "LACT_hessioxxx/include/mc_tel.h"
 #include <stdexcept>
@@ -6,6 +7,8 @@
 
 const std::string ihep_url = "root://eos01.ihep.ac.cn/";
 using std::string;
+HistoryContainer SimtelFileHandler::history_container = {1, NULL, NULL, NULL, 0};
+MetaParamList SimtelFileHandler::metadata_list;
 SimtelFileHandler::SimtelFileHandler(const std::string& filename, std::vector<int> subarray) : filename(filename), allowed_tels(subarray) {
     if((iobuf = allocate_io_buffer(5000000L)) == NULL) {
         throw std::runtime_error("Cannot allocate I/O buffer");
@@ -17,6 +20,8 @@ SimtelFileHandler::SimtelFileHandler(const std::string& filename, std::vector<in
         throw std::runtime_error("Cannot allocate memory for hsdata");
     }
     open_file(filename);
+    _read_history();
+    read_metadata();
     read_runheader();
     read_mcrunheader();
     read_atmosphere();
@@ -55,6 +60,48 @@ void SimtelFileHandler::read_block() {
         spdlog::error("Failed to read IO block");
         throw std::runtime_error("Failed to read IO block");
     }
+}
+void SimtelFileHandler::_read_history() {
+    spdlog::debug("Read history block");
+    read_block();
+    // history is the first item in the file
+    spdlog::debug("Read history block type: {}", item_header.type);
+    assert(item_header.type == IO_TYPE_HISTORY);
+
+    
+    // bug in LACT_hessioxxx have been fixed 
+    if(read_history(iobuf, &history_container) != 0) {
+        spdlog::error("Failed to read history");
+        throw std::runtime_error("Failed to read history");
+    }
+    spdlog::debug("End read history block");
+}
+void SimtelFileHandler::read_metadata() {
+    spdlog::debug("Read metadata block");
+    read_block();
+    while(item_header.type == IO_TYPE_METAPARAM) {
+        if(read_metaparam(iobuf, &metadata_list) != 0) {
+            spdlog::error("Failed to read metadata");
+            throw std::runtime_error("Failed to read metadata");
+        }
+        if(metadata_list.ident == -1) {
+            spdlog::debug("Read global metadata");
+            // global metadata
+            while(metadata_list.first) {
+                global_metadata[metadata_list.first->name] = metadata_list.first->value;
+                metadata_list.first = metadata_list.first->next;
+            }
+        }
+        else {
+            spdlog::debug("Read tel metadata for tel_id: {}", metadata_list.ident);
+            while(metadata_list.first) {
+                tel_metadata[metadata_list.ident][metadata_list.first->name] = metadata_list.first->value;
+                metadata_list.first = metadata_list.first->next;
+            }
+        }
+        read_block();
+    }
+    spdlog::debug("End read metadata block");
 }
 void SimtelFileHandler::read_telescope_settings() {
     spdlog::debug("Begin read telescope settings block");

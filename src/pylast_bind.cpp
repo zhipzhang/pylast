@@ -6,6 +6,8 @@
 #include "AtmosphereModel.hh"
 #include "nanobind/eigen/dense.h"
 #include "nanobind/stl/vector.h"
+#include "nanobind/stl/unordered_map.h"
+#include "nanobind/stl/pair.h"
 namespace nb = nanobind;
 
 
@@ -16,7 +18,8 @@ NB_MODULE(_pylast, m) {
             .def_ro("max_events", &EventSource::max_events)
             .def_ro("allowed_tels", &EventSource::allowed_tels)
             .def_ro("simulation_config", &EventSource::simulation_config)
-            .def_ro("atmosphere_model", &EventSource::atmosphere_model);
+            .def_ro("atmosphere_model", &EventSource::atmosphere_model)
+            .def_ro("metaparam", &EventSource::metaparam);
     nb::class_<SimtelEventSource, EventSource>(m, "SimtelEventSource")
         .def(nb::init<const std::string&, int64_t, std::vector<int>>(), nb::arg("filename"), nb::arg("max_events") = -1, nb::arg("subarray")=std::vector<int>{})
         .def("__repr__", &SimtelEventSource::print);
@@ -71,6 +74,11 @@ NB_MODULE(_pylast, m) {
             .def_ro("thick", &TableAtmosphereModel::thick)
             .def_ro("refidx_m1", &TableAtmosphereModel::refidx_m1)
             .def("__repr__", &TableAtmosphereModel::print);
+    nb::class_<Metaparam>(m, "Metaparam")
+            .def_ro("global_metadata", &Metaparam::global_metadata)
+            .def_ro("tel_metadata", &Metaparam::tel_metadata)
+            .def_ro("history", &Metaparam::history)
+            .def_ro("tel_history", &Metaparam::tel_history);
     m.def("initialize_logger", &initialize_logger,
           nb::arg("log_level") = "info", 
           nb::arg("log_file") = "",

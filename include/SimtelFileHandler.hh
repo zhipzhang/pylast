@@ -20,6 +20,8 @@
 #include "LACT_hessioxxx/include/initial.h"
 #include <vector>
 #include <unordered_map>
+using History_Entry = std::pair<time_t, std::string>;
+using History_List = std::vector<History_Entry>;
 class SimtelFileHandler {
     friend class SimtelEventSource;
 public:
@@ -34,6 +36,8 @@ private:
     AllHessData* hsdata = nullptr;
     std::vector<int> allowed_tels;
     std::unordered_map<int, int> tel_id_to_index;
+    std::unordered_map<std::string, std::string> global_metadata;
+    std::unordered_map<int, std::unordered_map<std::string, std::string>> tel_metadata;
     bool is_subarray_selected(int tel_id);
     void open_file(const std::string& filename);
     void read_block();
@@ -48,6 +52,9 @@ private:
     void read_pointing_corrections();
     void read_tracking_settings();
     void read_telescope_settings();
+    void read_metadata();
+    void _read_history();
     AtmProf* atmprof;
-    
+    static HistoryContainer history_container;
+    static MetaParamList metadata_list;
 };

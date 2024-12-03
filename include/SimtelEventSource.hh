@@ -21,13 +21,15 @@ public:
     SimtelEventSource() = default;
     SimtelEventSource(const string& filename, int64_t max_events = -1 , std::vector<int> subarray = {});
     virtual ~SimtelEventSource() = default;
-    void print_history();
     const std::string print() const;
 private:
     virtual void init_simulation_config() override;
-    //virtual void init_subarray() override;
     virtual void init_atmosphere_model() override;
+    virtual void init_metaparam() override;
+    //virtual void init_subarray() override;
     void set_simulation_config();
+    void set_telescope_settings(int tel_id);
+    void set_metaparam();
     std::unique_ptr<SimtelFileHandler> simtel_file_handler;
 };
 

@@ -1,24 +1,29 @@
 #include "SimtelEventSource.hh"
+#include "CameraGeometry.hh"
 #include "LACT_hessioxxx/include/io_basic.h"
 #include "LACT_hessioxxx/include/io_hess.h"
+#include "SimtelFileHandler.hh"
 #include "spdlog/spdlog.h"
 #include "spdlog/fmt/fmt.h"
 #include <cassert>
 #include "LACT_hessioxxx/include/io_history.h"
 #include "LACT_hessioxxx/include/mc_tel.h"
 #include "LACT_hessioxxx/include/mc_atmprof.h"
-
 SimtelEventSource::SimtelEventSource(const std::string& filename, int64_t max_events, std::vector<int> subarray):
     EventSource(filename, max_events, subarray)
 {
     simtel_file_handler = std::make_unique<SimtelFileHandler>(filename, subarray);
     is_stream = true;
     //read_history();
+    init_metaparam();
     init_simulation_config();
     init_atmosphere_model();
 }
 
-
+void SimtelEventSource::init_metaparam()
+{
+    set_metaparam();
+}
 void SimtelEventSource::init_atmosphere_model()
 {
     atmosphere_model = TableAtmosphereModel(simtel_file_handler->atmprof->n_alt, simtel_file_handler->atmprof->alt_km, simtel_file_handler->atmprof->rho, simtel_file_handler->atmprof->thick, simtel_file_handler->atmprof->refidx_m1);
@@ -60,6 +65,32 @@ void SimtelEventSource::set_simulation_config()
     simulation_config.corsika_wlen_min = simtel_file_handler->hsdata->mc_run_header.corsika_wlen_min;
     simulation_config.corsika_wlen_max = simtel_file_handler->hsdata->mc_run_header.corsika_wlen_max;
 }
+void SimtelEventSource::set_metaparam()
+{
+    metaparam.global_metadata = simtel_file_handler->global_metadata;
+    metaparam.tel_metadata = simtel_file_handler->tel_metadata;
+    while(simtel_file_handler->history_container.cfg_global->next != NULL) {
+        metaparam.history.push_back(std::make_pair(simtel_file_handler->history_container.cfg_global->time, simtel_file_handler->history_container.cfg_global->text));
+        simtel_file_handler->history_container.cfg_global = simtel_file_handler->history_container.cfg_global->next;
+    }
+    for(int itel = 0; itel < simtel_file_handler->history_container.ntel; itel++) {
+        while(simtel_file_handler->history_container.cfg_tel[itel] != NULL) {
+            metaparam.tel_history[itel].push_back(std::make_pair(simtel_file_handler->history_container.cfg_tel[itel]->time, simtel_file_handler->history_container.cfg_tel[itel]->text));
+            simtel_file_handler->history_container.cfg_tel[itel] = simtel_file_handler->history_container.cfg_tel[itel]->next;
+        }
+    }
+}
+
+void SimtelEventSource::set_telescope_settings(int tel_id)
+{
+    auto it = simtel_file_handler->tel_id_to_index.find(tel_id);
+    if(it == simtel_file_handler->tel_id_to_index.end()) {
+        spdlog::warn("Skip telescope settings for tel_id: {}", tel_id);
+        return;
+    }
+    int itel = it->second;
+}
+
 const std::string SimtelEventSource::print() const
 {
     return spdlog::fmt_lib::format("SimtelEventSource: {}", input_filename);
