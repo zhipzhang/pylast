@@ -14,7 +14,6 @@ SimtelEventSource::SimtelEventSource(const std::string& filename, int64_t max_ev
 {
     simtel_file_handler = std::make_unique<SimtelFileHandler>(filename, subarray);
     is_stream = true;
-    //read_history();
     init_metaparam();
     init_simulation_config();
     init_atmosphere_model();
@@ -69,14 +68,18 @@ void SimtelEventSource::set_metaparam()
 {
     metaparam.global_metadata = simtel_file_handler->global_metadata;
     metaparam.tel_metadata = simtel_file_handler->tel_metadata;
-    while(simtel_file_handler->history_container.cfg_global->next != NULL) {
-        metaparam.history.push_back(std::make_pair(simtel_file_handler->history_container.cfg_global->time, simtel_file_handler->history_container.cfg_global->text));
-        simtel_file_handler->history_container.cfg_global = simtel_file_handler->history_container.cfg_global->next;
+    if(simtel_file_handler->history_container.cfg_global != NULL) { 
+        while(simtel_file_handler->history_container.cfg_global->next != NULL) {
+            metaparam.history.push_back(std::make_pair(simtel_file_handler->history_container.cfg_global->time, simtel_file_handler->history_container.cfg_global->text));
+            simtel_file_handler->history_container.cfg_global = simtel_file_handler->history_container.cfg_global->next;
+        }
     }
-    for(int itel = 0; itel < simtel_file_handler->history_container.ntel; itel++) {
-        while(simtel_file_handler->history_container.cfg_tel[itel] != NULL) {
+    if(simtel_file_handler->history_container.cfg_tel != NULL) {    
+        for(int itel = 0; itel < simtel_file_handler->history_container.ntel; itel++) {
+            while(simtel_file_handler->history_container.cfg_tel[itel] != NULL) {
             metaparam.tel_history[itel].push_back(std::make_pair(simtel_file_handler->history_container.cfg_tel[itel]->time, simtel_file_handler->history_container.cfg_tel[itel]->text));
             simtel_file_handler->history_container.cfg_tel[itel] = simtel_file_handler->history_container.cfg_tel[itel]->next;
+            }
         }
     }
 }

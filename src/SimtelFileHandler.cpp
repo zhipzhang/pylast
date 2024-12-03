@@ -7,8 +7,6 @@
 
 const std::string ihep_url = "root://eos01.ihep.ac.cn/";
 using std::string;
-HistoryContainer SimtelFileHandler::history_container = {1, NULL, NULL, NULL, 0};
-MetaParamList SimtelFileHandler::metadata_list;
 SimtelFileHandler::SimtelFileHandler(const std::string& filename, std::vector<int> subarray) : filename(filename), allowed_tels(subarray) {
     if((iobuf = allocate_io_buffer(5000000L)) == NULL) {
         throw std::runtime_error("Cannot allocate I/O buffer");
@@ -19,6 +17,8 @@ SimtelFileHandler::SimtelFileHandler(const std::string& filename, std::vector<in
     if(hsdata == NULL) {
         throw std::runtime_error("Cannot allocate memory for hsdata");
     }
+    history_container = {1, NULL, NULL, NULL, 0};
+    metadata_list = {-1, NULL};
     open_file(filename);
     _read_history();
     read_metadata();
@@ -68,7 +68,7 @@ void SimtelFileHandler::_read_history() {
     spdlog::debug("Read history block type: {}", item_header.type);
     assert(item_header.type == IO_TYPE_HISTORY);
 
-    
+    spdlog::debug(" the pointer of history_container: {}", (void*)&history_container);
     // bug in LACT_hessioxxx have been fixed 
     if(read_history(iobuf, &history_container) != 0) {
         spdlog::error("Failed to read history");
@@ -79,7 +79,9 @@ void SimtelFileHandler::_read_history() {
 void SimtelFileHandler::read_metadata() {
     spdlog::debug("Read metadata block");
     read_block();
+    spdlog::debug(" the pointer of metadata_list: {}", (void*)&metadata_list);
     while(item_header.type == IO_TYPE_METAPARAM) {
+        spdlog::debug("begin read metadata");
         if(read_metaparam(iobuf, &metadata_list) != 0) {
             spdlog::error("Failed to read metadata");
             throw std::runtime_error("Failed to read metadata");

@@ -11,7 +11,6 @@
 
 #pragma once
 #include <string>
-#include "LACT_hessioxxx/include/io_hess.h"
 #include "LACT_hessioxxx/include/fileopen.h"
 #include "LACT_hessioxxx/include/io_hess.h"
 #include "LACT_hessioxxx/include/io_basic.h"
@@ -55,6 +54,6 @@ private:
     void read_metadata();
     void _read_history();
     AtmProf* atmprof;
-    static HistoryContainer history_container;
-    static MetaParamList metadata_list;
+    HistoryContainer history_container;
+    MetaParamList metadata_list;
 };
