@@ -26,6 +26,7 @@ SimtelFileHandler::SimtelFileHandler(const std::string& filename, std::vector<in
     read_mcrunheader();
     read_atmosphere();
     read_telescope_settings();
+    spdlog::debug("End read simtel file");
 }
 void SimtelFileHandler::open_file(const std::string& filename) {
     if (filename.substr(0, 4) == "/eos") {
@@ -213,6 +214,7 @@ void SimtelFileHandler::read_camera_settings() {
         return;
     }
     int itel = it->second;
+    //memset(&hsdata->camera_set[itel], 0, sizeof(CameraSettings));
     if(read_simtel_camsettings(iobuf, &hsdata->camera_set[itel]) < 0) {
         spdlog::error("Failed to read camera settings");
         throw std::runtime_error("Failed to read camera settings");

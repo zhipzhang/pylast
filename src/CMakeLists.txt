@@ -3,6 +3,7 @@ message(STATUS "hessioxxx BuildConfig='${BuildConfig}'")
 
 
 add_subdirectory(bernlohr/LACT_hessioxxx)
+add_definitions(-D${BuildConfig})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/bernlohr/)
 nanobind_add_module(_pylast
     STABLE_ABI
@@ -14,9 +15,13 @@ nanobind_add_module(_pylast
     AtmosphereModel.cpp
     SimtelFileHandler.cpp
     Metaparam.cpp
+    SubarrayDescription.cpp
+    CameraReadout.cpp
+    CameraGeometry.cpp
+    CameraDescription.cpp
+    OpticsDescription.cpp
+    pysubarray_bind.cpp
 )
-add_executable(debug debug.cpp SimtelFileHandler.cpp)
-target_link_libraries(debug PRIVATE hessio spdlog::spdlog)
 target_link_libraries(_pylast PRIVATE hessio)
 set_property(TARGET _pylast APPEND PROPERTY INSTALL_RPATH "$ORIGIN")
 target_link_libraries(_pylast PUBLIC spdlog::spdlog Eigen3::Eigen)

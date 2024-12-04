@@ -9,7 +9,7 @@
 #include "nanobind/stl/unordered_map.h"
 #include "nanobind/stl/pair.h"
 namespace nb = nanobind;
-
+void bind_subarray_description(nb::module_ &m);
 
 NB_MODULE(_pylast, m) {
     nb::class_<EventSource>(m, "EventSource")
@@ -19,7 +19,8 @@ NB_MODULE(_pylast, m) {
             .def_ro("allowed_tels", &EventSource::allowed_tels)
             .def_ro("simulation_config", &EventSource::simulation_config)
             .def_ro("atmosphere_model", &EventSource::atmosphere_model)
-            .def_ro("metaparam", &EventSource::metaparam);
+            .def_ro("metaparam", &EventSource::metaparam)
+            .def_ro("subarray", &EventSource::subarray);
     nb::class_<SimtelEventSource, EventSource>(m, "SimtelEventSource")
         .def(nb::init<const std::string&, int64_t, std::vector<int>>(), nb::arg("filename"), nb::arg("max_events") = -1, nb::arg("subarray")=std::vector<int>{})
         .def("__repr__", &SimtelEventSource::print);
@@ -83,4 +84,5 @@ NB_MODULE(_pylast, m) {
           nb::arg("log_level") = "info", 
           nb::arg("log_file") = "",
           "Initialize the spdlog logger with specified log level. Optionally specify a log file.");
+    bind_subarray_description(m);
 }

@@ -18,6 +18,7 @@
 #include <vector>
 #include "AtmosphereModel.hh"
 #include "Metaparam.hh"
+#include "SubarrayDescription.hh"
 using std::string;
 class EventSource
 {
@@ -32,6 +33,7 @@ public:
     bool is_stream = false;
 
     SimulationConfiguration simulation_config;
+    SubarrayDescription subarray;
 
     int64_t max_events;
     std::vector<int> allowed_tels;
@@ -43,7 +45,7 @@ protected:
     //virtual void init_subarray() = 0;
     virtual void init_atmosphere_model() = 0;
     virtual void init_metaparam() = 0;
-    //virtual void init_subarray() = 0;
+    virtual void init_subarray() = 0;
     bool is_subarray_selected(int tel_id) const;
 };
 
