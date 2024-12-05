@@ -24,7 +24,6 @@ nanobind_add_module(_pylast
 )
 target_link_libraries(_pylast PRIVATE hessio)
 set_property(TARGET _pylast APPEND PROPERTY INSTALL_RPATH "$ORIGIN")
-target_link_libraries(_pylast PUBLIC spdlog::spdlog Eigen3::Eigen)
 
 install(TARGETS _pylast LIBRARY DESTINATION pylast)
 install(TARGETS hessio LIBRARY DESTINATION pylast)
