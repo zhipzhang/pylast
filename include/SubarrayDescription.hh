@@ -33,6 +33,7 @@ public:
     TelescopeDescription& operator=(TelescopeDescription&& other) noexcept = default;
     TelescopeDescription& operator=(const TelescopeDescription& other) = default;
     ~TelescopeDescription() = default;
+    const string print() const;
 };
 class SubarrayDescription
 {
@@ -47,4 +48,5 @@ public:
     /** @brief Reference position of the subarray */
     std::array<double, 3> reference_position ;
     void add_telescope(const telescope_id_t tel_id,  TelescopeDescription&& tel_description, const std::array<double, 3>& tel_position);
+    const string print() const;
 };

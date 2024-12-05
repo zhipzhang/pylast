@@ -10,10 +10,12 @@ void bind_subarray_description(nb::module_ &m)
 {
     nb::class_<SubarrayDescription>(m, "SubarrayDescription")
         .def_ro("tels", &SubarrayDescription::tel_descriptions)
-        .def_ro("tel_positions", &SubarrayDescription::tel_positions);
+        .def_ro("tel_positions", &SubarrayDescription::tel_positions)
+        .def("__repr__", &SubarrayDescription::print);
     nb::class_<TelescopeDescription>(m, "TelescopeDescription")
         .def_ro("camera", &TelescopeDescription::camera_description)
-        .def_ro("optics", &TelescopeDescription::optics_description);
+        .def_ro("optics", &TelescopeDescription::optics_description)
+        .def("__repr__", &TelescopeDescription::print);
     nb::class_<OpticsDescription>(m, "OpticsDescription")
         .def_ro("optics_name", &OpticsDescription::optics_name)
         .def_ro("num_mirrors", &OpticsDescription::num_mirrors)
