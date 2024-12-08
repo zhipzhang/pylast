@@ -4,6 +4,7 @@ macro(add_python_binding MODULE_NAME SOURCES BINDING_FILES LIBRARIES)
     nanobind_add_module(${MODULE_NAME}
         STABLE_ABI
             ${SOURCES}
+            ${BINDING_FILES}
         )
         target_link_libraries(${MODULE_NAME} PRIVATE ${LIBRARIES})
         set_property(TARGET ${MODULE_NAME} APPEND PROPERTY INSTALL_RPATH "$ORIGIN")
@@ -19,7 +20,6 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/bernlohr/)
 
 set(SOURCE_FILES
     SimtelEventSource.cpp
-    pylast_bind.cpp
     LoggerInitialize.cpp
     SimulationConfiguration.cpp
     EventSource.cpp
@@ -36,9 +36,9 @@ set(SOURCE_FILES
 
 if(BUILD_PYTHON_BINDINGS)
     set(BINDING_FILES
-        pylast_bind.cpp
         pyarrayevent_bind.cpp
         pysubarray_bind.cpp
+        pylast_bind.cpp
     )
     add_python_binding(_pylast "${SOURCE_FILES}" "${BINDING_FILES}" hessio)
 endif()
