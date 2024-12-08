@@ -19,10 +19,48 @@
 #include "AtmosphereModel.hh"
 #include "Metaparam.hh"
 #include "SubarrayDescription.hh"
+#include "ArrayEvent.hh"
 using std::string;
 class EventSource
 {
 public:
+    class Iterator{
+        public:
+            using iterator_category = std::forward_iterator_tag;
+            using difference_type = std::ptrdiff_t;
+            using value_type = ArrayEvent;
+            using pointer = ArrayEvent*;
+            using reference = ArrayEvent&;
+            Iterator(EventSource* source, int position):source_(source), position_(position){
+                if(position == 0 && source_){
+                    event_ = std::move(source_->get_event());
+                }
+            }
+            const ArrayEvent& operator*() const {return event_;}
+            const ArrayEvent* operator->() const {return &event_;};
+
+            bool operator==(const Iterator& other) const{
+                if (source_ && source_->is_finished()) {
+                    return true;
+                }
+                return source_ == other.source_ && position_ == other.position_;
+            }
+            bool operator!=(const Iterator& other) const{
+                return !(*this==other);
+            }
+            Iterator& operator++()
+            {
+                ++position_;
+                if(source_ && !source_->is_finished() && (source_->max_events == -1 || position_ < source_->max_events)){
+                    event_ = std::move(source_->get_event());
+                }
+                return *this;
+            }
+        private:
+            EventSource* source_;
+            int position_;
+            ArrayEvent event_;
+    };
     EventSource() = default;
     EventSource(const string& filename) : input_filename(filename) {}
     EventSource(const string& filename, int64_t max_events , std::vector<int>& subarray ):input_filename(filename), max_events(max_events), allowed_tels(subarray) {}
@@ -39,10 +77,14 @@ public:
     std::vector<int> allowed_tels;
     TableAtmosphereModel atmosphere_model;
     Metaparam metaparam;
+    Iterator begin(){ return Iterator(this, 0);}
+    Iterator end(){return Iterator(this, max_events);}
 protected:
 
+    virtual bool is_finished() const = 0;
     virtual void init_simulation_config() = 0;
     //virtual void init_subarray() = 0;
+    virtual ArrayEvent get_event() = 0;
     virtual void init_atmosphere_model() = 0;
     virtual void init_metaparam() = 0;
     virtual void init_subarray() = 0;

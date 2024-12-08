@@ -12,6 +12,7 @@
 #include "LACT_hessioxxx/include/io_history.h"
 #include "LACT_hessioxxx/include/mc_tel.h"
 #include "LACT_hessioxxx/include/mc_atmprof.h"
+#include "Utils.hh"
 SimtelEventSource::SimtelEventSource(const std::string& filename, int64_t max_events, std::vector<int> subarray):
     EventSource(filename, max_events, subarray)
 {
@@ -159,6 +160,43 @@ std::array<double, 3> SimtelEventSource::get_telescope_position(int tel_index)
     double tel_y = simtel_file_handler->hsdata->run_header.tel_pos[tel_index][1];
     double tel_z = simtel_file_handler->hsdata->run_header.tel_pos[tel_index][2];
     return std::array<double, 3>{tel_x, tel_y, tel_z};
+}
+void SimtelEventSource::_load_next_events()
+{
+    simtel_file_handler->load_next_event();
+}
+ArrayEvent SimtelEventSource::get_event()
+{
+    _load_next_events();
+    ArrayEvent event;
+    event.simulated_event.shower.shower_primary_id = simtel_file_handler->hsdata->mc_shower.primary_id;
+    event.simulated_event.shower.energy = simtel_file_handler->hsdata->mc_shower.energy;
+    event.simulated_event.shower.alt = simtel_file_handler->hsdata->mc_shower.altitude;
+    event.simulated_event.shower.az = simtel_file_handler->hsdata->mc_shower.azimuth;
+    event.simulated_event.shower.core_x = simtel_file_handler->hsdata->mc_event.xcore;
+    event.simulated_event.shower.core_y = simtel_file_handler->hsdata->mc_event.ycore;
+    event.simulated_event.shower.h_first_int = simtel_file_handler->hsdata->mc_shower.h_first_int;
+    event.simulated_event.shower.x_max = simtel_file_handler->hsdata->mc_shower.xmax;
+    event.simulated_event.shower.starting_grammage = simtel_file_handler->hsdata->mc_shower.depth_start;
+    if(simtel_file_handler->have_true_image)
+    {
+        for(const auto& [tel_id, tel_index]: simtel_file_handler->tel_id_to_index) {
+            auto tel_position = subarray.tel_positions[tel_id];
+            auto shower_core = std::array<double, 3>{event.simulated_event.shower.core_x, event.simulated_event.shower.core_y, 0};
+            double cos_alt = cos(event.simulated_event.shower.alt);
+            double sin_alt = sin(event.simulated_event.shower.alt);
+            double cos_az = cos(event.simulated_event.shower.az);
+            double sin_az = sin(event.simulated_event.shower.az);
+            std::array<double, 3> line_direction{
+                cos_alt * sin_az,
+                cos_alt * cos_az,
+                sin_alt
+            };
+            double impact_parameter = Utils::point_line_distance(tel_position, shower_core, line_direction);
+            event.add_simulated_camera_image(tel_id, simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].pixels,simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].pe_count, impact_parameter);
+        }
+    }
+    return event;
 }
 const std::string SimtelEventSource::print() const
 {

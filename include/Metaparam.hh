@@ -32,4 +32,5 @@ public:
     void print_tel_metadata(int tel_id);
     void print_global_metadata();
     void print_history();
+    const std::string print();
 };

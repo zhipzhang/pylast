@@ -1,5 +1,7 @@
 #include "Metaparam.hh"
 #include <iostream>
+#include "spdlog/fmt/fmt.h"
+
 void Metaparam::add_global_metadata(const std::string& key, const std::string& value) {
     global_metadata[key] = value;
 }
@@ -30,4 +32,14 @@ void Metaparam::print_history() {
 
 void Metaparam::add_tel_history(int tel_id, time_t time, const std::string& history_entry) {
     tel_history[tel_id].push_back(std::make_pair(time, history_entry));
+}
+
+const std::string Metaparam::print() {
+    return fmt::format(
+        "Available members:\n"
+        "- global_metadata (key-value pairs)\n"
+        "- tel_metadata (dict[tel_id, key-value pairs])\n"
+        "- history (time-entry pairs)\n"
+        "- tel_history (dict[tel_id, time-entry pairs])"
+    );
 }

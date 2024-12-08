@@ -27,6 +27,8 @@ public:
     SimtelFileHandler(const std::string& filename, std::vector<int> subarray = {});
     SimtelFileHandler() = default;
     ~SimtelFileHandler();
+    bool no_more_blocks = false;
+    bool have_true_image = false;
 private:
     std::string filename = "none";
     FILE* input_file = nullptr;
@@ -51,8 +53,20 @@ private:
     void read_pointing_corrections();
     void read_tracking_settings();
     void read_telescope_settings();
+    void read_mc_shower();
+    void read_mc_event();
+    void read_true_image();
     void read_metadata();
     void _read_history();
+    void load_next_event();
+    /**
+     * @brief In order to use an native skip function of telescope, we borrow the read_simtel_mc_phot function from io_hess.c and change a little bit.
+     * 
+     * @param iobuf 
+     * @param mce 
+     * @return int 
+     */
+    int _read_simtel_mc_phot(IO_BUFFER* iobuf, MCEvent* mce);
     AtmProf* atmprof;
     HistoryContainer history_container;
     MetaParamList metadata_list;

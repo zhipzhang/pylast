@@ -1,4 +1,6 @@
+#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
 #include "SimtelFileHandler.hh"
+#include "LACT_hessioxxx/include/io_hess.h"
 #include "LACT_hessioxxx/include/io_history.h"
 #include "LACT_hessioxxx/include/mc_atmprof.h"
 #include "LACT_hessioxxx/include/mc_tel.h"
@@ -8,6 +10,7 @@
 const std::string ihep_url = "root://eos01.ihep.ac.cn/";
 using std::string;
 SimtelFileHandler::SimtelFileHandler(const std::string& filename, std::vector<int> subarray) : filename(filename), allowed_tels(subarray) {
+    SPDLOG_DEBUG("SimtelFileHandler constructor ");
     if((iobuf = allocate_io_buffer(5000000L)) == NULL) {
         throw std::runtime_error("Cannot allocate I/O buffer");
     }
@@ -54,8 +57,9 @@ void SimtelFileHandler::open_file(const std::string& filename) {
 }
 void SimtelFileHandler::read_block() {
     if(find_io_block(iobuf, &item_header) != 0) {
-        spdlog::error("Failed to find IO block");
-        throw std::runtime_error("Failed to find IO block");
+        spdlog::debug("No more blocks");
+        no_more_blocks = true;
+        return;
     }
     if(read_io_block(iobuf, &item_header) != 0) {
         spdlog::error("Failed to read IO block");
@@ -120,12 +124,14 @@ void SimtelFileHandler::read_telescope_settings() {
         read_pointing_corrections();
         read_block();
     }
+    // Next block have been read already
     spdlog::debug("End read telescope settings block");
 }
 void SimtelFileHandler::read_runheader() {
     spdlog::debug("Read runheader block");
     while(item_header.type != IO_TYPE_SIMTEL_RUNHEADER) {
         read_block();
+        spdlog::debug("Skip block type: {}", item_header.type);
     }
     if(read_simtel_runheader(iobuf, &hsdata->run_header) < 0) {
         spdlog::error("Failed to read runheader");
@@ -181,6 +187,7 @@ void SimtelFileHandler::read_mcrunheader() {
     spdlog::debug("Read mcrunheader block");
     while(item_header.type != IO_TYPE_SIMTEL_MCRUNHEADER) {
         read_block();
+        spdlog::debug("Skip block type: {}", item_header.type);
     }
     if(read_simtel_mcrunheader(iobuf, &hsdata->mc_run_header) < 0) {
         spdlog::error("Failed to read mcrunheader");
@@ -210,7 +217,8 @@ void SimtelFileHandler::read_camera_settings() {
     spdlog::debug("Read camera settings for tel_id: {}", tel_id);
     auto it = tel_id_to_index.find(tel_id);
     if(it == tel_id_to_index.end()) {
-        spdlog::warn("Skip camera settings for tel_id: {}", tel_id);
+        spdlog::warn("Skip telescope settings for tel_id: {}", tel_id);
+        spdlog::debug("Skip camera settings for tel_id: {}", tel_id);
         return;
     }
     int itel = it->second;
@@ -225,12 +233,13 @@ void SimtelFileHandler::read_camera_organisation() {
     spdlog::debug("Read camera organisation block");
     while(item_header.type != IO_TYPE_SIMTEL_CAMORGAN) {
         read_block();
+        spdlog::debug("Skip block type: {}", item_header.type);
     }
     int tel_id = item_header.ident;
     spdlog::debug("Read camera organisation for tel_id: {}", tel_id);
     auto it = tel_id_to_index.find(tel_id);
     if(it == tel_id_to_index.end()) {
-        spdlog::warn("Skip camera organisation for tel_id: {}", tel_id);
+        spdlog::debug("Skip camera organisation for tel_id: {}", tel_id);
         return;
     }
     int itel = it->second;
@@ -243,12 +252,13 @@ void SimtelFileHandler::read_pixel_settings() {
     spdlog::debug("Read pixel settings block");
     while(item_header.type != IO_TYPE_SIMTEL_PIXELSET) {
         read_block();
+        spdlog::debug("Skip block type: {}", item_header.type);
     }
     int tel_id = item_header.ident;
     spdlog::debug("Read pixel settings for tel_id: {}", tel_id);
     auto it = tel_id_to_index.find(tel_id);
     if(it == tel_id_to_index.end()) {
-        spdlog::warn("Skip pixel settings for tel_id: {}", tel_id);
+        spdlog::debug("Skip pixel settings for tel_id: {}", tel_id);
         return;
     }
     int itel = it->second;
@@ -261,12 +271,13 @@ void SimtelFileHandler::read_pixel_disabled() {
     spdlog::debug("Read pixel disabled block");
     while(item_header.type != IO_TYPE_SIMTEL_PIXELDISABLE) {
         read_block();
+        spdlog::debug("Skip block type: {}", item_header.type);
     }
     int tel_id = item_header.ident;
     spdlog::debug("Read pixel disabled for tel_id: {}", tel_id);
     auto it = tel_id_to_index.find(tel_id);
     if(it == tel_id_to_index.end()) {
-        spdlog::warn("Skip pixel disabled for tel_id: {}", tel_id);
+        spdlog::debug("Skip pixel disabled for tel_id: {}", tel_id);
         return;
     }
     int itel = it->second;
@@ -280,12 +291,13 @@ void SimtelFileHandler::read_camera_software_settings() {
     spdlog::debug("Read camera software settings block");
     while(item_header.type != IO_TYPE_SIMTEL_CAMSOFTSET) {
         read_block();
+        spdlog::debug("Skip block type: {}", item_header.type);
     }
     int tel_id = item_header.ident;
     spdlog::debug("Read camera software settings for tel_id: {}", tel_id);
     auto it = tel_id_to_index.find(tel_id);
     if(it == tel_id_to_index.end()) {
-        spdlog::warn("Skip camera software settings for tel_id: {}", tel_id);
+        spdlog::debug("Skip camera software settings for tel_id: {}", tel_id);
         return;
     }
     int itel = it->second;
@@ -299,12 +311,13 @@ void SimtelFileHandler::read_pointing_corrections() {
     spdlog::debug("Read pointing corrections block");
     while(item_header.type != IO_TYPE_SIMTEL_POINTINGCOR) {
         read_block();
+        spdlog::debug("Skip block type: {}", item_header.type);
     }
     int tel_id = item_header.ident;
     spdlog::debug("Read pointing corrections for tel_id: {}", tel_id);
     auto it = tel_id_to_index.find(tel_id);
     if(it == tel_id_to_index.end()) {
-        spdlog::warn("Skip pointing corrections for tel_id: {}", tel_id);
+        spdlog::debug("Skip pointing corrections for tel_id: {}", tel_id);
         return;
     }
     int itel = it->second;
@@ -318,12 +331,13 @@ void SimtelFileHandler::read_tracking_settings() {
     spdlog::debug("Read tracking settings block");
     while(item_header.type != IO_TYPE_SIMTEL_TRACKSET) {
         read_block();
+        spdlog::debug("Skip block type: {}", item_header.type);
     }
     int tel_id = item_header.ident;
     spdlog::debug("Read tracking settings for tel_id: {}", tel_id);
     auto it = tel_id_to_index.find(tel_id);
     if(it == tel_id_to_index.end()) {
-        spdlog::warn("Skip tracking settings for tel_id: {}", tel_id);
+        spdlog::debug("Skip tracking settings for tel_id: {}", tel_id);
         return;
     }
     int itel = it->second;
@@ -335,6 +349,245 @@ void SimtelFileHandler::read_tracking_settings() {
 bool SimtelFileHandler::is_subarray_selected(int tel_id) {
     if(allowed_tels.empty()) return true;
     return std::find(allowed_tels.begin(), allowed_tels.end(), tel_id) != allowed_tels.end();
+}
+
+void SimtelFileHandler::read_mc_shower() {
+    // Cause we may need skip some blocks before read mc shower
+    while(item_header.type != IO_TYPE_SIMTEL_MC_SHOWER) {
+        if(no_more_blocks) return;
+        read_block();
+        // Use warnning before finishing reading the events block
+        //spdlog::warn("Skip block type: {}", item_header.type);
+    }
+    int run_id = item_header.ident;
+    spdlog::debug("Read mc shower for run_id: {}", run_id);
+    if(read_simtel_mc_shower(iobuf, &hsdata->mc_shower) != 0) {
+        spdlog::error("Failed to read mc shower");
+        throw std::runtime_error("Failed to read mc shower");
+    }
+    read_block();
+}
+
+void SimtelFileHandler::read_mc_event() {
+    assert(item_header.type == IO_TYPE_SIMTEL_MC_EVENT);
+    int event_id = item_header.ident;
+    spdlog::debug("Read mc event for event_id: {}", event_id);
+    if(read_simtel_mc_event(iobuf, &hsdata->mc_event) != 0) {
+        spdlog::error("Failed to read mc event");
+        throw std::runtime_error("Failed to read mc event");
+    }
+    read_block();
+}
+void SimtelFileHandler::read_true_image() {
+    if(item_header.type == IO_TYPE_MC_TELARRAY)
+    {
+        if(!have_true_image)
+        {
+            have_true_image = true;
+        }
+        spdlog::debug("Reading true image for tel_id: {}", item_header.ident + 1);
+        if(_read_simtel_mc_phot(iobuf, &hsdata->mc_event) < 0) {
+            spdlog::error("Failed to read true image");
+            throw std::runtime_error("Failed to read true image");
+        }
+    }
+    else{
+        spdlog::debug("No true image block in the file");
+        return;
+    }
+}
+int SimtelFileHandler::_read_simtel_mc_phot(IO_BUFFER* iobuf, MCEvent* mce) {
+     
+   int iarray=0, itel=0, itel_pe=0, tel_id=0, jtel=0, type, nbunches=0, max_bunches=0, flags=0;
+   int npe=0, pixels=0, max_npe=0;
+   int rc;
+   double photons=0.;
+   IO_ITEM_HEADER item_header;
+   if ( (rc = begin_read_tel_array(iobuf, &item_header, &iarray)) < 0 )
+      return rc;
+   while ( (type = next_subitem_type(iobuf)) > 0 )
+   {
+      switch (type)
+      {
+         case IO_TYPE_MC_PHOTONS:
+            /* The purpose of this first call to read_tel_photons is only
+               to retrieve the array and telescope numbers (the original offset
+               number without ignored telescopes, basically telescope ID minus one), etc. */
+            /* With a NULL pointer argument, we expect rc = -10 */
+            rc = read_tel_photons(iobuf, 0, &iarray, &itel_pe, &photons,
+                  NULL, &nbunches);
+            if ( rc != -10 )
+            {
+               get_item_end(iobuf,&item_header);
+               return -1;
+            }
+            tel_id = itel_pe + 1;
+            itel = find_tel_idx(tel_id);
+            if ( itel < 0 || itel >= H_MAX_TEL )
+            {
+               Warning("Invalid telescope number in MC photons");
+               get_item_end(iobuf,&item_header);
+               return -1;
+            }
+            if ( nbunches > mce->mc_photons[itel].max_bunches || 
+                 (nbunches < mce->mc_photons[itel].max_bunches/4 &&
+                 mce->mc_photons[itel].max_bunches > 10000) ||
+                 mce->mc_photons[itel].bunches == NULL )
+            {
+               if ( mce->mc_photons[itel].bunches != NULL )
+                  free(mce->mc_photons[itel].bunches);
+               if ( (mce->mc_photons[itel].bunches = (struct bunch *)
+                    calloc(nbunches,sizeof(struct bunch))) == NULL )
+               {
+                  mce->mc_photons[itel].max_bunches = 0;
+                  get_item_end(iobuf,&item_header);
+                  return -4;
+               }
+               mce->mc_photons[itel].max_bunches = max_bunches = nbunches;
+            }
+            else
+               max_bunches = mce->mc_photons[itel].max_bunches;
+
+            /* Now really get the photon bunches */
+            rc = read_tel_photons(iobuf, max_bunches, &iarray, &jtel, 
+               &photons, mce->mc_photons[itel].bunches, &nbunches);
+
+            if ( rc < 0 )
+            {
+               mce->mc_photons[itel].nbunches = 0;
+               get_item_end(iobuf,&item_header);
+               return rc;
+            }
+            else
+               mce->mc_photons[itel].nbunches = nbunches;
+
+            if ( jtel != itel )
+            {
+               Warning("Inconsistent telescope number for MC photons");
+               get_item_end(iobuf,&item_header);
+               return -5;
+            }
+            break;
+         case IO_TYPE_MC_PE:
+            /* The purpose of this first call to read_photo_electrons is only
+               to retrieve the array and telescope offset numbers (the original offset
+               number without ignored telescopes, basically telescope ID minus one), 
+               the number of p.e.s and pixels etc. */
+            /* Here we expect as well rc = -10 */
+            rc = read_photo_electrons(iobuf, H_MAX_PIX, 0, &iarray, &itel_pe,
+                  &npe, &pixels, &flags, NULL, NULL, NULL, NULL, NULL);
+            if ( rc != -10 )
+            {
+               get_item_end(iobuf,&item_header);
+               return -1;
+            }
+            /* The itel_pe value may differ from the itel index value that we
+               are looking for if the telescope simulation had ignored telescopes.
+               This can be fixed but still assumes that base_telescope_number = 1
+               was used - as all known simulations do. */
+            tel_id = itel_pe + 1; /* Also note: 1 <= tel_id <= 1000 */
+            if(is_subarray_selected(tel_id)) {
+                itel = tel_id_to_index[tel_id];
+            }
+            else {
+                spdlog::debug("Skip mc photons_electrons for tel_id: {}", tel_id);
+                skip_subitem(iobuf);
+            }
+            if ( itel < 0 || itel >= H_MAX_TEL )
+            {
+               Warning("Invalid telescope number in MC photons");
+               get_item_end(iobuf,&item_header);
+               return -1;
+            }
+            if ( pixels > H_MAX_PIX )
+            {
+               Warning("Invalid number of pixels in MC photons");
+               get_item_end(iobuf,&item_header);
+               return -1;
+            }
+            /* If the current p.e. list buffer is too small or
+               non-existent or if it is unnecessarily large, 
+               we (re-) allocate a p.e. list buffer for p.e. times
+               and, if requested, for amplitudes. */
+            if ( npe > mce->mc_pe_list[itel].max_npe || 
+                 (npe < mce->mc_pe_list[itel].max_npe/4 && 
+                 mce->mc_pe_list[itel].max_npe > 20000) ||
+                 mce->mc_pe_list[itel].atimes == NULL ||
+                 (mce->mc_pe_list[itel].amplitudes == NULL && (flags&1) != 0) )
+            {
+               if ( mce->mc_pe_list[itel].atimes != NULL )
+                  free(mce->mc_pe_list[itel].atimes);
+               if ( (mce->mc_pe_list[itel].atimes = (double *)
+                    calloc(npe>0?npe:1,sizeof(double))) == NULL )
+               {
+                  mce->mc_pe_list[itel].max_npe = 0;
+                  get_item_end(iobuf,&item_header);
+                  return -4;
+               }
+               if ( mce->mc_pe_list[itel].amplitudes != NULL )
+                  free(mce->mc_pe_list[itel].amplitudes);
+               /* If the amplitude bit in flags is set, also check for that part */
+               if ( (flags&1) != 0 )
+               {
+                  if ( (mce->mc_pe_list[itel].amplitudes = (double *)
+                       calloc(npe>0?npe:1,sizeof(double))) == NULL )
+                  {
+                     mce->mc_pe_list[itel].max_npe = 0;
+                     get_item_end(iobuf,&item_header);
+                     return -4;
+                  }
+               }
+               mce->mc_pe_list[itel].max_npe = max_npe = npe;
+            }
+            else
+               max_npe = mce->mc_pe_list[itel].max_npe;
+
+#ifdef STORE_PHOTO_ELECTRONS
+            rc = read_photo_electrons(iobuf, H_MAX_PIX, max_npe, 
+                  &iarray, &jtel, &npe, &pixels, &mce->mc_pe_list[itel].flags,
+                  mce->mc_pe_list[itel].pe_count, 
+                  mce->mc_pe_list[itel].itstart, 
+                  mce->mc_pe_list[itel].atimes,
+                  mce->mc_pe_list[itel].amplitudes,
+                  mce->mc_pe_list[itel].photon_count);
+#else
+            rc = read_photo_electrons(iobuf, H_MAX_PIX, max_npe, 
+                  &iarray, &jtel, &npe, &pixels, &mce->mc_pe_list[itel].flags,
+                  mce->mc_pe_list[itel].pe_count, 
+                  mce->mc_pe_list[itel].itstart, 
+                  mce->mc_pe_list[itel].atimes,
+                  mce->mc_pe_list[itel].amplitudes,
+                  NULL);
+#endif
+
+            mce->mc_pe_list[itel].pixels = pixels;
+
+            if ( rc < 0 )
+            {
+               mce->mc_pe_list[itel].npe = 0;
+               get_item_end(iobuf,&item_header);
+               return rc;
+            }
+            else
+            {
+               mce->mc_pe_list[itel].npe = npe;
+            }
+
+            break;
+         default:
+            fprintf(stderr,
+               "Fix me: unexpected item type %d in read_simtel_mc_phot()\n",type);
+            skip_subitem(iobuf);
+      }
+   }
+   
+   return end_read_tel_array(iobuf, &item_header);
+}
+void SimtelFileHandler::load_next_event() {
+    read_mc_shower();
+    if(no_more_blocks) return;
+    read_mc_event();
+    read_true_image();
 }
 SimtelFileHandler::~SimtelFileHandler() {
     if(iobuf != NULL) {

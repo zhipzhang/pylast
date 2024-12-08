@@ -8,10 +8,14 @@
 #include "nanobind/stl/vector.h"
 #include "nanobind/stl/unordered_map.h"
 #include "nanobind/stl/pair.h"
+#include "nanobind/make_iterator.h"
 namespace nb = nanobind;
 void bind_subarray_description(nb::module_ &m);
+void bind_array_event(nb::module_ &m);
+void shutdown_logger();
 
 NB_MODULE(_pylast, m) {
+    bind_array_event(m);
     nb::class_<EventSource>(m, "EventSource")
             .def_ro("input_filename", &EventSource::input_filename)
             .def_ro("is_stream", &EventSource::is_stream)
@@ -20,7 +24,16 @@ NB_MODULE(_pylast, m) {
             .def_ro("simulation_config", &EventSource::simulation_config)
             .def_ro("atmosphere_model", &EventSource::atmosphere_model)
             .def_ro("metaparam", &EventSource::metaparam)
-            .def_ro("subarray", &EventSource::subarray);
+            .def_ro("subarray", &EventSource::subarray)
+            .def("__iter__",
+                [](EventSource &source) {
+                    return nb::make_iterator<nb::rv_policy::reference_internal>(
+                    nb::type<EventSource>(),
+                    "EventSourceIterator",
+                    source.begin(),
+                    source.end()
+                );
+                }, nb::keep_alive<0, 1>());
     nb::class_<SimtelEventSource, EventSource>(m, "SimtelEventSource")
         .def(nb::init<const std::string&, int64_t, std::vector<int>>(), nb::arg("filename"), nb::arg("max_events") = -1, nb::arg("subarray")=std::vector<int>{})
         .def("__repr__", &SimtelEventSource::print);
@@ -85,4 +98,5 @@ NB_MODULE(_pylast, m) {
           nb::arg("log_file") = "",
           "Initialize the spdlog logger with specified log level. Optionally specify a log file.");
     bind_subarray_description(m);
+    m.def("shutdown_logger", &shutdown_logger, "Shutdown the spdlog logger.");
 }
