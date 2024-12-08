@@ -24,16 +24,17 @@ if (NOT SKBUILD)
   the package is imported. Otherwise, you need to rerun the above
   after editing C++ files.")
 endif()
+if(SKBUILD)
+    message(STATUS "Building Python bindings with scikit-build-core")
+    set(BUILD_PYTHON_BINDINGS ON)
+endif()
 # Try to import all Python components potentially needed by nanobind
+if(BUILD_PYTHON_BINDINGS)
 find_package(Python 3.8
   REQUIRED COMPONENTS Interpreter Development.Module
   OPTIONAL_COMPONENTS Development.SABIModule)
-
-# Import nanobind through CMake's find_package mechanism
-if(APPLE)
-    add_compile_definitions(_DARWIN_C_SOURCE)
-endif()
 find_package(nanobind CONFIG REQUIRED)
+endif()
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
