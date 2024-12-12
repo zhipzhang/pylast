@@ -1,3 +1,4 @@
+#include <optional>
 #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
 #include "SimtelFileHandler.hh"
 #include "LACT_hessioxxx/include/io_hess.h"
@@ -6,6 +7,19 @@
 #include "LACT_hessioxxx/include/mc_tel.h"
 #include <stdexcept>
 #include <spdlog/spdlog.h>
+
+#define LOG_SCOPE(message)\
+    SPDLOG_DEBUG("Begin {}", message);\
+    auto scope_exit = finally([msg = message](){SPDLOG_DEBUG("End {}", msg);});
+
+template <typename Func>
+struct Finally {
+    Func func;
+    ~Finally() { func(); }
+};
+
+template <typename Func>
+Finally<Func> finally(Func func) { return {func}; }
 
 const std::string ihep_url = "root://eos01.ihep.ac.cn/";
 using std::string;
@@ -22,15 +36,28 @@ SimtelFileHandler::SimtelFileHandler(const std::string& filename, std::vector<in
     }
     history_container = {1, NULL, NULL, NULL, 0};
     metadata_list = {-1, NULL};
+    atmprof = get_common_atmprof();
+    initilize_block_handler();
     open_file(filename);
-    _read_history();
-    read_metadata();
-    read_runheader();
-    read_mcrunheader();
-    read_atmosphere();
-    read_telescope_settings();
+    read_until_event();
     SPDLOG_TRACE("End read simtel file");
 }
+
+void SimtelFileHandler::initilize_block_handler() {
+    block_handler[BlockType::History] = [this](){handle_history();};
+    block_handler[BlockType::MetaParam] = [this](){handle_metadata();};
+    block_handler[BlockType::RunHeader] = [this](){handle_runheader();};
+    block_handler[BlockType::MC_RunHeader] = [this](){handle_mcrunheader();};
+    block_handler[BlockType::Atmosphere] = [this](){handle_atmosphere();};
+    block_handler[BlockType::CameraSettings] = [this](){handle_camera_settings();};
+    block_handler[BlockType::CameraOrganisation] = [this](){handle_camera_organisation();};
+    block_handler[BlockType::PixelSettings] = [this](){handle_pixel_settings();};
+    block_handler[BlockType::PixelDisabled] = [this](){handle_pixel_disabled();};
+    block_handler[BlockType::CameraSoftwareSettings] = [this](){handle_camera_software_settings();};
+    block_handler[BlockType::PointingCorrections] = [this](){handle_pointing_corrections();};
+    block_handler[BlockType::TrackingSettings] = [this](){handle_tracking_settings();};
+}
+
 void SimtelFileHandler::open_file(const std::string& filename) {
     if (filename.substr(0, 4) == "/eos") {
         // If filename starts with "eos", prepend the IHEP URL
@@ -55,6 +82,15 @@ void SimtelFileHandler::open_file(const std::string& filename) {
     }
     iobuf->input_file = input_file;
 }
+
+std::optional<int> SimtelFileHandler::get_tel_index (int tel_id) const
+{
+    auto it = tel_id_to_index.find(tel_id);
+    if(it == tel_id_to_index.end()) {
+        return std::nullopt;
+    }
+    return it->second;
+}
 void SimtelFileHandler::read_block() {
     if(find_io_block(iobuf, &item_header) != 0) {
         SPDLOG_DEBUG("No more blocks");
@@ -66,69 +102,55 @@ void SimtelFileHandler::read_block() {
         throw std::runtime_error("Failed to read IO block");
     }
 }
+void SimtelFileHandler::read_until_block(BlockType block_type) {
+    while(item_header.type != static_cast<unsigned long>(block_type)) {
+        if(no_more_blocks) return;
+        read_block();
+        if(block_handler.find(static_cast<BlockType>(item_header.type)) != block_handler.end())
+        {
+            block_handler[static_cast<BlockType>(item_header.type)]();
+        }
+        else 
+        {
+            spdlog::warn("No handler for block type: {}", item_header.type);
+        }
+    }
+}
+void SimtelFileHandler::read_until_event() {
+    read_until_block(BlockType::Mc_Shower);
+}
 void SimtelFileHandler::_read_history() {
-    SPDLOG_DEBUG("Read history block");
-    read_block();
-    // history is the first item in the file
-    assert(item_header.type == IO_TYPE_HISTORY);
-
+    LOG_SCOPE("handle history block")
     // bug in LACT_hessioxxx have been fixed 
     if(read_history(iobuf, &history_container) != 0) {
         spdlog::error("Failed to read history");
         throw std::runtime_error("Failed to read history");
     }
-    SPDLOG_DEBUG("End read history block");
 }
-void SimtelFileHandler::read_metadata() {
-    SPDLOG_DEBUG("Read metadata block");
-    read_block();
-    while(item_header.type == IO_TYPE_METAPARAM) {
-        if(read_metaparam(iobuf, &metadata_list) != 0) {
-            spdlog::error("Failed to read metadata");
-            throw std::runtime_error("Failed to read metadata");
-        }
-        if(metadata_list.ident == -1) {
-            SPDLOG_DEBUG("Read global metadata");
-            // global metadata
-            while(metadata_list.first) {
+void SimtelFileHandler::_read_metadata() {
+    LOG_SCOPE("handle metadata block")
+    if(read_metaparam(iobuf, &metadata_list) != 0) {
+        spdlog::error("Failed to read metadata");
+        throw std::runtime_error("Failed to read metadata");
+    }
+    if(metadata_list.ident == -1) {
+        SPDLOG_DEBUG("Read global metadata");
+        // global metadata
+        while(metadata_list.first) {
                 global_metadata[metadata_list.first->name] = metadata_list.first->value;
-                metadata_list.first = metadata_list.first->next;
-            }
+            metadata_list.first = metadata_list.first->next;
         }
-        else {
-            SPDLOG_DEBUG("Read tel metadata for tel_id: {}", metadata_list.ident);
-            while(metadata_list.first) {
-                tel_metadata[metadata_list.ident][metadata_list.first->name] = metadata_list.first->value;
-                metadata_list.first = metadata_list.first->next;
-            }
+    }
+    else {
+        SPDLOG_DEBUG("Read tel metadata for tel_id: {}", metadata_list.ident);
+        while(metadata_list.first) {
+            tel_metadata[metadata_list.ident][metadata_list.first->name] = metadata_list.first->value;
+            metadata_list.first = metadata_list.first->next;
         }
-        read_block();
     }
-    SPDLOG_DEBUG("End read metadata block");
 }
-void SimtelFileHandler::read_telescope_settings() {
-    SPDLOG_DEBUG("Begin read telescope settings block");
-    read_block();
-    while(item_header.type == IO_TYPE_SIMTEL_CAMSETTINGS) 
-    {
-        read_camera_settings();
-        read_camera_organisation();
-        read_pixel_settings();
-        read_pixel_disabled();
-        read_camera_software_settings();
-        read_tracking_settings();
-        read_pointing_corrections();
-        read_block();
-    }
-    // Next block have been read already
-    SPDLOG_DEBUG("End read telescope settings block");
-}
-void SimtelFileHandler::read_runheader() {
-    SPDLOG_DEBUG("Read runheader block");
-    while(item_header.type != IO_TYPE_SIMTEL_RUNHEADER) {
-        SPDLOG_DEBUG("Skip block type: {}", item_header.type);
-        read_block();
-    }
+void SimtelFileHandler::_read_runheader() {
+    LOG_SCOPE("handle runheader block")
     if(read_simtel_runheader(iobuf, &hsdata->run_header) < 0) {
         spdlog::error("Failed to read runheader");
         throw std::runtime_error("Failed to read runheader");
@@ -181,195 +203,147 @@ void SimtelFileHandler::read_runheader() {
         hsdata->tel_lascal[itel].tel_id = tel_id;
 
     }
-    SPDLOG_DEBUG("End read runheader block");
-
 }
-void SimtelFileHandler::read_mcrunheader() {
-    SPDLOG_DEBUG("Read mcrunheader block");
-    while(item_header.type != IO_TYPE_SIMTEL_MCRUNHEADER) {
-        SPDLOG_DEBUG("Skip block type: {}", item_header.type);
-        read_block();
-    }
+void SimtelFileHandler::_read_mcrunheader() {
+    LOG_SCOPE("handle mcrunheader block");
     if(read_simtel_mcrunheader(iobuf, &hsdata->mc_run_header) < 0) {
         spdlog::error("Failed to read mcrunheader");
         throw std::runtime_error("Failed to read mcrunheader");
     }
-    SPDLOG_DEBUG("End read mcrunheader block");
 }
-void SimtelFileHandler::read_atmosphere() {
-    SPDLOG_DEBUG("Read atmosphere block");
-    atmprof = get_common_atmprof();
-    while(item_header.type != IO_TYPE_MC_ATMPROF) {
-        SPDLOG_DEBUG("Skip block type: {}", item_header.type);
-        read_block();
-    }
+void SimtelFileHandler::_read_atmosphere() {
+    LOG_SCOPE("handle atmosphere block");
     if(read_atmprof(iobuf, atmprof) != 0) {
         spdlog::error("Failed to read atmosphere");
         throw std::runtime_error("Failed to read atmosphere");
     }
-    SPDLOG_DEBUG("End read atmosphere block");
 }
 /**
  * @brief Camera settings is the first item in telescope settings block, we need handle it before others
  * 
  */
-void SimtelFileHandler::read_camera_settings() {
-    SPDLOG_DEBUG("Read camera settings block");
+void SimtelFileHandler::_read_camera_settings() {
+    LOG_SCOPE("Read camera settings block");
     // For camera setting, we need read block before call read_simtel_camsettings
-    assert(item_header.type == IO_TYPE_SIMTEL_CAMSETTINGS);
     int tel_id = item_header.ident;
     spdlog::debug("Read camera settings for tel_id: {}", tel_id);
-    auto it = tel_id_to_index.find(tel_id);
-    if(it == tel_id_to_index.end()) {
+    auto it = get_tel_index(tel_id);
+    if(!it) {
         SPDLOG_WARN("Skip telescope settings for tel_id: {}", tel_id);
         return;
     }
-    int itel = it->second;
+    int itel = it.value();
     //memset(&hsdata->camera_set[itel], 0, sizeof(CameraSettings));
     if(read_simtel_camsettings(iobuf, &hsdata->camera_set[itel]) < 0) {
         spdlog::error("Failed to read camera settings");
         throw std::runtime_error("Failed to read camera settings");
     }
-    SPDLOG_DEBUG("End read camera settings block");
-
 }
-void SimtelFileHandler::read_camera_organisation() {
-    SPDLOG_DEBUG("Read camera organisation block");
-    while(item_header.type != IO_TYPE_SIMTEL_CAMORGAN) {
-        SPDLOG_DEBUG("Skip block type: {}", item_header.type);
-        read_block();
-    }
+void SimtelFileHandler::_read_camera_organisation() {
+    LOG_SCOPE("Read camera organisation block");
     int tel_id = item_header.ident;
     spdlog::debug("Read camera organisation for tel_id: {}", tel_id);
-    auto it = tel_id_to_index.find(tel_id);
-    if(it == tel_id_to_index.end()) {
+    auto it = get_tel_index(tel_id);
+    if(!it) {
         SPDLOG_WARN("Skip camera organisation for tel_id: {}", tel_id);
         return;
     }
-    int itel = it->second;
+    int itel = it.value();
     if(read_simtel_camorgan(iobuf, &hsdata->camera_org[itel]) < 0) {
         spdlog::error("Failed to read camera organisation");
         throw std::runtime_error("Failed to read camera organisation");
     }
-    SPDLOG_DEBUG("End read camera organisation block");
 }
-void SimtelFileHandler::read_pixel_settings() {
-    SPDLOG_DEBUG("Read pixel settings block");
-    while(item_header.type != IO_TYPE_SIMTEL_PIXELSET) {
-        SPDLOG_DEBUG("Skip block type: {}", item_header.type);
-        read_block();
-    }
+void SimtelFileHandler::_read_pixel_settings() {
+    LOG_SCOPE("Read pixel settings block");
     int tel_id = item_header.ident;
     spdlog::debug("Read pixel settings for tel_id: {}", tel_id);
-    auto it = tel_id_to_index.find(tel_id);
-    if(it == tel_id_to_index.end()) {
+    auto it = get_tel_index(tel_id);
+    if(!it) {
         SPDLOG_WARN("Skip pixel settings for tel_id: {}", tel_id);
         return;
     }
-    int itel = it->second;
+    int itel = it.value();
     if(read_simtel_pixelset(iobuf, &hsdata->pixel_set[itel]) < 0) {
         spdlog::error("Failed to read pixel settings");
         throw std::runtime_error("Failed to read pixel settings");
     }   
-    SPDLOG_DEBUG("End read pixel settings block");
 }
-void SimtelFileHandler::read_pixel_disabled() {
-    SPDLOG_DEBUG("Read pixel disabled block");
-    while(item_header.type != IO_TYPE_SIMTEL_PIXELDISABLE) {
-        SPDLOG_DEBUG("Skip block type: {}", item_header.type);
-        read_block();
-    }
+void SimtelFileHandler::_read_pixel_disabled() {
+    LOG_SCOPE("Read pixel disabled block");
     int tel_id = item_header.ident;
     spdlog::debug("Read pixel disabled for tel_id: {}", tel_id);
-    auto it = tel_id_to_index.find(tel_id);
-    if(it == tel_id_to_index.end()) {
+    auto it = get_tel_index(tel_id);
+    if(!it) {
         SPDLOG_WARN("Skip pixel disabled for tel_id: {}", tel_id);
         return;
     }
-    int itel = it->second;
+    int itel = it.value();
     if(read_simtel_pixeldis(iobuf, &hsdata->pixel_disabled[itel]) < 0) {
         spdlog::error("Failed to read pixel disabled");
         throw std::runtime_error("Failed to read pixel disabled");
     }
-    SPDLOG_DEBUG("End read pixel disabled block");
 }
 
-void SimtelFileHandler::read_camera_software_settings() {
-    SPDLOG_DEBUG("Read camera software settings block");
-    while(item_header.type != IO_TYPE_SIMTEL_CAMSOFTSET) {
-        SPDLOG_DEBUG("Skip block type: {}", item_header.type);
-        read_block();
-    }
+void SimtelFileHandler::_read_camera_software_settings() {
+    LOG_SCOPE("Read camera software settings block");
     int tel_id = item_header.ident;
     spdlog::debug("Read camera software settings for tel_id: {}", tel_id);
-    auto it = tel_id_to_index.find(tel_id);
-    if(it == tel_id_to_index.end()) {
+    auto it = get_tel_index(tel_id);
+    if(!it) {
         SPDLOG_WARN("Skip camera software settings for tel_id: {}", tel_id);
         return;
     }
-    int itel = it->second;
+    int itel = it.value();
     if(read_simtel_camsoftset(iobuf, &hsdata->cam_soft_set[itel]) < 0) {
         spdlog::error("Failed to read camera software settings");
         throw std::runtime_error("Failed to read camera software settings");
     }
-    SPDLOG_DEBUG("End read camera software settings block");
 }
 
-void SimtelFileHandler::read_pointing_corrections() {
-    SPDLOG_DEBUG("Read pointing corrections block");
-    while(item_header.type != IO_TYPE_SIMTEL_POINTINGCOR) {
-        SPDLOG_DEBUG("Skip block type: {}", item_header.type);
-        read_block();
-    }
+void SimtelFileHandler::_read_pointing_corrections() {
+    LOG_SCOPE("Read pointing corrections block");
     int tel_id = item_header.ident;
     spdlog::debug("Read pointing corrections for tel_id: {}", tel_id);
-    auto it = tel_id_to_index.find(tel_id);
-    if(it == tel_id_to_index.end()) {
+    auto it = get_tel_index(tel_id);
+    if(!it) {
         SPDLOG_WARN("Skip pointing corrections for tel_id: {}", tel_id);
         return;
     }
-    int itel = it->second;
+    int itel = it.value();
     if(read_simtel_pointingcor(iobuf, &hsdata->point_cor[itel]) < 0) {
         spdlog::error("Failed to read pointing corrections");
         throw std::runtime_error("Failed to read pointing corrections");
     }
-    SPDLOG_DEBUG("End read pointing corrections block");
 }
 
-void SimtelFileHandler::read_tracking_settings() {
-    SPDLOG_DEBUG("Read tracking settings block");
-    while(item_header.type != IO_TYPE_SIMTEL_TRACKSET) {
-        SPDLOG_DEBUG("Skip block type: {}", item_header.type);
-        read_block();
-    }
+void SimtelFileHandler::_read_tracking_settings() {
+    LOG_SCOPE("Read tracking settings block");
     int tel_id = item_header.ident;
     spdlog::debug("Read tracking settings for tel_id: {}", tel_id);
-    auto it = tel_id_to_index.find(tel_id);
-    if(it == tel_id_to_index.end()) {
+    auto it = get_tel_index(tel_id);
+    if(!it) {
         SPDLOG_WARN("Skip tracking settings for tel_id: {}", tel_id);
         return;
     }
-    int itel = it->second;
+    int itel = it.value();
     if(read_simtel_trackset(iobuf, &hsdata->tracking_set[itel]) < 0) {
         spdlog::error("Failed to read tracking settings");
         throw std::runtime_error("Failed to read tracking settings");
     }
-    SPDLOG_DEBUG("End read tracking settings block");
 }
 bool SimtelFileHandler::is_subarray_selected(int tel_id) {
     if(allowed_tels.empty()) return true;
     return std::find(allowed_tels.begin(), allowed_tels.end(), tel_id) != allowed_tels.end();
 }
 
-void SimtelFileHandler::read_mc_shower() {
-    SPDLOG_DEBUG("Read mc shower block");
+void SimtelFileHandler::_read_mc_shower() {
+    LOG_SCOPE("Read mc shower block");
     // Cause we may need skip some blocks before read mc shower
-    while(item_header.type != IO_TYPE_SIMTEL_MC_SHOWER) {
-        if(no_more_blocks) return;
-        read_block();
-        // Use warnning before finishing reading the events block
-        //spdlog::warn("Skip block type: {}", item_header.type);
-    }
+    read_until_block(BlockType::Mc_Shower);
+    read_block();
+    // Use warnning before finishing reading the events block
+    //spdlog::warn("Skip block type: {}", item_header.type);
     int run_id = item_header.ident;
     spdlog::debug("Read mc shower for run_id: {}", run_id);
     if(read_simtel_mc_shower(iobuf, &hsdata->mc_shower) != 0) {
@@ -377,10 +351,9 @@ void SimtelFileHandler::read_mc_shower() {
         throw std::runtime_error("Failed to read mc shower");
     }
     read_block();
-    SPDLOG_DEBUG("End read mc shower block");
 }
 
-void SimtelFileHandler::read_mc_event() {
+void SimtelFileHandler::_read_mc_event() {
     assert(item_header.type == IO_TYPE_SIMTEL_MC_EVENT);
     int event_id = item_header.ident;
     spdlog::debug("Read mc event for event_id: {}", event_id);
@@ -390,7 +363,8 @@ void SimtelFileHandler::read_mc_event() {
     }
     read_block();
 }
-void SimtelFileHandler::read_true_image() {
+/*
+void SimtelFileHandler::_read_true_image() {
     if(item_header.type == IO_TYPE_MC_TELARRAY)
     {
         if(!have_true_image)
@@ -408,6 +382,7 @@ void SimtelFileHandler::read_true_image() {
         return;
     }
 }
+*/
 int SimtelFileHandler::_read_simtel_mc_phot(IO_BUFFER* iobuf, MCEvent* mce) {
      
    int iarray=0, itel=0, itel_pe=0, tel_id=0, jtel=0, type, nbunches=0, max_bunches=0, flags=0;
@@ -595,12 +570,50 @@ int SimtelFileHandler::_read_simtel_mc_phot(IO_BUFFER* iobuf, MCEvent* mce) {
    
    return end_read_tel_array(iobuf, &item_header);
 }
+void SimtelFileHandler::handle_history() {
+    handle_block<BlockType::History>("history",[this]() {_read_history();});
+}
+void SimtelFileHandler::handle_metadata() {
+    handle_block<BlockType::MetaParam>("metadata",[this]() {_read_metadata();});
+}
+void SimtelFileHandler::handle_runheader() {
+    handle_block<BlockType::RunHeader>("runheader",[this]() {_read_runheader();});
+}
+void SimtelFileHandler::handle_mcrunheader() {
+    handle_block<BlockType::MC_RunHeader>("mcrunheader",[this]() {_read_mcrunheader();});
+}
+void SimtelFileHandler::handle_atmosphere() {
+    handle_block<BlockType::Atmosphere>("atmosphere",[this]() {_read_atmosphere();});
+}
+void SimtelFileHandler::handle_camera_settings() {
+    handle_block<BlockType::CameraSettings>("camera_settings",[this]() {_read_camera_settings();});
+}
+void SimtelFileHandler::handle_camera_organisation() {
+    handle_block<BlockType::CameraOrganisation>("camera_organisation",[this]() {_read_camera_organisation();});
+}
+void SimtelFileHandler::handle_pixel_settings() {
+    handle_block<BlockType::PixelSettings>("pixel_settings",[this]() {_read_pixel_settings();});
+}
+void SimtelFileHandler::handle_pixel_disabled() {
+    handle_block<BlockType::PixelDisabled>("pixel_disabled",[this]() {_read_pixel_disabled();});
+}
+void SimtelFileHandler::handle_camera_software_settings() {
+    handle_block<BlockType::CameraSoftwareSettings>("camera_software_settings",[this]() {_read_camera_software_settings();});
+}
+void SimtelFileHandler::handle_pointing_corrections() {
+    handle_block<BlockType::PointingCorrections>("pointing_corrections",[this]() {_read_pointing_corrections();});
+}
+void SimtelFileHandler::handle_tracking_settings() {
+    handle_block<BlockType::TrackingSettings>("tracking_settings",[this]() {_read_tracking_settings();});
+}
+/*
 void SimtelFileHandler::load_next_event() {
     read_mc_shower();
     if(no_more_blocks) return;
     read_mc_event();
     read_true_image();
 }
+*/
 SimtelFileHandler::~SimtelFileHandler() {
     if(iobuf != NULL) {
         free_io_buffer(iobuf);
