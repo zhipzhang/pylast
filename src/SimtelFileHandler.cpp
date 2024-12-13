@@ -23,7 +23,7 @@ Finally<Func> finally(Func func) { return {func}; }
 
 const std::string ihep_url = "root://eos01.ihep.ac.cn/";
 using std::string;
-SimtelFileHandler::SimtelFileHandler(const std::string& filename, std::vector<int> subarray) : filename(filename), allowed_tels(subarray) {
+SimtelFileHandler::SimtelFileHandler(const std::string& filename) : filename(filename) {
     SPDLOG_TRACE("SimtelFileHandler constructor ");
     if((iobuf = allocate_io_buffer(5000000L)) == NULL) {
         throw std::runtime_error("Cannot allocate I/O buffer");
@@ -34,6 +34,7 @@ SimtelFileHandler::SimtelFileHandler(const std::string& filename, std::vector<in
     if(hsdata == NULL) {
         throw std::runtime_error("Cannot allocate memory for hsdata");
     }
+    item_header = {0, 0, 0, 0, 0, 0, 0};
     history_container = {1, NULL, NULL, NULL, 0};
     metadata_list = {-1, NULL};
     atmprof = get_common_atmprof();
@@ -56,6 +57,13 @@ void SimtelFileHandler::initilize_block_handler() {
     block_handler[BlockType::CameraSoftwareSettings] = [this](){handle_camera_software_settings();};
     block_handler[BlockType::PointingCorrections] = [this](){handle_pointing_corrections();};
     block_handler[BlockType::TrackingSettings] = [this](){handle_tracking_settings();};
+    block_handler[BlockType::Mc_Shower] = [this](){handle_mc_shower();};
+    block_handler[BlockType::Mc_Event] = [this](){handle_mc_event();};
+    block_handler[BlockType::LaserCalibration] = [this](){handle_laser_calibration();};
+    block_handler[BlockType::PixelMonitor] = [this](){handle_pixel_monitor();};
+    block_handler[BlockType::TelescopeMonitor] = [this](){handle_telescope_monitor();};
+    block_handler[BlockType::TrueImage] = [this](){handle_true_image();};
+    block_handler[BlockType::SimtelEvent] = [this](){handle_simtel_event();};
 }
 
 void SimtelFileHandler::open_file(const std::string& filename) {
@@ -91,33 +99,81 @@ std::optional<int> SimtelFileHandler::get_tel_index (int tel_id) const
     }
     return it->second;
 }
-void SimtelFileHandler::read_block() {
+void SimtelFileHandler::find_block() {
+    if(no_more_blocks) return;
     if(find_io_block(iobuf, &item_header) != 0) {
         SPDLOG_DEBUG("No more blocks");
         no_more_blocks = true;
         return;
     }
-    if(read_io_block(iobuf, &item_header) != 0) {
-        spdlog::error("Failed to read IO block");
-        throw std::runtime_error("Failed to read IO block");
+}
+void SimtelFileHandler::skip_block() {
+    if(no_more_blocks) return;
+    if(skip_io_block(iobuf, &item_header) != 0) {
+        throw std::runtime_error("Failed to skip block");
     }
 }
+void SimtelFileHandler::read_block() {
+    if(no_more_blocks) return;
+    if(read_io_block(iobuf, &item_header) != 0) {
+        throw std::runtime_error("Failed to read block");
+    }
+}
+/**
+ * @brief Read until the block type is the same as the input block type, after call this function,
+ * must handle the block manually
+ * 
+ * @param block_type 
+ */
 void SimtelFileHandler::read_until_block(BlockType block_type) {
+    find_block();
     while(item_header.type != static_cast<unsigned long>(block_type)) {
         if(no_more_blocks) return;
-        read_block();
         if(block_handler.find(static_cast<BlockType>(item_header.type)) != block_handler.end())
         {
+            read_block();
             block_handler[static_cast<BlockType>(item_header.type)]();
         }
         else 
         {
             spdlog::warn("No handler for block type: {}", item_header.type);
+            skip_block();
         }
+        find_block();
     }
+    return;
+}
+void SimtelFileHandler::only_read_blocks(std::vector<BlockType> block_types) {
+    if(block_types.empty() || no_more_blocks) return;
+    find_block();
+    while(!no_more_blocks) {
+        if(std::find(block_types.begin(), block_types.end(), static_cast<BlockType>(item_header.type)) != block_types.end()) {
+            read_block();
+            block_handler[static_cast<BlockType>(item_header.type)]();
+            if(item_header.type == static_cast<unsigned long>(block_types.front())) {
+                return;
+            }
+        }
+        else {
+            skip_block();
+        }
+        find_block();
+    }
+}
+bool SimtelFileHandler::only_read_mc_event() {
+    only_read_blocks({BlockType::Mc_Event, BlockType::Mc_Shower});
+    if(no_more_blocks) return false;
+    return true;
 }
 void SimtelFileHandler::read_until_event() {
     read_until_block(BlockType::Mc_Shower);
+    read_block();
+    block_handler[BlockType::Mc_Shower](); // handle mc shower block after read_util
+}
+void SimtelFileHandler::load_next_event() {
+    read_until_block(BlockType::SimtelEvent);
+    read_block();
+    block_handler[BlockType::SimtelEvent](); // handle simtel event block after read_util
 }
 void SimtelFileHandler::_read_history() {
     LOG_SCOPE("handle history block")
@@ -157,11 +213,6 @@ void SimtelFileHandler::_read_runheader() {
     }
         for(auto itel = 0; itel < hsdata->run_header.ntel; itel++)
     {
-        if(!is_subarray_selected(hsdata->run_header.tel_id[itel])) 
-        {
-            SPDLOG_DEBUG("Skip telescope id: {} in runheader", hsdata->run_header.tel_id[itel]);
-            continue;
-        }
         int tel_id = hsdata->run_header.tel_id[itel];
         spdlog::info("Initialize telescope id: {}", tel_id);
         tel_id_to_index[tel_id] = itel;
@@ -332,243 +383,93 @@ void SimtelFileHandler::_read_tracking_settings() {
         throw std::runtime_error("Failed to read tracking settings");
     }
 }
-bool SimtelFileHandler::is_subarray_selected(int tel_id) {
-    if(allowed_tels.empty()) return true;
-    return std::find(allowed_tels.begin(), allowed_tels.end(), tel_id) != allowed_tels.end();
-}
 
 void SimtelFileHandler::_read_mc_shower() {
     LOG_SCOPE("Read mc shower block");
-    // Cause we may need skip some blocks before read mc shower
-    read_until_block(BlockType::Mc_Shower);
-    read_block();
-    // Use warnning before finishing reading the events block
-    //spdlog::warn("Skip block type: {}", item_header.type);
     int run_id = item_header.ident;
     spdlog::debug("Read mc shower for run_id: {}", run_id);
     if(read_simtel_mc_shower(iobuf, &hsdata->mc_shower) != 0) {
         spdlog::error("Failed to read mc shower");
         throw std::runtime_error("Failed to read mc shower");
     }
-    read_block();
 }
 
 void SimtelFileHandler::_read_mc_event() {
-    assert(item_header.type == IO_TYPE_SIMTEL_MC_EVENT);
     int event_id = item_header.ident;
     spdlog::debug("Read mc event for event_id: {}", event_id);
     if(read_simtel_mc_event(iobuf, &hsdata->mc_event) != 0) {
         spdlog::error("Failed to read mc event");
         throw std::runtime_error("Failed to read mc event");
     }
-    read_block();
 }
-/*
-void SimtelFileHandler::_read_true_image() {
-    if(item_header.type == IO_TYPE_MC_TELARRAY)
-    {
-        if(!have_true_image)
-        {
-            have_true_image = true;
-        }
-        spdlog::debug("Reading true image for tel_id: {}", item_header.ident + 1);
-        if(_read_simtel_mc_phot(iobuf, &hsdata->mc_event) < 0) {
-            spdlog::error("Failed to read true image");
-            throw std::runtime_error("Failed to read true image");
-        }
-    }
-    else{
-        spdlog::debug("No true image block in the file");
+void SimtelFileHandler::_read_pixel_monitor() {
+    LOG_SCOPE("Read pixel monitor block");
+    int tel_id = item_header.ident;
+    spdlog::debug("Read pixel monitor for tel_id: {}", tel_id);
+    auto it = get_tel_index(tel_id);
+    if(!it) {
+        SPDLOG_WARN("Skip pixel monitor for tel_id: {}", tel_id);
         return;
     }
+    int itel = it.value();
+    if(read_simtel_mc_pixel_moni(iobuf, &hsdata->mcpixmon[itel]) != 0) {
+        spdlog::error("Failed to read pixel monitor");
+        throw std::runtime_error("Failed to read pixel monitor");
+    }
 }
-*/
-int SimtelFileHandler::_read_simtel_mc_phot(IO_BUFFER* iobuf, MCEvent* mce) {
-     
-   int iarray=0, itel=0, itel_pe=0, tel_id=0, jtel=0, type, nbunches=0, max_bunches=0, flags=0;
-   int npe=0, pixels=0, max_npe=0;
-   int rc;
-   double photons=0.;
-   IO_ITEM_HEADER item_header;
-   if ( (rc = begin_read_tel_array(iobuf, &item_header, &iarray)) < 0 )
-      return rc;
-   while ( (type = next_subitem_type(iobuf)) > 0 )
-   {
-      switch (type)
-      {
-         case IO_TYPE_MC_PHOTONS:
-            /* The purpose of this first call to read_tel_photons is only
-               to retrieve the array and telescope numbers (the original offset
-               number without ignored telescopes, basically telescope ID minus one), etc. */
-            /* With a NULL pointer argument, we expect rc = -10 */
-            rc = read_tel_photons(iobuf, 0, &iarray, &itel_pe, &photons,
-                  NULL, &nbunches);
-            if ( rc != -10 )
-            {
-               get_item_end(iobuf,&item_header);
-               return -1;
-            }
-            tel_id = itel_pe + 1;
-            itel = find_tel_idx(tel_id);
-            if ( itel < 0 || itel >= H_MAX_TEL )
-            {
-               Warning("Invalid telescope number in MC photons");
-               get_item_end(iobuf,&item_header);
-               return -1;
-            }
-            if ( nbunches > mce->mc_photons[itel].max_bunches || 
-                 (nbunches < mce->mc_photons[itel].max_bunches/4 &&
-                 mce->mc_photons[itel].max_bunches > 10000) ||
-                 mce->mc_photons[itel].bunches == NULL )
-            {
-               if ( mce->mc_photons[itel].bunches != NULL )
-                  free(mce->mc_photons[itel].bunches);
-               if ( (mce->mc_photons[itel].bunches = (struct bunch *)
-                    calloc(nbunches,sizeof(struct bunch))) == NULL )
-               {
-                  mce->mc_photons[itel].max_bunches = 0;
-                  get_item_end(iobuf,&item_header);
-                  return -4;
-               }
-               mce->mc_photons[itel].max_bunches = max_bunches = nbunches;
-            }
-            else
-               max_bunches = mce->mc_photons[itel].max_bunches;
-
-            /* Now really get the photon bunches */
-            rc = read_tel_photons(iobuf, max_bunches, &iarray, &jtel, 
-               &photons, mce->mc_photons[itel].bunches, &nbunches);
-
-            if ( rc < 0 )
-            {
-               mce->mc_photons[itel].nbunches = 0;
-               get_item_end(iobuf,&item_header);
-               return rc;
-            }
-            else
-               mce->mc_photons[itel].nbunches = nbunches;
-
-            if ( jtel != itel )
-            {
-               Warning("Inconsistent telescope number for MC photons");
-               get_item_end(iobuf,&item_header);
-               return -5;
-            }
-            break;
-         case IO_TYPE_MC_PE:
-            /* The purpose of this first call to read_photo_electrons is only
-               to retrieve the array and telescope offset numbers (the original offset
-               number without ignored telescopes, basically telescope ID minus one), 
-               the number of p.e.s and pixels etc. */
-            /* Here we expect as well rc = -10 */
-            rc = read_photo_electrons(iobuf, H_MAX_PIX, 0, &iarray, &itel_pe,
-                  &npe, &pixels, &flags, NULL, NULL, NULL, NULL, NULL);
-            if ( rc != -10 )
-            {
-               get_item_end(iobuf,&item_header);
-               return -1;
-            }
-            /* The itel_pe value may differ from the itel index value that we
-               are looking for if the telescope simulation had ignored telescopes.
-               This can be fixed but still assumes that base_telescope_number = 1
-               was used - as all known simulations do. */
-            tel_id = itel_pe + 1; /* Also note: 1 <= tel_id <= 1000 */
-            if(is_subarray_selected(tel_id)) {
-                itel = tel_id_to_index[tel_id];
-            }
-            else {
-                spdlog::debug("Skip mc photons_electrons for tel_id: {}", tel_id);
-                skip_subitem(iobuf);
-            }
-            if ( itel < 0 || itel >= H_MAX_TEL )
-            {
-               Warning("Invalid telescope number in MC photons");
-               get_item_end(iobuf,&item_header);
-               return -1;
-            }
-            if ( pixels > H_MAX_PIX )
-            {
-               Warning("Invalid number of pixels in MC photons");
-               get_item_end(iobuf,&item_header);
-               return -1;
-            }
-            /* If the current p.e. list buffer is too small or
-               non-existent or if it is unnecessarily large, 
-               we (re-) allocate a p.e. list buffer for p.e. times
-               and, if requested, for amplitudes. */
-            if ( npe > mce->mc_pe_list[itel].max_npe || 
-                 (npe < mce->mc_pe_list[itel].max_npe/4 && 
-                 mce->mc_pe_list[itel].max_npe > 20000) ||
-                 mce->mc_pe_list[itel].atimes == NULL ||
-                 (mce->mc_pe_list[itel].amplitudes == NULL && (flags&1) != 0) )
-            {
-               if ( mce->mc_pe_list[itel].atimes != NULL )
-                  free(mce->mc_pe_list[itel].atimes);
-               if ( (mce->mc_pe_list[itel].atimes = (double *)
-                    calloc(npe>0?npe:1,sizeof(double))) == NULL )
-               {
-                  mce->mc_pe_list[itel].max_npe = 0;
-                  get_item_end(iobuf,&item_header);
-                  return -4;
-               }
-               if ( mce->mc_pe_list[itel].amplitudes != NULL )
-                  free(mce->mc_pe_list[itel].amplitudes);
-               /* If the amplitude bit in flags is set, also check for that part */
-               if ( (flags&1) != 0 )
-               {
-                  if ( (mce->mc_pe_list[itel].amplitudes = (double *)
-                       calloc(npe>0?npe:1,sizeof(double))) == NULL )
-                  {
-                     mce->mc_pe_list[itel].max_npe = 0;
-                     get_item_end(iobuf,&item_header);
-                     return -4;
-                  }
-               }
-               mce->mc_pe_list[itel].max_npe = max_npe = npe;
-            }
-            else
-               max_npe = mce->mc_pe_list[itel].max_npe;
-
-#ifdef STORE_PHOTO_ELECTRONS
-            rc = read_photo_electrons(iobuf, H_MAX_PIX, max_npe, 
-                  &iarray, &jtel, &npe, &pixels, &mce->mc_pe_list[itel].flags,
-                  mce->mc_pe_list[itel].pe_count, 
-                  mce->mc_pe_list[itel].itstart, 
-                  mce->mc_pe_list[itel].atimes,
-                  mce->mc_pe_list[itel].amplitudes,
-                  mce->mc_pe_list[itel].photon_count);
-#else
-            rc = read_photo_electrons(iobuf, H_MAX_PIX, max_npe, 
-                  &iarray, &jtel, &npe, &pixels, &mce->mc_pe_list[itel].flags,
-                  mce->mc_pe_list[itel].pe_count, 
-                  mce->mc_pe_list[itel].itstart, 
-                  mce->mc_pe_list[itel].atimes,
-                  mce->mc_pe_list[itel].amplitudes,
-                  NULL);
-#endif
-
-            mce->mc_pe_list[itel].pixels = pixels;
-
-            if ( rc < 0 )
-            {
-               mce->mc_pe_list[itel].npe = 0;
-               get_item_end(iobuf,&item_header);
-               return rc;
-            }
-            else
-            {
-               mce->mc_pe_list[itel].npe = npe;
-            }
-
-            break;
-         default:
-            fprintf(stderr,
-               "Fix me: unexpected item type %d in read_simtel_mc_phot()\n",type);
-            skip_subitem(iobuf);
-      }
-   }
-   
-   return end_read_tel_array(iobuf, &item_header);
+void SimtelFileHandler::_read_telescope_monitor() {
+    LOG_SCOPE("Read telescope monitor block");
+    int tel_id = item_header.ident;
+    spdlog::debug("Read telescope monitor for tel_id: {}", tel_id);
+    auto it = get_tel_index(tel_id);
+    if(!it) {
+        SPDLOG_WARN("Skip telescope monitor for tel_id: {}", tel_id);
+        return;
+    }
+    int itel = it.value();
+    if(read_simtel_tel_monitor(iobuf, &hsdata->tel_moni[itel]) != 0) {
+        spdlog::error("Failed to read telescope monitor");
+        throw std::runtime_error("Failed to read telescope monitor");
+    }
+}
+void SimtelFileHandler::_read_true_image() {
+    if(!have_true_image)
+    {
+        have_true_image = true;
+    }
+    LOG_SCOPE("Read true image block");
+    int event_id = item_header.ident;
+    spdlog::debug("Read true image for event_id: {}", event_id);
+    if(read_simtel_mc_phot(iobuf, &hsdata->mc_event) != 0) {
+        spdlog::error("Failed to read true image");
+        throw std::runtime_error("Failed to read true image");
+    }
+}
+void SimtelFileHandler::_read_laser_calibration() {
+    LOG_SCOPE("Read laser calibration block");
+    int tel_id = item_header.ident;
+    spdlog::debug("Read laser calibration for tel_id: {}", tel_id);
+    auto it = get_tel_index(tel_id);
+    if(!it) {
+        SPDLOG_WARN("Skip laser calibration for tel_id: {}", tel_id);
+        return;
+    }
+    int itel = it.value();
+    if(read_simtel_laser_calib(iobuf, &hsdata->tel_lascal[itel]) != 0) {
+        spdlog::error("Failed to read laser calibration");
+        throw std::runtime_error("Failed to read laser calibration");
+    }
+}
+void SimtelFileHandler::_read_simtel_event() {
+    LOG_SCOPE("Read simtel event block");
+    int event_id = item_header.ident;
+    spdlog::debug("Read simtel event for event_id: {}", event_id);
+    // One should known that all telescopes are read out here, 
+    // so we should skip afterwards
+    if(read_simtel_event(iobuf, &hsdata->event, -1) != 0) {
+        spdlog::error("Failed to read simtel event");
+        throw std::runtime_error("Failed to read simtel event");
+    }
 }
 void SimtelFileHandler::handle_history() {
     handle_block<BlockType::History>("history",[this]() {_read_history();});
@@ -605,6 +506,27 @@ void SimtelFileHandler::handle_pointing_corrections() {
 }
 void SimtelFileHandler::handle_tracking_settings() {
     handle_block<BlockType::TrackingSettings>("tracking_settings",[this]() {_read_tracking_settings();});
+}
+void SimtelFileHandler::handle_mc_shower() {
+    handle_block<BlockType::Mc_Shower>("mc_shower",[this]() {_read_mc_shower();});
+}
+void SimtelFileHandler::handle_mc_event() {
+    handle_block<BlockType::Mc_Event>("mc_event",[this]() {_read_mc_event();});
+}
+void SimtelFileHandler::handle_pixel_monitor() {
+    handle_block<BlockType::PixelMonitor>("pixel_monitor",[this]() {_read_pixel_monitor();});
+}
+void SimtelFileHandler::handle_telescope_monitor() {
+    handle_block<BlockType::TelescopeMonitor>("telescope_monitor",[this]() {_read_telescope_monitor();});
+}
+void SimtelFileHandler::handle_laser_calibration() {
+    handle_block<BlockType::LaserCalibration>("laser_calibration",[this]() {_read_laser_calibration();});
+}
+void SimtelFileHandler::handle_true_image() {
+    handle_block<BlockType::TrueImage>("true_image",[this]() {_read_true_image();});
+}
+void SimtelFileHandler::handle_simtel_event() {
+    handle_block<BlockType::SimtelEvent>("simtel_event",[this]() {_read_simtel_event();});
 }
 /*
 void SimtelFileHandler::load_next_event() {

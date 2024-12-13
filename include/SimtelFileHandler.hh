@@ -29,7 +29,7 @@ using History_List = std::vector<History_Entry>;
 class SimtelFileHandler {
     friend class SimtelEventSource;
 public:
-    SimtelFileHandler(const std::string& filename, std::vector<int> subarray = {});
+    SimtelFileHandler(const std::string& filename);
     SimtelFileHandler() = default;
     ~SimtelFileHandler();
     bool no_more_blocks = false;
@@ -40,11 +40,9 @@ private:
     IO_BUFFER* iobuf = nullptr;
     IO_ITEM_HEADER item_header;
     AllHessData* hsdata = nullptr;
-    std::vector<int> allowed_tels;
     std::unordered_map<int, int> tel_id_to_index;
     std::unordered_map<std::string, std::string> global_metadata;
     std::unordered_map<int, std::unordered_map<std::string, std::string>> tel_metadata;
-    bool is_subarray_selected(int tel_id);
     inline std::optional<int> get_tel_index(int tel_id) const;
     enum class BlockType {
         History = IO_TYPE_HISTORY,
@@ -62,6 +60,11 @@ private:
         TrackingEvent = IO_TYPE_SIMTEL_TRACKEVENT,
         Mc_Shower = IO_TYPE_SIMTEL_MC_SHOWER,
         Mc_Event = IO_TYPE_SIMTEL_MC_EVENT,
+        LaserCalibration = IO_TYPE_SIMTEL_LASCAL,
+        PixelMonitor = IO_TYPE_SIMTEL_MC_PIXMON,
+        TelescopeMonitor = IO_TYPE_SIMTEL_TEL_MONI,
+        TrueImage = IO_TYPE_MC_TELARRAY,
+        SimtelEvent = IO_TYPE_SIMTEL_EVENT,
     };
     void open_file(const std::string& filename);
     template<BlockType block_type>
@@ -90,6 +93,11 @@ private:
     void _read_telescope_settings();
     void _read_mc_shower();
     void _read_mc_event();
+    void _read_pixel_monitor();
+    void _read_telescope_monitor();
+    void _read_laser_calibration();
+    void _read_true_image();
+    void _read_simtel_event();
     //void load_next_event();
     void handle_history();
     void handle_metadata();
@@ -106,22 +114,23 @@ private:
     void handle_telescope_settings();
     void handle_mc_shower();
     void handle_mc_event();
+    void handle_pixel_monitor();
+    void handle_telescope_monitor();
+    void handle_laser_calibration();
     void handle_true_image();
+    void handle_simtel_event();
+    void find_block();
+    void skip_block();
     void read_block();
     void read_until_block(BlockType block_type);
+    void only_read_blocks(std::vector<BlockType> block_types);
+    bool only_read_mc_event();
+    void load_next_event();
     /**
-     * @brief read the file until the actual event
+     * @brief read the file until the actual shower
      * 
      */
     void read_until_event();
-    /**
-     * @brief In order to use an native skip function of telescope, we borrow the read_simtel_mc_phot function from io_hess.c and change a little bit.
-     * 
-     * @param iobuf 
-     * @param mce 
-     * @return int 
-     */
-    int _read_simtel_mc_phot(IO_BUFFER* iobuf, MCEvent* mce);
     AtmProf* atmprof;
     HistoryContainer history_container;
     MetaParamList metadata_list;

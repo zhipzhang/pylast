@@ -9,6 +9,9 @@
  * 
  */
 
+#pragma once
+#include <string>
+#include "spdlog/fmt/fmt.h"
  class SimulatedShower {
 public:
     /** @brief Default constructor */
@@ -34,5 +37,20 @@ public:
     double starting_grammage;
     /** @brief Primary particle ID number */
     int shower_primary_id;
-
+    const std::string print() const {
+        return fmt::format("SimulatedShower(\n"
+                         "    shower_primary_id={}\n"
+                         "    energy={} TeV,\n"
+                         "    alt={} deg,\n"
+                         "    az={} deg,\n" 
+                         "    core_x={} m,\n"
+                         "    core_y={} m,\n"
+                         "    h_first_int={} m,\n"
+                         "    x_max={} g/cm^2,\n"
+                         "    starting_grammage={} g/cm^2,\n"
+                         ")",
+                         shower_primary_id, energy, alt, az,
+                         core_x, core_y, h_first_int, x_max,
+                         starting_grammage);
+    }
  };

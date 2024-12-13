@@ -20,6 +20,8 @@
 #include "Metaparam.hh"
 #include "SubarrayDescription.hh"
 #include "ArrayEvent.hh"
+#include <optional>
+#include "SimulatedShowerArray.hh"
 using std::string;
 class EventSource
 {
@@ -77,10 +79,11 @@ public:
     std::vector<int> allowed_tels;
     TableAtmosphereModel atmosphere_model;
     Metaparam metaparam;
+    std::optional<SimulatedShowerArray> shower_array;   
     Iterator begin(){ return Iterator(this, 0);}
     Iterator end(){return Iterator(this, max_events);}
+    virtual void load_all_simulated_showers() = 0;
 protected:
-
     virtual bool is_finished() const = 0;
     virtual void init_simulation_config() = 0;
     //virtual void init_subarray() = 0;

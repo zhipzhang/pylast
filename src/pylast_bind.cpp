@@ -9,13 +9,16 @@
 #include "nanobind/stl/unordered_map.h"
 #include "nanobind/stl/pair.h"
 #include "nanobind/make_iterator.h"
+#include "nanobind/stl/optional.h"
 namespace nb = nanobind;
 void bind_subarray_description(nb::module_ &m);
 void bind_array_event(nb::module_ &m);
 void shutdown_logger();
+void bind_simulated_shower_array(nb::module_ &m);
 
 NB_MODULE(_pylast, m) {
     bind_array_event(m);
+    bind_simulated_shower_array(m);
     nb::class_<EventSource>(m, "EventSource")
             .def_ro("input_filename", &EventSource::input_filename)
             .def_ro("is_stream", &EventSource::is_stream)
@@ -25,6 +28,8 @@ NB_MODULE(_pylast, m) {
             .def_ro("atmosphere_model", &EventSource::atmosphere_model)
             .def_ro("metaparam", &EventSource::metaparam)
             .def_ro("subarray", &EventSource::subarray)
+            .def_ro("shower_array", &EventSource::shower_array)
+            .def("load_simulated_showers", &EventSource::load_all_simulated_showers)
             .def("__iter__",
                 [](EventSource &source) {
                     return nb::make_iterator<nb::rv_policy::reference_internal>(

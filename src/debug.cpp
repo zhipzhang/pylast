@@ -6,8 +6,5 @@
 int main(int argc, char** argv) {
     initialize_logger("debug", "debug.log");
     auto simtel_source = new SimtelEventSource(argv[1]);
-    for(auto& event: *simtel_source) {
-        spdlog::info("Event alt: {}", event.simulated_event.shower.alt);
-    }
-    
+    simtel_source->load_all_simulated_showers();
 }

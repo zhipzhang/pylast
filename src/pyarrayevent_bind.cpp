@@ -1,6 +1,8 @@
 #include "nanobind/nanobind.h"
 #include "ArrayEvent.hh"
-
+#include "SimulatedShowerArray.hh"
+#include "nanobind/eigen/dense.h"
+#include "nanobind/stl/string.h"
 namespace nb = nanobind;
 
 void bind_array_event(nb::module_ &m) {
@@ -25,5 +27,22 @@ void bind_array_event(nb::module_ &m) {
         .def_ro("h_first_int", &SimulatedShower::h_first_int)
         .def_ro("x_max", &SimulatedShower::x_max)
         .def_ro("starting_grammage", &SimulatedShower::starting_grammage)
-        .def_ro("shower_primary_id", &SimulatedShower::shower_primary_id);
+        .def_ro("shower_primary_id", &SimulatedShower::shower_primary_id)
+        .def("__repr__", &SimulatedShower::print);
+}
+void bind_simulated_shower_array(nb::module_ &m) {
+    nb::class_<SimulatedShowerArray>(m, "SimulatedShowerArray")
+        .def_prop_ro("size", &SimulatedShowerArray::size)
+        .def_prop_ro("energy", &SimulatedShowerArray::energy)
+        .def_prop_ro("alt", &SimulatedShowerArray::alt)
+        .def_prop_ro("az", &SimulatedShowerArray::az)
+        .def_prop_ro("core_x", &SimulatedShowerArray::core_x)
+        .def_prop_ro("core_y", &SimulatedShowerArray::core_y)
+        .def_prop_ro("h_first_int", &SimulatedShowerArray::h_first_int)
+        .def_prop_ro("x_max", &SimulatedShowerArray::x_max)
+        .def_prop_ro("starting_grammage", &SimulatedShowerArray::starting_grammage)
+        .def_prop_ro("shower_primary_id", &SimulatedShowerArray::shower_primary_id)
+        .def("__repr__", &SimulatedShowerArray::print)
+        .def("__getitem__", &SimulatedShowerArray::operator[])
+        .def("__len__", &SimulatedShowerArray::size);
 }

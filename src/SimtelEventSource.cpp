@@ -6,6 +6,7 @@
 #include "LACT_hessioxxx/include/io_basic.h"
 #include "LACT_hessioxxx/include/io_hess.h"
 #include "SimtelFileHandler.hh"
+#include "SimulatedShowerArray.hh"
 #include "spdlog/spdlog.h"
 #include "spdlog/fmt/fmt.h"
 #include <cassert>
@@ -16,7 +17,7 @@
 SimtelEventSource::SimtelEventSource(const std::string& filename, int64_t max_events, std::vector<int> subarray):
     EventSource(filename, max_events, subarray)
 {
-    simtel_file_handler = std::make_unique<SimtelFileHandler>(filename, subarray);
+    simtel_file_handler = std::make_unique<SimtelFileHandler>(filename);
     is_stream = true;
     init_metaparam();
     init_simulation_config();
@@ -41,17 +42,13 @@ void SimtelEventSource::init_subarray()
     //Mean we will read all telescopes in the file
     if(allowed_tels.empty())
     {
-        spdlog::debug("Set telescope settings for all telescopes");
         for(const auto& [tel_id, tel_index]: simtel_file_handler->tel_id_to_index) {
-            spdlog::debug("Set telescope settings for tel_id: {}", tel_id);
-            set_telescope_settings(tel_id);
+            allowed_tels.push_back(tel_id);
         }
     }
-    else
-    {
-        for(const auto& tel_id: allowed_tels) {
-            set_telescope_settings(tel_id);
-        }
+    std::sort(allowed_tels.begin(), allowed_tels.end());
+    for(const auto& tel_id: allowed_tels) {
+        set_telescope_settings(tel_id);
     }
 }
 void SimtelEventSource::set_simulation_config()
@@ -161,6 +158,28 @@ std::array<double, 3> SimtelEventSource::get_telescope_position(int tel_index)
     double tel_z = simtel_file_handler->hsdata->run_header.tel_pos[tel_index][2];
     return std::array<double, 3>{tel_x, tel_y, tel_z};
 }
+void SimtelEventSource::load_all_simulated_showers()
+{
+    // Normally, we will read 20 events per shower
+    shower_array = SimulatedShowerArray(simulation_config.n_showers * 20);
+    while(simtel_file_handler->only_read_mc_event()){
+        _load_simulated_shower();
+    }
+}
+void SimtelEventSource::_load_simulated_shower()
+{
+    SimulatedShower shower;
+    shower.energy = simtel_file_handler->hsdata->mc_shower.energy;
+    shower.alt = simtel_file_handler->hsdata->mc_shower.altitude;
+    shower.az = simtel_file_handler->hsdata->mc_shower.azimuth;
+    shower.core_x = simtel_file_handler->hsdata->mc_event.xcore;
+    shower.core_y = simtel_file_handler->hsdata->mc_event.ycore;
+    shower.h_first_int = simtel_file_handler->hsdata->mc_shower.h_first_int;
+    shower.x_max = simtel_file_handler->hsdata->mc_shower.xmax;
+    shower.starting_grammage = simtel_file_handler->hsdata->mc_shower.depth_start;
+    shower.shower_primary_id = simtel_file_handler->hsdata->mc_shower.primary_id;
+    shower_array->push_back(shower);
+}
 void SimtelEventSource::_load_next_events()
 {
     simtel_file_handler->load_next_event();
@@ -180,7 +199,8 @@ ArrayEvent SimtelEventSource::get_event()
     event.simulated_event.shower.starting_grammage = simtel_file_handler->hsdata->mc_shower.depth_start;
     if(simtel_file_handler->have_true_image)
     {
-        for(const auto& [tel_id, tel_index]: simtel_file_handler->tel_id_to_index) {
+        for(const auto& tel_id: allowed_tels) {
+            auto tel_index = simtel_file_handler->tel_id_to_index[tel_id];
             auto tel_position = subarray.tel_positions[tel_id];
             auto shower_core = std::array<double, 3>{event.simulated_event.shower.core_x, event.simulated_event.shower.core_y, 0};
             double cos_alt = cos(event.simulated_event.shower.alt);
