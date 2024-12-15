@@ -8,7 +8,7 @@ void initialize_logger(const std::string& log_level, const std::string& log_file
 void initialize_logger(const std::string& log_level, const std::string& log_file) {
     // Create async console sink
     auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-    console_sink->set_level(spdlog::level::err);
+    console_sink->set_level(spdlog::level::info);
     console_sink->set_pattern("[%^%l%$] %v");
     
     // Create thread pool

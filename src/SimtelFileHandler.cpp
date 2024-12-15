@@ -63,6 +63,7 @@ void SimtelFileHandler::initilize_block_handler() {
     block_handler[BlockType::PixelMonitor] = [this](){handle_pixel_monitor();};
     block_handler[BlockType::TelescopeMonitor] = [this](){handle_telescope_monitor();};
     block_handler[BlockType::TrueImage] = [this](){handle_true_image();};
+    block_handler[BlockType::MC_PESUM] = [this](){handle_mc_pesum();};
     block_handler[BlockType::SimtelEvent] = [this](){handle_simtel_event();};
 }
 
@@ -419,7 +420,8 @@ void SimtelFileHandler::_read_pixel_monitor() {
 }
 void SimtelFileHandler::_read_telescope_monitor() {
     LOG_SCOPE("Read telescope monitor block");
-    int tel_id = item_header.ident;
+    int tel_id = (item_header.ident & 0xff) | 
+                     ((item_header.ident & 0x3f000000) >> 16); 
     spdlog::debug("Read telescope monitor for tel_id: {}", tel_id);
     auto it = get_tel_index(tel_id);
     if(!it) {
@@ -458,6 +460,15 @@ void SimtelFileHandler::_read_laser_calibration() {
     if(read_simtel_laser_calib(iobuf, &hsdata->tel_lascal[itel]) != 0) {
         spdlog::error("Failed to read laser calibration");
         throw std::runtime_error("Failed to read laser calibration");
+    }
+}
+void SimtelFileHandler::_read_mc_pesum() {
+    LOG_SCOPE("Read mc pesum block");
+    int event_id = item_header.ident;
+    spdlog::debug("Read mc pesum for event_id: {}", event_id);
+    if(read_simtel_mc_pe_sum(iobuf, &hsdata->mc_event.mc_pesum) != 0) {
+        spdlog::error("Failed to read mc pesum");
+        throw std::runtime_error("Failed to read mc pesum");
     }
 }
 void SimtelFileHandler::_read_simtel_event() {
@@ -524,6 +535,9 @@ void SimtelFileHandler::handle_laser_calibration() {
 }
 void SimtelFileHandler::handle_true_image() {
     handle_block<BlockType::TrueImage>("true_image",[this]() {_read_true_image();});
+}
+void SimtelFileHandler::handle_mc_pesum() {
+    handle_block<BlockType::MC_PESUM>("mc_pesum",[this]() {_read_mc_pesum();});
 }
 void SimtelFileHandler::handle_simtel_event() {
     handle_block<BlockType::SimtelEvent>("simtel_event",[this]() {_read_simtel_event();});

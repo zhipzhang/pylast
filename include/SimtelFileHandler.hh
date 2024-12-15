@@ -27,14 +27,12 @@
 using History_Entry = std::pair<time_t, std::string>;
 using History_List = std::vector<History_Entry>;
 class SimtelFileHandler {
-    friend class SimtelEventSource;
 public:
     SimtelFileHandler(const std::string& filename);
     SimtelFileHandler() = default;
     ~SimtelFileHandler();
     bool no_more_blocks = false;
     bool have_true_image = false;
-private:
     std::string filename = "none";
     FILE* input_file = nullptr;
     IO_BUFFER* iobuf = nullptr;
@@ -64,6 +62,7 @@ private:
         PixelMonitor = IO_TYPE_SIMTEL_MC_PIXMON,
         TelescopeMonitor = IO_TYPE_SIMTEL_TEL_MONI,
         TrueImage = IO_TYPE_MC_TELARRAY,
+        MC_PESUM  = IO_TYPE_SIMTEL_MC_PE_SUM ,
         SimtelEvent = IO_TYPE_SIMTEL_EVENT,
     };
     void open_file(const std::string& filename);
@@ -78,6 +77,23 @@ private:
         }
     }
     void initilize_block_handler();
+    //void load_next_event();
+    void read_until_block(BlockType block_type);
+    void only_read_blocks(std::vector<BlockType> block_types);
+    bool only_read_mc_event();
+    void load_next_event();
+    /**
+     * @brief read the file until the actual shower
+     * 
+     */
+    void read_until_event();
+    AtmProf* atmprof;
+    HistoryContainer history_container;
+    MetaParamList metadata_list;
+private:
+    void find_block();
+    void skip_block();
+    void read_block();
     void _read_history();
     void _read_metadata();
     void _read_runheader();
@@ -97,8 +113,8 @@ private:
     void _read_telescope_monitor();
     void _read_laser_calibration();
     void _read_true_image();
+    void _read_mc_pesum();
     void _read_simtel_event();
-    //void load_next_event();
     void handle_history();
     void handle_metadata();
     void handle_runheader();
@@ -119,21 +135,6 @@ private:
     void handle_laser_calibration();
     void handle_true_image();
     void handle_simtel_event();
-    void find_block();
-    void skip_block();
-    void read_block();
-    void read_until_block(BlockType block_type);
-    void only_read_blocks(std::vector<BlockType> block_types);
-    bool only_read_mc_event();
-    void load_next_event();
-    /**
-     * @brief read the file until the actual shower
-     * 
-     */
-    void read_until_event();
-    AtmProf* atmprof;
-    HistoryContainer history_container;
-    MetaParamList metadata_list;
-
+    void handle_mc_pesum();
     std::unordered_map<BlockType, std::function<void()>> block_handler;
 };

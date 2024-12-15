@@ -3,6 +3,7 @@
 #include "SimulatedShowerArray.hh"
 #include "nanobind/eigen/dense.h"
 #include "nanobind/stl/string.h"
+#include "nanobind/stl/unordered_map.h"
 namespace nb = nanobind;
 
 void bind_array_event(nb::module_ &m) {
