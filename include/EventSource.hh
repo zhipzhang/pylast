@@ -65,20 +65,20 @@ public:
     };
     EventSource() = default;
     EventSource(const string& filename) : input_filename(filename) {}
-    EventSource(const string& filename, int64_t max_events , std::vector<int>& subarray ):input_filename(filename), max_events(max_events), allowed_tels(subarray) {}
+    EventSource(const string& filename, int64_t max_events , std::vector<int>& subarray , bool load_simulated_showers = false):input_filename(filename), max_events(max_events), allowed_tels(subarray), load_simulated_showers(load_simulated_showers) {}
     virtual ~EventSource() = default;
     string input_filename;
 
     /** @brief Whether the file is a stream(e.g. eos file system) */
     bool is_stream = false;
 
-    SimulationConfiguration simulation_config;
-    SubarrayDescription subarray;
+    std::optional<SimulationConfiguration> simulation_config;
+    std::optional<SubarrayDescription> subarray;
 
     int64_t max_events;
     std::vector<int> allowed_tels;
-    TableAtmosphereModel atmosphere_model;
-    Metaparam metaparam;
+    std::optional<TableAtmosphereModel> atmosphere_model;
+    std::optional<Metaparam> metaparam;
     std::optional<SimulatedShowerArray> shower_array;   
     Iterator begin(){ return Iterator(this, 0);}
     Iterator end(){return Iterator(this, max_events);}
@@ -92,5 +92,6 @@ protected:
     virtual void init_metaparam() = 0;
     virtual void init_subarray() = 0;
     bool is_subarray_selected(int tel_id) const;
+    bool load_simulated_showers;
 };
 

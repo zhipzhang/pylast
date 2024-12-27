@@ -40,7 +40,6 @@ SimtelFileHandler::SimtelFileHandler(const std::string& filename) : filename(fil
     atmprof = get_common_atmprof();
     initilize_block_handler();
     open_file(filename);
-    read_until_event();
     SPDLOG_TRACE("End read simtel file");
 }
 

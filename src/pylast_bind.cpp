@@ -40,7 +40,7 @@ NB_MODULE(_pylast, m) {
                 );
                 }, nb::keep_alive<0, 1>());
     nb::class_<SimtelEventSource, EventSource>(m, "SimtelEventSource")
-        .def(nb::init<const std::string&, int64_t, std::vector<int>>(), nb::arg("filename"), nb::arg("max_events") = -1, nb::arg("subarray")=std::vector<int>{})
+        .def(nb::init<const std::string&, int64_t, std::vector<int>, bool>(), nb::arg("filename"), nb::arg("max_events") = -1, nb::arg("subarray")=std::vector<int>{}, nb::arg("load_simulated_showers")=false)
         .def("__repr__", &SimtelEventSource::print);
     nb::class_<SimulationConfiguration>(m, "SimulationConfiguration")
             .def(nb::init<>())

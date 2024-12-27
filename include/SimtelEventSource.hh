@@ -20,7 +20,7 @@ class SimtelEventSource: public EventSource
 {
 public:
     SimtelEventSource() = default;
-    SimtelEventSource(const string& filename, int64_t max_events = -1 , std::vector<int> subarray = {});
+    SimtelEventSource(const string& filename, int64_t max_events = -1 , std::vector<int> subarray = {}, bool load_simulated_showers = false);
     virtual ~SimtelEventSource() = default;
     const std::string print() const;
     virtual void load_all_simulated_showers() override;
@@ -33,7 +33,6 @@ private:
     virtual bool is_finished() const override {return simtel_file_handler->no_more_blocks;}
     void set_simulation_config();
     void set_telescope_settings(int tel_id);
-    void _load_simulated_shower();
     ArrayEvent get_event() override;
     CameraGeometry get_telescope_camera_geometry(int tel_index);
     CameraReadout get_telescope_camera_readout(int tel_index);

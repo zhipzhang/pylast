@@ -21,6 +21,8 @@ public:
     TableAtmosphereModel(const std::string& filename):input_filename(filename){}
     TableAtmosphereModel(int n_alt, double* alt_km, double* rho, double* thick, double* refidx_m1);
     TableAtmosphereModel& operator=(TableAtmosphereModel&& other) noexcept;
+    TableAtmosphereModel(const TableAtmosphereModel& other) = default;
+    TableAtmosphereModel& operator=(const TableAtmosphereModel& other) = default;
   
    // double get_density(double altitude) const;
    // double get_thickness(double altitude) const;
