@@ -25,6 +25,7 @@ public:
     const std::string print() const;
     virtual void load_all_simulated_showers() override;
 private:
+    virtual void open_file() override;
     virtual void init_simulation_config() override;
     virtual void init_atmosphere_model() override;
     virtual void init_metaparam() override;

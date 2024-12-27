@@ -9,6 +9,8 @@
  * 
  */
 #include "SimulatedEvent.hh"
+#include <optional>
+
  class ArrayEvent {
 public:
     ArrayEvent() = default;
@@ -18,11 +20,13 @@ public:
 
     ArrayEvent(ArrayEvent&& other) noexcept = default;
     ArrayEvent& operator=(ArrayEvent&& other) noexcept = default;
-    SimulatedEvent simulated_event;
-
+    std::optional<SimulatedEvent> simulated_event;
     inline void add_simulated_camera_image(int tel_id, int n_pixels, int* pe_count, double impact_parameter) 
     {
-        simulated_event.cameras.emplace(tel_id, SimulatedCamera(n_pixels, pe_count, impact_parameter));
+        if (!simulated_event) {
+            simulated_event = SimulatedEvent();
+        }
+        simulated_event->cameras.emplace(tel_id, SimulatedCamera(n_pixels, pe_count, impact_parameter));
     }
 
 

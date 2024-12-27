@@ -50,7 +50,15 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         -Wmaybe-uninitialized # Warn about potentially uninitialized variables
     )
 endif()
-
-
+if(APPLE)
+    set(BASEPOINT @loader_path)
+else()
+    set(BASEPOINT $ORIGIN)
+endif()
+set(CMAKE_INSTALL_RPATH ${BASEPOINT} ${BASEPOINT}/${CMAKE_INSTALL_LIBDIR})
 add_subdirectory(src)
+
+if(WITH_TEST)
+    add_subdirectory(test)
+endif()
 

@@ -64,7 +64,7 @@ public:
             ArrayEvent event_;
     };
     EventSource() = default;
-    EventSource(const string& filename) : input_filename(filename) {}
+    EventSource(const string& filename) : input_filename(filename) {initialize();}
     EventSource(const string& filename, int64_t max_events , std::vector<int>& subarray , bool load_simulated_showers = false):input_filename(filename), max_events(max_events), allowed_tels(subarray), load_simulated_showers(load_simulated_showers) {}
     virtual ~EventSource() = default;
     string input_filename;
@@ -93,5 +93,23 @@ protected:
     virtual void init_subarray() = 0;
     bool is_subarray_selected(int tel_id) const;
     bool load_simulated_showers;
+    virtual void open_file() = 0;
+    void initialize() {
+    try{
+        open_file();
+        init_metaparam();
+        init_simulation_config();
+        init_atmosphere_model();
+        init_subarray();
+        if(load_simulated_showers){
+            load_all_simulated_showers();
+        }
+    } catch(const std::exception& e) {
+        throw std::runtime_error("Error initializing EventSource: " + std::string(e.what()));
+        }
+    }
+
 };
+
+
 
