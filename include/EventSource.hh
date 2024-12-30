@@ -35,11 +35,10 @@ public:
             using reference = ArrayEvent&;
             Iterator(EventSource* source, int position):source_(source), position_(position){
                 if(position == 0 && source_){
-                    event_ = std::move(source_->get_event());
+                    *source_->current_event = std::move(source_->get_event());
                 }
             }
-            const ArrayEvent& operator*() const {return event_;}
-            const ArrayEvent* operator->() const {return &event_;};
+            const ArrayEvent& operator*() const {return *source_->current_event;}
 
             bool operator==(const Iterator& other) const{
                 if (source_ && source_->is_finished()) {
@@ -53,15 +52,15 @@ public:
             Iterator& operator++()
             {
                 ++position_;
+                source_->current_event_index = position_;
                 if(source_ && !source_->is_finished() && (source_->max_events == -1 || position_ < source_->max_events)){
-                    event_ = std::move(source_->get_event());
+                    *source_->current_event = std::move(source_->get_event());
                 }
                 return *this;
             }
         private:
             EventSource* source_;
             int position_;
-            ArrayEvent event_;
     };
     EventSource() = default;
     EventSource(const string& filename) : input_filename(filename) {}
@@ -80,7 +79,15 @@ public:
     std::optional<TableAtmosphereModel> atmosphere_model;
     std::optional<Metaparam> metaparam;
     std::optional<SimulatedShowerArray> shower_array;   
-    Iterator begin(){ return Iterator(this, 0);}
+    std::optional<ArrayEvent> current_event;
+    int current_event_index = 0;
+    Iterator begin(){
+        if(!current_event){
+            current_event = ArrayEvent();
+        }
+        auto it =  Iterator(this, current_event_index);
+        return it;
+    }
     Iterator end(){return Iterator(this, max_events);}
     virtual void load_all_simulated_showers() = 0;
 protected:
