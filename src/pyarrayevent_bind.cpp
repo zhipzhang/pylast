@@ -4,11 +4,19 @@
 #include "nanobind/eigen/dense.h"
 #include "nanobind/stl/string.h"
 #include "nanobind/stl/unordered_map.h"
+#include "nanobind/stl/optional.h"
+#include "nanobind/stl/array.h"
 namespace nb = nanobind;
 
 void bind_array_event(nb::module_ &m) {
     nb::class_<ArrayEvent>(m, "ArrayEvent")
-        .def_ro("simulation", &ArrayEvent::simulated_event);
+        .def_ro("simulation", &ArrayEvent::simulated_event)
+        .def_ro("r0_event", &ArrayEvent::r0_event);
+    nb::class_<R0Event>(m, "R0Event")
+        .def_ro("tels", &R0Event::tels);
+    nb::class_<R0Camera>(m, "R0Camera")
+        .def_ro("waveform", &R0Camera::waveform)
+        .def_ro("waveform_sum", &R0Camera::waveform_sum);
     nb::class_<SimulatedEvent>(m, "SimulatedEvent")
         .def_ro("shower", &SimulatedEvent::shower)
         .def_ro("cameras", &SimulatedEvent::cameras);

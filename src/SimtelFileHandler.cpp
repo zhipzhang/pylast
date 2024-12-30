@@ -214,7 +214,7 @@ void SimtelFileHandler::_read_runheader() {
         for(auto itel = 0; itel < hsdata->run_header.ntel; itel++)
     {
         int tel_id = hsdata->run_header.tel_id[itel];
-        spdlog::info("Initialize telescope id: {}", tel_id);
+        spdlog::info("Initialize telescope id: {} for itel: {}", tel_id, itel);
         tel_id_to_index[tel_id] = itel;
         hsdata->camera_set[itel].tel_id = tel_id;
         hsdata->camera_org[itel].tel_id = tel_id;
@@ -240,14 +240,14 @@ void SimtelFileHandler::_read_runheader() {
             throw std::runtime_error("Failed to allocate memory for pixel timing data");
         }
         hsdata->event.teldata[itel].pixtm->tel_id = tel_id;
-        hsdata->event.teldata[itel].img = (ImgData*) calloc(1, sizeof(ImgData));
+        hsdata->event.teldata[itel].img = (ImgData*) calloc(2, sizeof(ImgData));
         if(hsdata->event.teldata[itel].img == NULL)
         {
             spdlog::error("Failed to allocate memory for image data");
             throw std::runtime_error("Failed to allocate memory for image data");
         }
         hsdata->event.teldata[itel].img->tel_id = tel_id;
-        hsdata->event.teldata[itel].max_image_sets = 0;
+        hsdata->event.teldata[itel].max_image_sets = 1;
         hsdata->event.teldata[itel].img[0].tel_id = tel_id;
         hsdata->event.teldata[itel].img[1].tel_id = tel_id;
         hsdata->tel_moni[itel].tel_id = tel_id;

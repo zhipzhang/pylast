@@ -64,7 +64,7 @@ public:
             ArrayEvent event_;
     };
     EventSource() = default;
-    EventSource(const string& filename) : input_filename(filename) {initialize();}
+    EventSource(const string& filename) : input_filename(filename) {}
     EventSource(const string& filename, int64_t max_events , std::vector<int>& subarray , bool load_simulated_showers = false):input_filename(filename), max_events(max_events), allowed_tels(subarray), load_simulated_showers(load_simulated_showers) {}
     virtual ~EventSource() = default;
     string input_filename;
@@ -86,7 +86,6 @@ public:
 protected:
     virtual bool is_finished() const = 0;
     virtual void init_simulation_config() = 0;
-    //virtual void init_subarray() = 0;
     virtual ArrayEvent get_event() = 0;
     virtual void init_atmosphere_model() = 0;
     virtual void init_metaparam() = 0;

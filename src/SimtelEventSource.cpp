@@ -200,6 +200,7 @@ ArrayEvent SimtelEventSource::get_event()
 {
     _load_next_events();
     ArrayEvent event;
+    event.simulated_event  = SimulatedEvent();
     event.simulated_event->shower.shower_primary_id = simtel_file_handler->hsdata->mc_shower.primary_id;
     event.simulated_event->shower.energy = simtel_file_handler->hsdata->mc_shower.energy;
     event.simulated_event->shower.alt = simtel_file_handler->hsdata->mc_shower.altitude;
@@ -211,7 +212,100 @@ ArrayEvent SimtelEventSource::get_event()
     event.simulated_event->shower.starting_grammage = simtel_file_handler->hsdata->mc_shower.depth_start;
     if(simtel_file_handler->have_true_image)
     {
-        for(const auto& tel_id: allowed_tels) {
+        read_true_image(event);
+    }
+    read_adc_samples(event);
+    read_adc_sum(event);
+    return event;
+}
+void SimtelEventSource::read_adc_samples(ArrayEvent& event)
+{
+    if(!event.r0_event) {
+        event.r0_event = R0Event();
+    }
+    for(const auto& tel_id: allowed_tels) {
+        auto tel_index = simtel_file_handler->tel_id_to_index[tel_id];
+        if(simtel_file_handler->hsdata->event.teldata[tel_index].raw->known)
+        {
+            if(simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_known[0][0] & (1L<<1))
+            {
+                spdlog::debug("ADC samples are available for tel_id: {} for first gain", tel_id);
+            }
+            else 
+            {
+                return;
+            }
+            Eigen::Matrix<uint16_t, -1, -1, Eigen::RowMajor> high_gain;
+            high_gain.resize(simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels, simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_samples);
+            for(int ipixel = 0; ipixel < simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels; ipixel++) {
+                for(int isample = 0; isample < simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_samples; isample++) {
+                    high_gain(ipixel, isample) = simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_sample[0][ipixel][isample];
+                }
+            }
+            Eigen::Matrix<uint16_t, -1, -1, Eigen::RowMajor> low_gain;
+            low_gain.resize(simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels, simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_samples);
+           if(simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_known[1][0] & (1L<<1))
+           {
+                spdlog::debug("ADC samples are available for tel_id: {} for second gain", tel_id);
+           }
+           else 
+           {
+                event.add_r0_camera_adc_sample(tel_id, simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels, simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_samples, std::move(high_gain), std::move(low_gain));
+                return;
+           }
+            for(int ipixel = 0; ipixel < simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels; ipixel++) {
+                for(int isample = 0; isample < simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_samples; isample++) {
+                    low_gain(ipixel, isample) = simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_sample[1][ipixel][isample];
+                }
+            }
+            event.add_r0_camera_adc_sample(tel_id, simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels, simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_samples, std::move(high_gain), std::move(low_gain));
+        }
+    }
+}
+void SimtelEventSource::read_adc_sum(ArrayEvent& event)
+{
+    if(!event.r0_event) {
+        event.r0_event = R0Event();
+    }
+    for(const auto& tel_id: allowed_tels) {
+        auto tel_index = simtel_file_handler->tel_id_to_index[tel_id];
+        if(simtel_file_handler->hsdata->event.teldata[tel_index].raw->known)
+        {
+            if(simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_known[0][0] & (1L))
+            {
+                spdlog::debug("ADC samples are available for tel_id: {} for first gain", tel_id);
+            }
+            else 
+            {
+                return;
+            }
+            Eigen::Map<const Eigen::Vector<uint32_t, -1>> high_gain_sum(
+                simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_sum[0], 
+                H_MAX_PIX);
+
+            Eigen::Map<const Eigen::Vector<uint32_t, -1>> low_gain_sum(nullptr, 0);
+
+            if(simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_known[1][0] & (1L))
+            {
+                spdlog::debug("ADC samples are available for tel_id: {} for second gain", tel_id);
+            }
+            else 
+            {
+                return;
+            }   
+            if(simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_gains == 2) {
+                new (&low_gain_sum) Eigen::Map<const Eigen::Vector<uint32_t, -1>>(
+                    simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_sum[1], 
+                    H_MAX_PIX);
+            }
+            event.add_r0_camera_adc_sum(tel_id, simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels, high_gain_sum, low_gain_sum);
+        }
+    }
+}
+
+void SimtelEventSource::read_true_image(ArrayEvent& event)
+{
+    for(const auto& tel_id: allowed_tels) {
             auto tel_index = simtel_file_handler->tel_id_to_index[tel_id];
             auto tel_position = subarray->tel_positions[tel_id];
             auto shower_core = std::array<double, 3>{event.simulated_event->shower.core_x, event.simulated_event->shower.core_y, 0};
@@ -227,8 +321,6 @@ ArrayEvent SimtelEventSource::get_event()
             double impact_parameter = Utils::point_line_distance(tel_position, shower_core, line_direction);
             event.add_simulated_camera_image(tel_id, simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].pixels,simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].pe_count, impact_parameter);
         }
-    }
-    return event;
 }
 const std::string SimtelEventSource::print() const
 {

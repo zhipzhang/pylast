@@ -32,6 +32,7 @@ set(SOURCE_FILES
     CameraDescription.cpp
     SimulatedCamera.cpp
     OpticsDescription.cpp
+    R0Event.cpp
 )
 
 if(BUILD_PYTHON_BINDINGS)
