@@ -25,7 +25,7 @@ public:
     SimulatedEvent& operator=(const SimulatedEvent&) noexcept = default;
     SimulatedEvent& operator=(SimulatedEvent&&) noexcept = default;
     SimulatedShower shower;
-    std::unordered_map<telescope_id, SimulatedCamera> cameras;
+    std::unordered_map<telescope_id, SimulatedCamera> tels;
 
 
 };

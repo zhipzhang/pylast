@@ -19,11 +19,12 @@ void bind_array_event(nb::module_ &m) {
         .def_ro("waveform_sum", &R0Camera::waveform_sum);
     nb::class_<SimulatedEvent>(m, "SimulatedEvent")
         .def_ro("shower", &SimulatedEvent::shower)
-        .def_ro("cameras", &SimulatedEvent::cameras);
+        .def_ro("tels", &SimulatedEvent::tels);
     nb::class_<SimulatedCamera>(m, "SimulatedCamera")
         .def_ro("true_image_sum", &SimulatedCamera::true_image_sum)
         .def_ro("true_image", &SimulatedCamera::true_image)
-        .def_ro("impact_parameter", &SimulatedCamera::impact_parameter);
+        .def_ro("impact_parameter", &SimulatedCamera::impact_parameter)
+        .def("__repr__", &SimulatedCamera::print);
     nb::class_<TelImpactParameter>(m, "TelImpactParameter")
         .def_ro("impact_distance", &TelImpactParameter::impact_parameter)
         .def_ro("impact_distance_error", &TelImpactParameter::impact_parameter_error);

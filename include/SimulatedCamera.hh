@@ -13,6 +13,8 @@
 class ImageParameters;
 #include "Eigen/Dense"
 #include "TelImpactParameter.hh"
+#include "spdlog/fmt/fmt.h"
+
 class SimulatedCamera {
 public:
     SimulatedCamera() = default;
@@ -26,5 +28,15 @@ public:
     Eigen::VectorXi true_image;
     TelImpactParameter impact_parameter;
     //ImageParameters true_image;
+    std::string print() const {
+        return fmt::format("SimulatedCamera:\n"
+                         "\ttrue_image_sum: {}\n"
+                         "\ttrue_image: array of {} pixels\n"
+                         "\timpact_parameter: ({:.2f} ± {:.2f})",
+                         true_image_sum,
+                         true_image.size(),
+                         impact_parameter.impact_parameter,
+                         impact_parameter.impact_parameter_error);
+    }
 
  };

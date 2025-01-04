@@ -29,7 +29,7 @@ public:
         if(!simulated_event) {
             throw std::runtime_error("simulated_event must be initialized before adding camera images");
         }
-        simulated_event->cameras.emplace(tel_id, SimulatedCamera(n_pixels, pe_count, impact_parameter));
+        simulated_event->tels.emplace(tel_id, SimulatedCamera(n_pixels, pe_count, impact_parameter));
     }
     void add_r0_camera_adc_sample(int tel_id, int n_pixels, int n_samples,  Eigen::Matrix<uint16_t, -1, -1, Eigen::RowMajor> high_gain, Eigen::Matrix<uint16_t, -1, -1, Eigen::RowMajor> low_gain) {
         if(!r0_event) {
