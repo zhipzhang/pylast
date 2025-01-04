@@ -31,12 +31,12 @@ public:
     VectorXd pix_y;
     /** @brief Pixel areas [m^2] */
     VectorXd pix_area;
-    /** @brief Pixel types */
+    /** @brief Pixel types 0 for circle, 1 for hexagon, 2 for square */
     Eigen::VectorXi pix_type;
     /** @brief Camera rotation [degree] */
     double cam_rotation;
     /** @brief Neighbor matrix */
-    //SparseMatrix<double> neigh_matrix;
+    Eigen::SparseMatrix<int> neigh_matrix;
     
 
     CameraGeometry() = default;
@@ -48,4 +48,6 @@ public:
     CameraGeometry& operator=(const CameraGeometry& other) = default;
     ~CameraGeometry() = default;
     const string print() const;
+private:
+    void compute_neighbor_matrix(bool diagnal = false);
 };

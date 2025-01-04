@@ -4,6 +4,7 @@
 #include "nanobind/stl/unordered_map.h"
 #include "nanobind/stl/array.h"
 #include "nanobind/stl/string.h"
+#include "nanobind/eigen/sparse.h"
 namespace nb = nanobind;
 
 void bind_subarray_description(nb::module_ &m)
@@ -45,5 +46,6 @@ void bind_subarray_description(nb::module_ &m)
         .def_ro("pix_y", &CameraGeometry::pix_y)
         .def_ro("pix_area", &CameraGeometry::pix_area)
         .def_ro("cam_rotation", &CameraGeometry::cam_rotation)
+        .def_ro("neigh_matrix", &CameraGeometry::neigh_matrix)
         .def("__repr__", &CameraGeometry::print);
 }
