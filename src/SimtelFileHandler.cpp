@@ -173,6 +173,7 @@ void SimtelFileHandler::read_until_event() {
 void SimtelFileHandler::load_next_event() {
     read_until_block(BlockType::SimtelEvent);
     read_block();
+    if(no_more_blocks) return;
     block_handler[BlockType::SimtelEvent](); // handle simtel event block after read_util
 }
 void SimtelFileHandler::_read_history() {
