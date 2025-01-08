@@ -50,14 +50,14 @@ void CameraGeometry::compute_neighbor_matrix(bool diagnal )
         double min_squared_dist = std::numeric_limits<double>::max();
         for(int j = 0; j < min_neighbors + 1; j++)
         {
-            if(indices[j] != i && distances[j] < min_squared_dist){
+            if(indices[j] != static_cast<size_t>(i) && distances[j] < min_squared_dist){
                 min_squared_dist = distances[j];
             }
         }
         
         for(int j = 0; j < min_neighbors + 1; j++)
         {
-            if(indices[j] == i){
+            if(indices[j] == static_cast<size_t>(i)){
                 continue;
             }
             if(distances[j] < radius * radius * min_squared_dist)
