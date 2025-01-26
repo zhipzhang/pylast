@@ -36,7 +36,6 @@ private:
     void set_telescope_settings(int tel_id);
     void read_true_image(ArrayEvent& event);
     void read_adc_samples(ArrayEvent& event);
-    void read_adc_sum(ArrayEvent& event);
     ArrayEvent get_event() override;
     CameraGeometry get_telescope_camera_geometry(int tel_index);
     CameraReadout get_telescope_camera_readout(int tel_index);

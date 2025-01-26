@@ -13,6 +13,7 @@
 #include "LACT_hessioxxx/include/io_history.h"
 #include "LACT_hessioxxx/include/mc_tel.h"
 #include "LACT_hessioxxx/include/mc_atmprof.h"
+#include <cstdint>
 #include <thread>
 #include "Utils.hh"
 SimtelEventSource::SimtelEventSource(const std::string& filename, int64_t max_events, std::vector<int> subarray, bool load_simulated_showers):
@@ -215,91 +216,65 @@ ArrayEvent SimtelEventSource::get_event()
         read_true_image(event);
     }
     read_adc_samples(event);
-    read_adc_sum(event);
     return event;
 }
 void SimtelEventSource::read_adc_samples(ArrayEvent& event)
 {
-    if(!event.r0_event) {
-        event.r0_event = R0Event();
+    if(!event.r0) {
+        event.r0 = R0Event();
     }
     for(const auto& tel_id: allowed_tels) {
         auto tel_index = simtel_file_handler->tel_id_to_index[tel_id];
         if(simtel_file_handler->hsdata->event.teldata[tel_index].raw->known)
         {
+            uint32_t* high_gain_waveform_sum = nullptr;
+            uint32_t* low_gain_waveform_sum = nullptr;
+            Eigen::Matrix<uint16_t, -1, -1, Eigen::RowMajor> high_gain_waveform;
+            Eigen::Matrix<uint16_t, -1, -1, Eigen::RowMajor> low_gain_waveform;
+            // Read ADC samples
             if(simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_known[0][0] & (1L<<1))
             {
+                high_gain_waveform.resize(simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels, simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_samples);
+                for(int ipixel = 0; ipixel < simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels; ipixel++) {
+                    for(int isample = 0; isample < simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_samples; isample++) {
+                        high_gain_waveform(ipixel, isample) = simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_sample[0][ipixel][isample];
+                    }
+                }
                 spdlog::debug("ADC samples are available for tel_id: {} for first gain", tel_id);
             }
             else 
             {
-                return;
+                return; // We hope to get the adc samples now(maybe in the future we cam get sum or peak), so now if don't have adc samples just return
             }
-            Eigen::Matrix<uint16_t, -1, -1, Eigen::RowMajor> high_gain;
-            high_gain.resize(simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels, simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_samples);
-            for(int ipixel = 0; ipixel < simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels; ipixel++) {
-                for(int isample = 0; isample < simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_samples; isample++) {
-                    high_gain(ipixel, isample) = simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_sample[0][ipixel][isample];
-                }
-            }
-            Eigen::Matrix<uint16_t, -1, -1, Eigen::RowMajor> low_gain;
-            low_gain.resize(simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels, simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_samples);
-           if(simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_known[1][0] & (1L<<1))
-           {
+            if(simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_known[1][0] & (1L<<1))
+            {
+                low_gain_waveform.resize(simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels, simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_samples);
                 spdlog::debug("ADC samples are available for tel_id: {} for second gain", tel_id);
-           }
-           else 
-           {
-                event.add_r0_camera_adc_sample(tel_id, simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels, simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_samples, std::move(high_gain), std::move(low_gain));
-                return;
-           }
-            for(int ipixel = 0; ipixel < simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels; ipixel++) {
-                for(int isample = 0; isample < simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_samples; isample++) {
-                    low_gain(ipixel, isample) = simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_sample[1][ipixel][isample];
+                for(int ipixel = 0; ipixel < simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels; ipixel++) {
+                    for(int isample = 0; isample < simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_samples; isample++) {
+                        low_gain_waveform(ipixel, isample) = simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_sample[1][ipixel][isample];
+                    }
                 }
             }
-            event.add_r0_camera_adc_sample(tel_id, simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels, simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_samples, std::move(high_gain), std::move(low_gain));
-        }
-    }
-}
-void SimtelEventSource::read_adc_sum(ArrayEvent& event)
-{
-    if(!event.r0_event) {
-        event.r0_event = R0Event();
-    }
-    for(const auto& tel_id: allowed_tels) {
-        auto tel_index = simtel_file_handler->tel_id_to_index[tel_id];
-        if(simtel_file_handler->hsdata->event.teldata[tel_index].raw->known)
-        {
             if(simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_known[0][0] & (1L))
             {
-                spdlog::debug("ADC samples are available for tel_id: {} for first gain", tel_id);
+                spdlog::debug("ADC sums are available for tel_id: {} for first gain", tel_id);
+                high_gain_waveform_sum = &simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_sum[0][0];
+                if(simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_known[1][0] & (1L))
+                {
+                    spdlog::debug("ADC sums are available for tel_id: {} for second gain", tel_id);
+                    low_gain_waveform_sum = &simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_sum[1][0];
+                }
             }
-            else 
-            {
-                return;
-            }
-            Eigen::Map<const Eigen::Vector<uint32_t, -1>> high_gain_sum(
-                simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_sum[0], 
-                H_MAX_PIX);
-
-            Eigen::Map<const Eigen::Vector<uint32_t, -1>> low_gain_sum(nullptr, 0);
-
-            if(simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_known[1][0] & (1L))
-            {
-                spdlog::debug("ADC samples are available for tel_id: {} for second gain", tel_id);
-            }
-            else 
-            {
-                return;
-            }   
-            if(simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_gains == 2) {
-                new (&low_gain_sum) Eigen::Map<const Eigen::Vector<uint32_t, -1>>(
-                    simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_sum[1], 
-                    H_MAX_PIX);
-            }
-            event.add_r0_camera_adc_sum(tel_id, simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels, high_gain_sum, low_gain_sum);
-        }
+            // If no adc_sums, it will be nullptr
+            event.r0->add_tel(tel_id, 
+                    simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels,
+                    simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_samples,
+                    std::move(high_gain_waveform),
+                    std::move(low_gain_waveform),
+                    high_gain_waveform_sum,
+                    low_gain_waveform_sum);
+                }
     }
 }
 

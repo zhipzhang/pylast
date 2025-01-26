@@ -1,3 +1,4 @@
+#include "R0Event.hh"
 #include "nanobind/nanobind.h"
 #include "ArrayEvent.hh"
 #include "SimulatedShowerArray.hh"
@@ -6,14 +7,23 @@
 #include "nanobind/stl/unordered_map.h"
 #include "nanobind/stl/optional.h"
 #include "nanobind/stl/array.h"
+#include "nanobind/stl/unique_ptr.h"
+
+
 namespace nb = nanobind;
 
 void bind_array_event(nb::module_ &m) {
     nb::class_<ArrayEvent>(m, "ArrayEvent")
         .def_ro("simulation", &ArrayEvent::simulated_event)
-        .def_ro("r0_event", &ArrayEvent::r0_event);
-    nb::class_<R0Event>(m, "R0Event")
-        .def_ro("tels", &R0Event::tels);
+        .def_ro("r0", &ArrayEvent::r0);
+    nb::class_<R0Event>(m, "r0")
+        .def_prop_ro("tels", [](const R0Event& self){
+            std::unordered_map<int, R0Camera*> rels;
+            for(auto& pair : self.tels){
+                rels[pair.first] = pair.second.get();
+            }
+            return rels;
+        });
     nb::class_<R0Camera>(m, "R0Camera")
         .def_ro("waveform", &R0Camera::waveform)
         .def_ro("waveform_sum", &R0Camera::waveform_sum);

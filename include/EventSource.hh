@@ -13,7 +13,6 @@
 #pragma once
 
 #include <initializer_list>
-#include <string>
 #include "SimulationConfiguration.hh"
 #include <vector>
 #include "AtmosphereModel.hh"
@@ -38,7 +37,7 @@ public:
                     *source_->current_event = std::move(source_->get_event());
                 }
             }
-            const ArrayEvent& operator*() const {return *source_->current_event;}
+            ArrayEvent& operator*() const {return *source_->current_event;}
 
             bool operator==(const Iterator& other) const{
                 if (source_ && source_->is_finished()) {
