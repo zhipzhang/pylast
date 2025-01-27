@@ -14,18 +14,19 @@
 #include "SimulatedShower.hh"
 #include "SimulatedCamera.hh"
 #include <unordered_map>
+#include <BaseTelContainer.hh>
 
 using telescope_id = int;
-class SimulatedEvent {
+class SimulatedEvent: public BaseTelContainer<SimulatedCamera>{
 public:
     SimulatedEvent() = default;
     ~SimulatedEvent() = default;
-    SimulatedEvent(const SimulatedEvent&) = default;
     SimulatedEvent(SimulatedEvent&&) = default;
-    SimulatedEvent& operator=(const SimulatedEvent&) noexcept = default;
     SimulatedEvent& operator=(SimulatedEvent&&) noexcept = default;
     SimulatedShower shower;
-    std::unordered_map<telescope_id, SimulatedCamera> tels;
-
+    void add_simulated_image(telescope_id tel_id, int n_pixels, int* pe_count, double impact_parameter) 
+    {
+        BaseTelContainer::add_tel(tel_id, n_pixels, pe_count, impact_parameter);
+    }
 
 };

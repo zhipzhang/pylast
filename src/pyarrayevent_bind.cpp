@@ -14,22 +14,16 @@ namespace nb = nanobind;
 
 void bind_array_event(nb::module_ &m) {
     nb::class_<ArrayEvent>(m, "ArrayEvent")
-        .def_ro("simulation", &ArrayEvent::simulated_event)
+        .def_ro("simulation", &ArrayEvent::simulation)
         .def_ro("r0", &ArrayEvent::r0);
     nb::class_<R0Event>(m, "r0")
-        .def_prop_ro("tels", [](const R0Event& self){
-            std::unordered_map<int, R0Camera*> rels;
-            for(auto& pair : self.tels){
-                rels[pair.first] = pair.second.get();
-            }
-            return rels;
-        });
+        .def_prop_ro("tels", &R0Event::get_tels);
     nb::class_<R0Camera>(m, "R0Camera")
         .def_ro("waveform", &R0Camera::waveform)
         .def_ro("waveform_sum", &R0Camera::waveform_sum);
     nb::class_<SimulatedEvent>(m, "SimulatedEvent")
         .def_ro("shower", &SimulatedEvent::shower)
-        .def_ro("tels", &SimulatedEvent::tels);
+        .def_prop_ro("tels", &SimulatedEvent::get_tels);
     nb::class_<SimulatedCamera>(m, "SimulatedCamera")
         .def_ro("true_image_sum", &SimulatedCamera::true_image_sum)
         .def_ro("true_image", &SimulatedCamera::true_image)

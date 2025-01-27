@@ -201,16 +201,16 @@ ArrayEvent SimtelEventSource::get_event()
 {
     _load_next_events();
     ArrayEvent event;
-    event.simulated_event  = SimulatedEvent();
-    event.simulated_event->shower.shower_primary_id = simtel_file_handler->hsdata->mc_shower.primary_id;
-    event.simulated_event->shower.energy = simtel_file_handler->hsdata->mc_shower.energy;
-    event.simulated_event->shower.alt = simtel_file_handler->hsdata->mc_shower.altitude;
-    event.simulated_event->shower.az = simtel_file_handler->hsdata->mc_shower.azimuth;
-    event.simulated_event->shower.core_x = simtel_file_handler->hsdata->mc_event.xcore;
-    event.simulated_event->shower.core_y = simtel_file_handler->hsdata->mc_event.ycore;
-    event.simulated_event->shower.h_first_int = simtel_file_handler->hsdata->mc_shower.h_first_int;
-    event.simulated_event->shower.x_max = simtel_file_handler->hsdata->mc_shower.xmax;
-    event.simulated_event->shower.starting_grammage = simtel_file_handler->hsdata->mc_shower.depth_start;
+    event.simulation  = SimulatedEvent();
+    event.simulation->shower.shower_primary_id = simtel_file_handler->hsdata->mc_shower.primary_id;
+    event.simulation->shower.energy = simtel_file_handler->hsdata->mc_shower.energy;
+    event.simulation->shower.alt = simtel_file_handler->hsdata->mc_shower.altitude;
+    event.simulation->shower.az = simtel_file_handler->hsdata->mc_shower.azimuth;
+    event.simulation->shower.core_x = simtel_file_handler->hsdata->mc_event.xcore;
+    event.simulation->shower.core_y = simtel_file_handler->hsdata->mc_event.ycore;
+    event.simulation->shower.h_first_int = simtel_file_handler->hsdata->mc_shower.h_first_int;
+    event.simulation->shower.x_max = simtel_file_handler->hsdata->mc_shower.xmax;
+    event.simulation->shower.starting_grammage = simtel_file_handler->hsdata->mc_shower.depth_start;
     if(simtel_file_handler->have_true_image)
     {
         read_true_image(event);
@@ -283,18 +283,18 @@ void SimtelEventSource::read_true_image(ArrayEvent& event)
     for(const auto& tel_id: allowed_tels) {
             auto tel_index = simtel_file_handler->tel_id_to_index[tel_id];
             auto tel_position = subarray->tel_positions[tel_id];
-            auto shower_core = std::array<double, 3>{event.simulated_event->shower.core_x, event.simulated_event->shower.core_y, 0};
-            double cos_alt = cos(event.simulated_event->shower.alt);
-            double sin_alt = sin(event.simulated_event->shower.alt);
-            double cos_az = cos(event.simulated_event->shower.az);
-            double sin_az = sin(event.simulated_event->shower.az);
+            auto shower_core = std::array<double, 3>{event.simulation->shower.core_x, event.simulation->shower.core_y, 0};
+            double cos_alt = cos(event.simulation->shower.alt);
+            double sin_alt = sin(event.simulation->shower.alt);
+            double cos_az = cos(event.simulation->shower.az);
+            double sin_az = sin(event.simulation->shower.az);
             std::array<double, 3> line_direction{
                 cos_alt * sin_az,
                 cos_alt * cos_az,
                 sin_alt
             };
             double impact_parameter = Utils::point_line_distance(tel_position, shower_core, line_direction);
-            event.add_simulated_camera_image(tel_id, simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].pixels,simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].pe_count, impact_parameter);
+            event.simulation->add_simulated_image(tel_id, simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].pixels,simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].pe_count, impact_parameter);
         }
 }
 const std::string SimtelEventSource::print() const
