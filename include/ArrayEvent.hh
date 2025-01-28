@@ -12,6 +12,7 @@
 #include <optional>
 #include "R0Event.hh"
 #include "R1Event.hh"
+#include "EventMonitor.hh"
  class ArrayEvent {
 public:
     ArrayEvent() = default;
@@ -23,5 +24,6 @@ public:
     ArrayEvent& operator=(ArrayEvent&& other) noexcept = default;
     std::optional<SimulatedEvent> simulation;
     std::optional<R0Event> r0;
+    std::optional<EventMonitor> monitor;
     //std::optional<R1Event> r1_event;
 };

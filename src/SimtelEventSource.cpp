@@ -100,7 +100,7 @@ void SimtelEventSource::set_metaparam()
         }
     }
     if(simtel_file_handler->history_container.cfg_tel != NULL) {    
-        for(auto itel = 0; itel < simtel_file_handler->history_container.ntel; itel++) {
+        for(size_t itel = 0; itel < simtel_file_handler->history_container.ntel; itel++) {
             while(simtel_file_handler->history_container.cfg_tel[itel] != NULL) {
             metaparam->tel_history[itel].push_back(std::make_pair(simtel_file_handler->history_container.cfg_tel[itel]->time, simtel_file_handler->history_container.cfg_tel[itel]->text));
             simtel_file_handler->history_container.cfg_tel[itel] = simtel_file_handler->history_container.cfg_tel[itel]->next;
@@ -215,6 +215,7 @@ ArrayEvent SimtelEventSource::get_event()
     {
         read_true_image(event);
     }
+    read_event_monitor(event);
     read_adc_samples(event);
     return event;
 }
@@ -277,7 +278,28 @@ void SimtelEventSource::read_adc_samples(ArrayEvent& event)
                 }
     }
 }
-
+void SimtelEventSource::read_event_monitor(ArrayEvent& event)
+{
+    double *dc_to_pe = nullptr;
+    double *pedestal_per_sample = nullptr;
+    if(!event.monitor) {
+        event.monitor = EventMonitor();
+    }
+    for(const auto& tel_id: allowed_tels) {
+        auto tel_index = simtel_file_handler->tel_id_to_index[tel_id];
+        if(simtel_file_handler->hsdata->tel_lascal[tel_index].known && simtel_file_handler->hsdata->tel_moni[tel_index].known)
+        {
+            auto n_channels = simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_gains;
+            auto n_pixels = simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels;
+            pedestal_per_sample = &simtel_file_handler->hsdata->tel_moni[tel_index].pedsamp[0][0];
+            dc_to_pe = &simtel_file_handler->hsdata->tel_lascal[tel_index].calib[0][0];
+            if(n_channels == 0 || n_pixels == 0) {
+                continue;
+            }
+            event.monitor->add_telmonitor(tel_id, n_channels, n_pixels, pedestal_per_sample, dc_to_pe, H_MAX_PIX);
+        }
+    }
+}
 void SimtelEventSource::read_true_image(ArrayEvent& event)
 {
     for(const auto& tel_id: allowed_tels) {
