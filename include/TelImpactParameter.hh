@@ -15,8 +15,8 @@ struct TelImpactParameter {
 public:
     TelImpactParameter() = default;
     ~TelImpactParameter() = default;
-    TelImpactParameter(double impact_parameter, double impact_parameter_error):
-        impact_parameter(impact_parameter), impact_parameter_error(impact_parameter_error) {}
-    double impact_parameter;
-    double impact_parameter_error;
+    TelImpactParameter(double distance, double distance_error):
+        distance(distance), distance_error(distance_error) {}
+    double distance;
+    double distance_error = 0.0;
 };

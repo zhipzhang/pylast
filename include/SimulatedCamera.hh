@@ -26,7 +26,7 @@ public:
     SimulatedCamera(int n_pixels, int* pe_count, double impact_parameter);
     int true_image_sum;
     Eigen::VectorXi true_image;
-    TelImpactParameter impact_parameter;
+    TelImpactParameter impact;
     //ImageParameters true_image;
     std::string print() const {
         return fmt::format("SimulatedCamera:\n"
@@ -35,8 +35,8 @@ public:
                          "\timpact_parameter: ({:.2f} ± {:.2f})",
                          true_image_sum,
                          true_image.size(),
-                         impact_parameter.impact_parameter,
-                         impact_parameter.impact_parameter_error);
+                         impact.distance,
+                         impact.distance_error);
     }
 
  };

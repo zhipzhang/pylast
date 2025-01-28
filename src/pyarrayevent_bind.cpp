@@ -27,11 +27,11 @@ void bind_array_event(nb::module_ &m) {
     nb::class_<SimulatedCamera>(m, "SimulatedCamera")
         .def_ro("true_image_sum", &SimulatedCamera::true_image_sum)
         .def_ro("true_image", &SimulatedCamera::true_image)
-        .def_ro("impact_parameter", &SimulatedCamera::impact_parameter)
+        .def_ro("impact", &SimulatedCamera::impact)
         .def("__repr__", &SimulatedCamera::print);
     nb::class_<TelImpactParameter>(m, "TelImpactParameter")
-        .def_ro("impact_distance", &TelImpactParameter::impact_parameter)
-        .def_ro("impact_distance_error", &TelImpactParameter::impact_parameter_error);
+        .def_ro("impact_distance", &TelImpactParameter::distance)
+        .def_ro("impact_distance_error", &TelImpactParameter::distance_error);
     nb::class_<SimulatedShower>(m, "shower")
         .def_ro("alt", &SimulatedShower::alt)
         .def_ro("az", &SimulatedShower::az)
