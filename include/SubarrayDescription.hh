@@ -42,7 +42,7 @@ public:
     ~SubarrayDescription() = default;
 
     /** @brief Descriptions of the telescopes */
-    std::unordered_map<telescope_id_t, TelescopeDescription> tel_descriptions;
+    std::unordered_map<telescope_id_t, TelescopeDescription> tels;
     /** @brief Positions of the telescopes */
     std::unordered_map<telescope_id_t, std::array<double, 3>> tel_positions;
     /** @brief Reference position of the subarray */

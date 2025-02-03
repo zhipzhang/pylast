@@ -20,7 +20,8 @@ class SimtelEventSource: public EventSource
 {
 public:
     SimtelEventSource() = default;
-    SimtelEventSource(const string& filename, int64_t max_events = -1 , std::vector<int> subarray = {}, bool load_simulated_showers = false);
+    SimtelEventSource(const string& filename, int64_t max_events = -1 , std::vector<int> subarray = {}, bool load_simulated_showers = false, int gain_selector_threshold = 4000);
+
     virtual ~SimtelEventSource() = default;
     const std::string print() const;
     virtual void load_all_simulated_showers() override;
@@ -37,6 +38,7 @@ private:
     void read_true_image(ArrayEvent& event);
     void read_adc_samples(ArrayEvent& event);
     void read_event_monitor(ArrayEvent& event);
+    void apply_simtel_calibration(ArrayEvent& event);
     ArrayEvent get_event() override;
     CameraGeometry get_telescope_camera_geometry(int tel_index);
     CameraReadout get_telescope_camera_readout(int tel_index);
@@ -46,5 +48,6 @@ private:
     std::unique_ptr<SimtelFileHandler> simtel_file_handler;
     std::string camera_name;
     std::string optics_name;
+    int gain_selector_threshold;
 };
 

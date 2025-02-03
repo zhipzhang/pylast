@@ -16,7 +16,7 @@ const string TelescopeDescription::print() const
 
 void SubarrayDescription::add_telescope(const telescope_id_t tel_id, TelescopeDescription &&tel_description, const std::array<double, 3> &tel_position)
 {
-    tel_descriptions.emplace(tel_id, std::move(tel_description));
+    tels.emplace(tel_id, std::move(tel_description));
     tel_positions[tel_id] = tel_position;
 }
 

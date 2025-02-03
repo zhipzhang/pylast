@@ -8,14 +8,29 @@
 #include "nanobind/stl/optional.h"
 #include "nanobind/stl/array.h"
 #include "nanobind/stl/unique_ptr.h"
-
+#include "TelMonitor.hh"
+#include "EventMonitor.hh"
 
 namespace nb = nanobind;
 
 void bind_array_event(nb::module_ &m) {
     nb::class_<ArrayEvent>(m, "ArrayEvent")
         .def_ro("simulation", &ArrayEvent::simulation)
-        .def_ro("r0", &ArrayEvent::r0);
+        .def_ro("r0", &ArrayEvent::r0)
+        .def_ro("monitor", &ArrayEvent::monitor)
+        .def_ro("r1", &ArrayEvent::r1);
+    nb::class_<R1Event>(m, "r1")
+        .def_prop_ro("tels", &R1Event::get_tels);
+    nb::class_<R1Camera>(m, "R1Camera")
+        .def_ro("waveform", &R1Camera::waveform)
+        .def_ro("gain_selection", &R1Camera::gain_selection);
+    nb::class_<TelMonitor>(m, "TelMonitor")
+        .def_ro("n_channels", &TelMonitor::n_channels)
+        .def_ro("n_pixels", &TelMonitor::n_pixels)
+        .def_ro("pedestal_per_sample", &TelMonitor::pedestal_per_sample)
+        .def_ro("dc_to_pe", &TelMonitor::dc_to_pe);
+    nb::class_<EventMonitor>(m, "EventMonitor")
+        .def_prop_ro("tels", &EventMonitor::get_tels);
     nb::class_<R0Event>(m, "r0")
         .def_prop_ro("tels", &R0Event::get_tels);
     nb::class_<R0Camera>(m, "R0Camera")

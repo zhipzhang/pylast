@@ -13,11 +13,13 @@
 #include "LACT_hessioxxx/include/io_history.h"
 #include "LACT_hessioxxx/include/mc_tel.h"
 #include "LACT_hessioxxx/include/mc_atmprof.h"
+#include "Calibration.hh"
 #include <cstdint>
 #include <thread>
 #include "Utils.hh"
-SimtelEventSource::SimtelEventSource(const std::string& filename, int64_t max_events, std::vector<int> subarray, bool load_simulated_showers):
-    EventSource(filename, max_events, subarray, load_simulated_showers)
+SimtelEventSource::SimtelEventSource(const std::string& filename, int64_t max_events, std::vector<int> subarray, bool load_simulated_showers, int gain_selector_threshold):
+    EventSource(filename, max_events, subarray, load_simulated_showers),
+    gain_selector_threshold(gain_selector_threshold)
 {
     initialize();
 }
@@ -217,6 +219,7 @@ ArrayEvent SimtelEventSource::get_event()
     }
     read_event_monitor(event);
     read_adc_samples(event);
+    apply_simtel_calibration(event);
     return event;
 }
 void SimtelEventSource::read_adc_samples(ArrayEvent& event)
@@ -276,6 +279,26 @@ void SimtelEventSource::read_adc_samples(ArrayEvent& event)
                     high_gain_waveform_sum,
                     low_gain_waveform_sum);
                 }
+    }
+}
+void SimtelEventSource::apply_simtel_calibration(ArrayEvent& event)
+{
+    if(!event.r1) {
+        event.r1 = R1Event();
+    }
+    for (const auto& [tel_id, r0_tel]: event.r0->tels) {
+        Eigen::Matrix<double, -1, -1, Eigen::RowMajor> r1_waveform;
+        auto gain_selection = select_gain_channel_by_threshold(r0_tel->waveform, gain_selector_threshold);
+        int n_pixels = r0_tel->waveform[0].rows();
+        int n_samples = r0_tel->waveform[0].cols();
+        r1_waveform.resize(n_pixels, n_samples);
+        for(int ipix = 0; ipix < n_pixels; ipix++) {
+            int selected_gain_channel = gain_selection[ipix];
+            for(int isample = 0; isample < n_samples; isample++) {
+                r1_waveform(ipix, isample) = (r0_tel->waveform[selected_gain_channel](ipix, isample) - event.monitor->tels[tel_id]->pedestal_per_sample[selected_gain_channel][ipix]) * event.monitor->tels[tel_id]->dc_to_pe[selected_gain_channel][ipix];
+            }
+        }
+        event.r1->add_tel(tel_id, n_pixels, n_samples, std::move(r1_waveform), std::move(gain_selection));
     }
 }
 void SimtelEventSource::read_event_monitor(ArrayEvent& event)

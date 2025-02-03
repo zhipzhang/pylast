@@ -34,7 +34,7 @@ SimtelFileHandler::SimtelFileHandler(const std::string& filename) : filename(fil
     if(hsdata == NULL) {
         throw std::runtime_error("Cannot allocate memory for hsdata");
     }
-    item_header = {0, 0, 0, 0, 0, 0, 0};
+    item_header = {0, 0, 0, 0, 0, 0, 0, 0};
     history_container = {1, NULL, NULL, NULL, 0};
     metadata_list = {-1, NULL};
     atmprof = get_common_atmprof();
