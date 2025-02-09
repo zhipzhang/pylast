@@ -22,8 +22,8 @@ void CameraGeometry::compute_neighbor_matrix(bool diagnal )
     // Create KD-tree adapter for the points matrix
     using KDTreeAdapter = nanoflann::KDTreeEigenMatrixAdaptor<Eigen::Matrix<double, Eigen::Dynamic, 2, Eigen::RowMajor>>;
     KDTreeAdapter kdtree(2, std::cref(points), 20);
-    int min_neighbors ;
-    double radius;
+    int min_neighbors;
+    double radius ;
     if(pix_type[0] == 0 || pix_type[0] == 1)
     {
         min_neighbors = 6;
@@ -38,6 +38,9 @@ void CameraGeometry::compute_neighbor_matrix(bool diagnal )
             min_neighbors = 8;
             radius = 1.99;
         }
+    }
+    else {
+        throw std::runtime_error("Invalid pixel type");
     }
     neigh_matrix.resize(num_pixels, num_pixels);
     std::vector<size_t> indices(min_neighbors + 1);

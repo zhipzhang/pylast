@@ -13,7 +13,7 @@
 #include "LACT_hessioxxx/include/io_history.h"
 #include "LACT_hessioxxx/include/mc_tel.h"
 #include "LACT_hessioxxx/include/mc_atmprof.h"
-#include "Calibration.hh"
+#include "Utils.hh"
 #include <cstdint>
 #include <thread>
 #include "Utils.hh"
@@ -288,7 +288,7 @@ void SimtelEventSource::apply_simtel_calibration(ArrayEvent& event)
     }
     for (const auto& [tel_id, r0_tel]: event.r0->tels) {
         Eigen::Matrix<double, -1, -1, Eigen::RowMajor> r1_waveform;
-        auto gain_selection = select_gain_channel_by_threshold(r0_tel->waveform, gain_selector_threshold);
+        auto gain_selection = Utils::select_gain_channel_by_threshold<uint16_t>(r0_tel->waveform, gain_selector_threshold);
         int n_pixels = r0_tel->waveform[0].rows();
         int n_samples = r0_tel->waveform[0].cols();
         r1_waveform.resize(n_pixels, n_samples);

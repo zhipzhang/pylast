@@ -10,7 +10,7 @@ namespace nb = nanobind;
 void bind_subarray_description(nb::module_ &m)
 {
     nb::class_<SubarrayDescription>(m, "SubarrayDescription")
-        .def_ro("tels", &SubarrayDescription::tel_descriptions)
+        .def_ro("tels", &SubarrayDescription::tels)
         .def_ro("tel_positions", &SubarrayDescription::tel_positions)
         .def("__repr__", &SubarrayDescription::print);
     nb::class_<TelescopeDescription>(m, "TelescopeDescription")

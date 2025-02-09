@@ -10,7 +10,7 @@
 #include "nanobind/stl/unique_ptr.h"
 #include "TelMonitor.hh"
 #include "EventMonitor.hh"
-
+#include "DL0Event.hh"
 namespace nb = nanobind;
 
 void bind_array_event(nb::module_ &m) {
@@ -18,7 +18,13 @@ void bind_array_event(nb::module_ &m) {
         .def_ro("simulation", &ArrayEvent::simulation)
         .def_ro("r0", &ArrayEvent::r0)
         .def_ro("monitor", &ArrayEvent::monitor)
-        .def_ro("r1", &ArrayEvent::r1);
+        .def_ro("r1", &ArrayEvent::r1)
+        .def_ro("dl0", &ArrayEvent::dl0);
+    nb::class_<DL0Event>(m, "dl0")
+        .def_prop_ro("tels", &DL0Event::get_tels);
+    nb::class_<DL0Camera>(m, "DL0Camera")
+        .def_ro("image", &DL0Camera::image)
+        .def_ro("peak_time", &DL0Camera::peak_time);
     nb::class_<R1Event>(m, "r1")
         .def_prop_ro("tels", &R1Event::get_tels);
     nb::class_<R1Camera>(m, "R1Camera")

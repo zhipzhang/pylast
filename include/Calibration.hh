@@ -26,25 +26,39 @@
  Eigen::VectorXi select_gain_channel_by_threshold(const std::array<Eigen::Matrix<uint16_t, -1, -1, Eigen::RowMajor>, 2>& waveform, const double threshold);
 
 
+class ImageExtractorFactory
+{
+    public:
+    template<typename Extractor, typename... Args>
+    static std::unique_ptr<ImageExtractor> create(SubarrayDescription& subarray, Args&&... args)
+    {
+        return std::make_unique<Extractor>(subarray, std::forward<Args>(args)...);
+    }
+};
 class Calibrator
 {
     public:
     template<typename... Args>
-    Calibrator(SubarrayDescription& subarray, const std::string& image_extractor_type = "FullWaveFormExtractor", Args&&... args);
+    Calibrator(SubarrayDescription& subarray, const std::string& image_extractor_type = "FullWaveFormExtractor", Args&&... args)
+    :subarray(subarray)
+    {
+        if(image_extractor_type == "FullWaveFormExtractor")
+        {
+            this->image_extractor = ImageExtractorFactory::create<FullWaveFormExtractor>(subarray);
+        }
+        else if(image_extractor_type == "LocalPeakExtractor")
+        {
+            this->image_extractor = ImageExtractorFactory::create<LocalPeakExtractor>(subarray, std::forward<Args>(args)...);
+        }
+        else
+        {
+            throw std::runtime_error("Invalid image extractor type: " + image_extractor_type);
+        }
+    }
     ~Calibrator() = default;
 
     void operator()(ArrayEvent& event);
     std::unique_ptr<ImageExtractor> image_extractor;
     private:
         SubarrayDescription& subarray;
-};
-
-class ImageExtractorFactory
-{
-    public:
-    template<typename Extractor, typename... Args>
-    static std::unique_ptr<Extractor> create(SubarrayDescription& subarray, Args&&... args)
-    {
-        return std::make_unique<Extractor>(subarray, std::forward<Args>(args)...);
-    }
 };

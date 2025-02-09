@@ -35,4 +35,35 @@ double point_line_distance(const std::array<T,3>& point,
     // Calculate cross product and get distance using Eigen operations
     return (vec.cross(ld)).norm() / ld.norm();
 }
+
+ /**
+  * @brief Select the gain channel by threshold
+  * 
+  * @param waveform  2-channel waveform (assume the first channel is the high gain channel, sometimes the second channel is 0)
+  * @param threshold threshold for the low gain channel
+  * @return Eigen::VectorXi
+  */
+template<typename T>
+Eigen::VectorXi select_gain_channel_by_threshold(const std::array<Eigen::Matrix<T, -1, -1, Eigen::RowMajor>, 2>& waveform, const double threshold)
+{
+    // Matrix is (n_pixels, n_samples)
+    // Vector returned is (n_pixels)
+    if(waveform[1].isZero())
+    {
+        return Eigen::VectorXi::Zero(waveform[0].rows());
+    }
+    else 
+    {
+        // If the high gain channel exceeds the threshold, select the low gain channel
+        Eigen::VectorXi gain_selector = Eigen::VectorXi::Zero(waveform[0].rows());
+        for(int i = 0; i < waveform[0].rows(); i++)
+        {
+            if((waveform[0].row(i).array() > threshold).any())
+            {
+                gain_selector(i) = 1;
+            }
+        }
+        return gain_selector;
+    }
+}
 }

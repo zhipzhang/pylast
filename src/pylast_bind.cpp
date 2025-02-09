@@ -15,6 +15,7 @@ void bind_subarray_description(nb::module_ &m);
 void bind_array_event(nb::module_ &m);
 void shutdown_logger();
 void bind_simulated_shower_array(nb::module_ &m);
+void bind_calibrator(nb::module_ &m);
 
 NB_MODULE(_pylast, m) {
     bind_array_event(m);
@@ -104,4 +105,5 @@ NB_MODULE(_pylast, m) {
           "Initialize the spdlog logger with specified log level. Optionally specify a log file.");
     bind_subarray_description(m);
     m.def("shutdown_logger", &shutdown_logger, "Shutdown the spdlog logger.");
+    bind_calibrator(m);
 }
