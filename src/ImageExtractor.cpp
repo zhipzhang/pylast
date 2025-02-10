@@ -1,6 +1,6 @@
 #include "ImageExtractor.hh"
 #include <iostream>
-ImageExtractor::ImageExtractor(SubarrayDescription& subarray):
+ImageExtractor::ImageExtractor(const SubarrayDescription& subarray):
     subarray(subarray)
 {
     for(auto [tel_id, tel_config]: subarray.tels)
@@ -8,6 +8,7 @@ ImageExtractor::ImageExtractor(SubarrayDescription& subarray):
         sampling_rate_ghz[tel_id] = tel_config.camera_description.camera_readout.sampling_rate;
     }
 }
+// TODO: Fix this function 
 Eigen::VectorXd ImageExtractor::compute_integration_correction(const Eigen::MatrixXd& reference_pulse, double reference_pulse_sample_width_ns, double sample_width_ns, int window_width, int window_shift)
 {
     int n_channels = reference_pulse.rows();
@@ -75,7 +76,7 @@ Eigen::VectorXd ImageExtractor::compute_integration_correction(const Eigen::Matr
     return correction;
 }
 
-FullWaveFormExtractor::FullWaveFormExtractor(SubarrayDescription& subarray):
+FullWaveFormExtractor::FullWaveFormExtractor(const SubarrayDescription& subarray):
     ImageExtractor(subarray)
 {
 }
@@ -119,12 +120,28 @@ Eigen::VectorXi ImageExtractor::get_peak_index(const Eigen::Matrix<double, -1, -
     }
     return peak_index;
 }
-LocalPeakExtractor::LocalPeakExtractor(SubarrayDescription& subarray, int window_width, int window_shift, bool apply_correction):
-    ImageExtractor(subarray),
-    window_width(window_width),
-    window_shift(window_shift),
-    apply_correction(apply_correction)
+json LocalPeakExtractor::get_default_config()
 {
+    std::string config = R"(
+    {
+        "window_width": 7,
+        "window_shift": 3,
+        "apply_correction": true
+    }
+    )";
+    return Configurable::from_string(config);
+}
+void LocalPeakExtractor::configure(const json& config)
+{
+    try {
+        const json& cfg = config.contains("LocalPeakExtractor") ? config.at("LocalPeakExtractor") : config;
+        window_width = cfg["window_width"];
+        window_shift = cfg["window_shift"];
+        apply_correction = cfg["apply_correction"];
+    }
+    catch(const std::exception& e) {
+        throw std::runtime_error("Error configuring LocalPeakExtractor: " + std::string(e.what()));
+    }
 }
 void LocalPeakExtractor::correction(Eigen::VectorXd& charge, const Eigen::VectorXi& gain_selection, const CameraReadout& readout, double sampling_rate_ghz)
 {

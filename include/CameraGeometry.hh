@@ -49,5 +49,5 @@ public:
     ~CameraGeometry() = default;
     const string print() const;
 private:
-    void compute_neighbor_matrix(bool diagnal = false);
+    void compute_neighbor_matrix(bool diagonal = false);
 };

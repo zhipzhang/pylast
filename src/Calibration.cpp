@@ -1,4 +1,6 @@
 #include "Calibration.hh"
+#include "Configurable.hh"
+#include <stdexcept>
 
 Eigen::VectorXi select_gain_channel_by_threshold(const std::array<Eigen::Matrix<uint16_t, -1, -1, Eigen::RowMajor>, 2>& waveform, const double threshold)
 {
@@ -23,7 +25,39 @@ Eigen::VectorXi select_gain_channel_by_threshold(const std::array<Eigen::Matrix<
     }
 }
 
+json Calibrator::get_default_config()
+{
+    std::string default_config = R"(
+    {
+        "image_extractor_type": "FullWaveFormExtractor"
+    }
+    )";
+    json base_config = Configurable::from_string(default_config);
+    base_config["LocalPeakExtractor"] = LocalPeakExtractor::get_default_config();
+    return base_config;
+}
 
+void Calibrator::configure(const json &config)
+{
+    try {
+        const json& cfg = config.contains("Calibrator") ? config.at("Calibrator") : config;
+        image_extractor_type = cfg["image_extractor_type"];
+        if(image_extractor_type == "LocalPeakExtractor")
+        {
+            image_extractor = ImageExtractorFactory::create<LocalPeakExtractor>(subarray, cfg);
+        }
+        else if(image_extractor_type == "FullWaveFormExtractor")
+        {
+            image_extractor = ImageExtractorFactory::create<FullWaveFormExtractor>(subarray);
+        }
+        else {
+            throw std::runtime_error("Unknow ImageExtractor type: " + image_extractor_type);
+        }
+    }
+    catch(const std::exception& e) {
+        throw std::runtime_error("Error configuring Calibrator: " + std::string(e.what()));
+    }
+}
 void Calibrator::operator()(ArrayEvent& event)
 {
     if(!event.dl0)
