@@ -18,8 +18,8 @@ Eigen::VectorXd ImageExtractor::compute_integration_correction(const Eigen::Matr
     for (int ich = 0; ich < n_channels; ich++)
     {
         Eigen::VectorXd pulse = reference_pulse.row(ich);
-        double max_pulse_time = pulse.size() * reference_pulse_sample_width_ns;
-        Eigen::VectorXd pulse_shape_x = Eigen::VectorXd::LinSpaced(pulse.size(), 0, max_pulse_time);
+        double max_pulse_time = (pulse.size() - 0.5) * reference_pulse_sample_width_ns;
+        Eigen::VectorXd pulse_shape_x = Eigen::VectorXd::LinSpaced(pulse.size() , 0.5 * reference_pulse_sample_width_ns, max_pulse_time);
         
         // Create sampled_edges for histogram
         int n_sampled_edges = static_cast<int>(std::ceil(max_pulse_time / sample_width_ns)) + 1;
@@ -75,7 +75,6 @@ Eigen::VectorXd ImageExtractor::compute_integration_correction(const Eigen::Matr
     std::cout << "correction: " << correction << std::endl;
     return correction;
 }
-
 FullWaveFormExtractor::FullWaveFormExtractor(const SubarrayDescription& subarray):
     ImageExtractor(subarray)
 {

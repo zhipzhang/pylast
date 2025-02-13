@@ -36,7 +36,7 @@ public:
     int n_samples;
 
     CameraReadout() = default;
-    CameraReadout(string camera_name, double sampling_rate, double reference_pulse_sample_width, int n_channels, int n_pixels, int n_samples, double* reference_pulse_shape, int n_ref_shape, int l_ref_shape);
+    CameraReadout(string camera_name, double sampling_rate, double reference_pulse_sample_width, int n_channels, int n_pixels, int n_samples, Eigen::MatrixXd reference_pulse_shape);
     ~CameraReadout() = default;
     
     CameraReadout(CameraReadout&& other) noexcept = default;

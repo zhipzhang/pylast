@@ -15,6 +15,7 @@
 #include "R1Event.hh"
 #include "EventMonitor.hh"
 #include "DL0Event.hh"
+#include "DL1Event.hh"
  class ArrayEvent {
 public:
     ArrayEvent() = default;
@@ -29,5 +30,6 @@ public:
     std::optional<R1Event> r1;
     std::optional<EventMonitor> monitor;
     std::optional<DL0Event> dl0;
+    std::optional<DL1Event> dl1;
     //std::optional<R1Event> r1_event;
 };

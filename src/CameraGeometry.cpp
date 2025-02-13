@@ -1,5 +1,6 @@
 #include "CameraGeometry.hh"
 #include "spdlog/fmt/fmt.h"
+#include "spdlog/spdlog.h"
 #include "nanoflann.hpp"
 #include <cstddef>
 #include <algorithm>
@@ -70,6 +71,38 @@ void CameraGeometry::compute_neighbor_matrix(bool diagnal )
         }
     }
     neigh_matrix.makeCompressed();
+}
+Eigen::Vector<bool, -1> CameraGeometry::get_border_pixel_mask(int width)
+{
+    try{
+        return border_pixel_mask.at(width);
+    }
+    catch(const std::out_of_range& e)
+    {
+        spdlog::debug("Computing border pixel mask for width {}", width);
+        Eigen::VectorXi neighbor_number = neigh_matrix * Eigen::VectorXi::Ones(neigh_matrix.cols());
+        double max_neighbor_number = neighbor_number.maxCoeff();
+        Eigen::Vector<bool, -1> outermost_pixel_mask = neighbor_number.array() < max_neighbor_number;
+        if(width == 1)
+        {
+            border_pixel_mask[width] = outermost_pixel_mask;
+            return outermost_pixel_mask;
+        }
+        else
+        {
+            Eigen::Vector<bool, -1> border_mask;
+            Eigen::Vector<bool, -1> previous_border_mask = outermost_pixel_mask;
+            for(int i = 0; i < width - 1; i++)
+            {
+                border_mask = (neigh_matrix * previous_border_mask.cast<int>()).array() > 0;
+                border_mask = (border_mask.array() || previous_border_mask.array());
+                previous_border_mask = border_mask;
+            }
+            this->border_pixel_mask[width] = border_mask;
+            return border_mask;
+        }
+        
+    }
 }
 const string CameraGeometry::print() const
 {

@@ -15,6 +15,8 @@
 #include "Configurable.hh"
 #include <memory>
 #include "ImageCleaner.hh"
+#include "ArrayEvent.hh"
+#include "ImageParameters.hh"
 class ImageProcessor: public Configurable
 {
 public:
@@ -24,6 +26,9 @@ public:
     void configure(const json& config) override;
     static json get_default_config();
     json default_config() const override {return get_default_config();}
+    void operator()(ArrayEvent& event);
+    static HillasParameter hillas_parameter(const CameraGeometry& camera_geometry, const Eigen::VectorXd& masked_image);
+    static LeakageParameter leakage_parameter(CameraGeometry& camera_geometry, const Eigen::VectorXd& masked_image);
 private:
     const SubarrayDescription& subarray;
     std::string image_cleaner_type;

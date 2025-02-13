@@ -123,6 +123,17 @@ void SimtelEventSource::set_telescope_settings(int tel_id)
     auto camera_geometry = get_telescope_camera_geometry(itel);
     auto camera_readout = get_telescope_camera_readout(itel);
     auto optics = get_telescope_optics(itel);
+    if(optics.effective_focal_length != 0)
+    {
+        camera_geometry.pix_x_fov = camera_geometry.pix_x / optics.effective_focal_length;
+        camera_geometry.pix_y_fov = camera_geometry.pix_y / optics.effective_focal_length;
+    }
+    else
+    {
+        spdlog::warn("Effective Area is not available, so using the equivalent focal length");
+        camera_geometry.pix_x_fov = camera_geometry.pix_x / optics.equivalent_focal_length;
+        camera_geometry.pix_y_fov = camera_geometry.pix_y / optics.equivalent_focal_length;
+    }
     auto camera_description = CameraDescription(camera_name, std::move(camera_geometry), std::move(camera_readout));
     auto telescope_description = TelescopeDescription(std::move(camera_description), std::move(optics));
     auto telescope_position = get_telescope_position(itel);
@@ -146,10 +157,15 @@ CameraReadout SimtelEventSource::get_telescope_camera_readout(int tel_index)
     int n_samples = simtel_file_handler->hsdata->pixel_set[tel_index].sum_bins;
     double sampling_rate = 1/simtel_file_handler->hsdata->pixel_set[tel_index].time_slice;
     double reference_pulse_sample_width = simtel_file_handler->hsdata->pixel_set[tel_index].ref_step;
-    double* reference_pulse_shape = &simtel_file_handler->hsdata->pixel_set[tel_index].refshape[0][0];
-    int n_ref_shape = simtel_file_handler->hsdata->pixel_set[tel_index].nrefshape;
-    int l_ref_shape = simtel_file_handler->hsdata->pixel_set[tel_index].lrefshape;
-    return CameraReadout(camera_name, sampling_rate, reference_pulse_sample_width, n_channels, num_pixels, n_samples, reference_pulse_shape, n_ref_shape, l_ref_shape   );
+    Eigen::MatrixXd reference_pulse_shape(n_channels, simtel_file_handler->hsdata->pixel_set[tel_index].lrefshape);
+    for (int i = 0; i < n_channels; i++)
+    {
+        for (int j = 0; j < simtel_file_handler->hsdata->pixel_set[tel_index].lrefshape; j++)
+        {
+            reference_pulse_shape(i, j) = simtel_file_handler->hsdata->pixel_set[tel_index].refshape[i][j];
+        }
+    }
+    return CameraReadout(camera_name, sampling_rate, reference_pulse_sample_width, n_channels, num_pixels, n_samples, std::move(reference_pulse_shape));
 }
 OpticsDescription SimtelEventSource::get_telescope_optics(int tel_index)
 {

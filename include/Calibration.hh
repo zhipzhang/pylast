@@ -15,7 +15,7 @@
 #include "SubarrayDescription.hh"
 #include "ArrayEvent.hh"
 #include "ImageExtractor.hh"
-
+#include "Configurable.hh"
  /**
   * @brief Select the gain channel by threshold
   * 
@@ -29,36 +29,34 @@
 class ImageExtractorFactory
 {
     public:
+    ImageExtractorFactory() = default;
     template<typename Extractor, typename... Args>
-    static std::unique_ptr<ImageExtractor> create(SubarrayDescription& subarray, Args&&... args)
+    static std::unique_ptr<ImageExtractor> create(const SubarrayDescription& subarray, Args&&... args)
     {
         return std::make_unique<Extractor>(subarray, std::forward<Args>(args)...);
     }
+    static ImageExtractorFactory& get_instance()
+    {
+        static ImageExtractorFactory instance;
+        return instance;
+    }
+    ImageExtractorFactory(ImageExtractorFactory const&) = delete;
+    void operator=(ImageExtractorFactory const&) = delete;
+    ~ImageExtractorFactory() = default;
 };
-class Calibrator
+
+class Calibrator: public Configurable
 {
     public:
-    template<typename... Args>
-    Calibrator(SubarrayDescription& subarray, const std::string& image_extractor_type = "FullWaveFormExtractor", Args&&... args)
-    :subarray(subarray)
-    {
-        if(image_extractor_type == "FullWaveFormExtractor")
-        {
-            this->image_extractor = ImageExtractorFactory::create<FullWaveFormExtractor>(subarray);
-        }
-        else if(image_extractor_type == "LocalPeakExtractor")
-        {
-            this->image_extractor = ImageExtractorFactory::create<LocalPeakExtractor>(subarray, std::forward<Args>(args)...);
-        }
-        else
-        {
-            throw std::runtime_error("Invalid image extractor type: " + image_extractor_type);
-        }
-    }
+    DECLARE_CONFIGURABLE_DEFINITIONS(const SubarrayDescription&, subarray, Calibrator);
+    static json get_default_config();
+    json default_config() const override {return get_default_config();}
+    void configure(const json& config) override;
     ~Calibrator() = default;
 
     void operator()(ArrayEvent& event);
     std::unique_ptr<ImageExtractor> image_extractor;
     private:
-        SubarrayDescription& subarray;
+        const SubarrayDescription& subarray;
+        std::string image_extractor_type;
 };
