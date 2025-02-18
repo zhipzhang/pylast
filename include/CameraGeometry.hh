@@ -43,7 +43,8 @@ public:
     Eigen::SparseMatrix<int> neigh_matrix;
     /** @brief Map from width to border pixel mask */
     std::unordered_map<int, Eigen::Vector<bool, -1>> border_pixel_mask; 
-
+    /** @brief Pixel width [m] */
+    Eigen::VectorXd pix_width;
     CameraGeometry() = default;
     CameraGeometry(std::string camera_name, int num_pixels, double* pix_x, double* pix_y, double* pix_area, int* pix_type, double cam_rotation);
 

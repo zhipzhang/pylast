@@ -29,6 +29,8 @@ public:
     void operator()(ArrayEvent& event);
     static HillasParameter hillas_parameter(const CameraGeometry& camera_geometry, const Eigen::VectorXd& masked_image);
     static LeakageParameter leakage_parameter(CameraGeometry& camera_geometry, const Eigen::VectorXd& masked_image);
+    static ConcentrationParameter concentration_parameter(const CameraGeometry& camera_geometry, const Eigen::VectorXd& masked_image, const HillasParameter& hillas_parameter);
+    static MorphologyParameter morphology_parameter(const CameraGeometry& camera_geometry, const Eigen::Vector<bool, -1>& image_mask);
 private:
     const SubarrayDescription& subarray;
     std::string image_cleaner_type;

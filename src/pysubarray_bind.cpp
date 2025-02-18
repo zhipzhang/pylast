@@ -49,3 +49,8 @@ void bind_subarray_description(nb::module_ &m)
         .def_ro("neigh_matrix", &CameraGeometry::neigh_matrix)
         .def("__repr__", &CameraGeometry::print);
 }
+
+NB_MODULE(_pylast_subarray, m)
+{
+    bind_subarray_description(m);
+}

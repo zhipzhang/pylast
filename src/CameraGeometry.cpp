@@ -12,6 +12,22 @@ CameraGeometry::CameraGeometry(std::string camera_name, int num_pixels, double* 
     this->pix_y = Eigen::VectorXd(Eigen::Map<Eigen::VectorXd>(pix_y, num_pixels));
     this->pix_area = Eigen::VectorXd(Eigen::Map<Eigen::VectorXd>(pix_area, num_pixels));
     this->pix_type = Eigen::VectorXi(Eigen::Map<Eigen::VectorXi>(pix_type, num_pixels));
+    if(this->pix_type[0] == 0)
+    {
+        this->pix_width = (this->pix_area.array()/M_PI).sqrt();
+    }
+    else if(this->pix_type[0] == 1)
+    {
+        this->pix_width = this->pix_area.array()/sqrt(3);
+    }
+    else if(this->pix_type[0] == 2)
+    {
+        this->pix_width = this->pix_area.array().sqrt();
+    }
+    else
+    {
+        throw std::runtime_error("Invalid pixel type");
+    }
     compute_neighbor_matrix(false);
 }
 void CameraGeometry::compute_neighbor_matrix(bool diagnal )

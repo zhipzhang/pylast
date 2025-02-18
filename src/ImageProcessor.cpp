@@ -2,7 +2,8 @@
 #include "CameraGeometry.hh"
 #include "ImageParameters.hh"
 #include "spdlog/spdlog.h"
-
+#include <queue>
+#include <iostream>
 
 Eigen::Vector<bool, -1> ImageProcessor::tailcuts_clean(const CameraGeometry& camera_geometry, const Eigen::VectorXd& image, double picture_thresh, double boundary_thresh, bool keep_isolated_pixels, int min_number_picture_neighbors)
 {
@@ -33,6 +34,7 @@ Eigen::Vector<bool, -1> ImageProcessor::tailcuts_clean(const CameraGeometry& cam
 void ImageProcessor::configure(const json& config)
 {
     image_cleaner_type = config["image_cleaner_type"];
+    std::cout << "image_cleaner_type: " << image_cleaner_type << std::endl;
     if(image_cleaner_type == "Tailcuts_cleaner")
     {
         image_cleaner = std::make_unique<TailcutsCleaner>(config["Tailcuts_cleaner"]);
@@ -53,12 +55,16 @@ void ImageProcessor::operator()(ArrayEvent& event)
         Eigen::VectorXd masked_image = image_mask.select(dl0_camera->image, Eigen::VectorXd::Zero(dl0_camera->image.size()));
         HillasParameter hillas_parameter = ImageProcessor::hillas_parameter(subarray.tels.at(tel_id).camera_description.camera_geometry, masked_image);
         LeakageParameter leakage_parameter = ImageProcessor::leakage_parameter(const_cast<CameraGeometry&>(subarray.tels.at(tel_id).camera_description.camera_geometry), masked_image);
+        ConcentrationParameter concentration_parameter = ImageProcessor::concentration_parameter(subarray.tels.at(tel_id).camera_description.camera_geometry, masked_image, hillas_parameter);
+        MorphologyParameter morphology_parameter = ImageProcessor::morphology_parameter(subarray.tels.at(tel_id).camera_description.camera_geometry, image_mask);
         // Tempory image are copyed from dl0_camera
         dl1_camera.image = dl0_camera->image;
         dl1_camera.peak_time = dl0_camera->peak_time;
         dl1_camera.mask = std::move(image_mask);  // Image mask is not used in the future
         dl1_camera.image_parameters.hillas = hillas_parameter;
         dl1_camera.image_parameters.leakage = leakage_parameter;
+        dl1_camera.image_parameters.concentration = concentration_parameter;
+        dl1_camera.image_parameters.morphology = morphology_parameter;
         event.dl1->add_tel(tel_id, std::move(dl1_camera));
     }
 
@@ -74,9 +80,9 @@ HillasParameter ImageProcessor::hillas_parameter(const CameraGeometry& camera_ge
     double phi = std::atan2(y, x);
     Eigen::VectorXd delta_x = camera_geometry.pix_x_fov.array() - x;
     Eigen::VectorXd delta_y = camera_geometry.pix_y_fov.array() - y;
-    cov_matrix(0, 0) = (delta_x.array() * delta_x.array()).matrix().dot(masked_image)/(intensity - 1);
-    cov_matrix(1, 1) = (delta_y.array() * delta_y.array()).matrix().dot(masked_image)/(intensity - 1);
-    cov_matrix(0, 1) = (delta_x.array() * delta_y.array()).matrix().dot(masked_image)/(intensity - 1);
+    cov_matrix(0, 0) = (delta_x.array().square() * masked_image.array()).sum()/(intensity - 1);
+    cov_matrix(1, 1) = (delta_y.array().square() * masked_image.array()).sum()/(intensity - 1);
+    cov_matrix(0, 1) = (delta_x.array() * delta_y.array() * masked_image.array()).sum()/(intensity - 1);
     cov_matrix(1, 0) = cov_matrix(0, 1);
     double length,width, psi = 0;
     double skewness = 0, kurtosis = 0;
@@ -106,8 +112,8 @@ HillasParameter ImageProcessor::hillas_parameter(const CameraGeometry& camera_ge
     double m4_long = pow(longitudinal.array(), 4).matrix().dot(masked_image);
     skewness = m3_long/pow(length, 3);
     kurtosis = m4_long/pow(length, 4);
-    return HillasParameter{length, width, psi, x, y, skewness, kurtosis, intensity, r, phi};
 
+    return HillasParameter{length, width, psi, x, y, skewness, kurtosis, intensity, r, phi};
 }
 LeakageParameter ImageProcessor::leakage_parameter(CameraGeometry& camera_geometry, const Eigen::VectorXd& masked_image)
 {
@@ -118,20 +124,90 @@ LeakageParameter ImageProcessor::leakage_parameter(CameraGeometry& camera_geomet
     double intensity = masked_image.sum();
     double intensity_width_1 = outermost_pixel_mask.cast<double>().dot(masked_image)/intensity;
     double intensity_width_2 = second_outermost_pixel_mask.cast<double>().dot(masked_image)/intensity;
-    double pixel_width_1 = 1.0 * (outermost_pixel_mask.array() || (masked_image.array() > 0)).count() / image_pixels;
-    double pixel_width_2 = 1.0 * (second_outermost_pixel_mask.array() || (masked_image.array() > 0)).count()/ image_pixels;
-    return LeakageParameter{intensity_width_1, intensity_width_2, pixel_width_1, pixel_width_2};
+    double pixel_width_1 = 1.0 * (outermost_pixel_mask.array() && (masked_image.array() > 0)).count() / image_pixels;
+    double pixel_width_2 = 1.0 * (second_outermost_pixel_mask.array() && (masked_image.array() > 0)).count()/ image_pixels;
+    return LeakageParameter{pixel_width_1, pixel_width_2, intensity_width_1, intensity_width_2};
+
+}
+ConcentrationParameter ImageProcessor::concentration_parameter(const CameraGeometry& camera_geometry, const Eigen::VectorXd& masked_image, const HillasParameter& hillas_parameter)
+{
+    double concentration_pixel = masked_image.maxCoeff()/ hillas_parameter.intensity;
+    auto delta_x = camera_geometry.pix_x_fov.array() - hillas_parameter.x;
+    auto delta_y = camera_geometry.pix_y_fov.array() - hillas_parameter.y;
+    Eigen::ArrayXd distance = (delta_x.array() * delta_x.array() + delta_y.array() * delta_y.array()).sqrt();
+    auto mask_cog = distance < camera_geometry.pix_width[0];
+    double concentration_cog = masked_image.dot(mask_cog.cast<double>().matrix()) / hillas_parameter.intensity;
+    Eigen::Matrix2d rotation_matrix = (Eigen::Matrix2d() << cos(hillas_parameter.psi), sin(hillas_parameter.psi), -sin(hillas_parameter.psi), cos(hillas_parameter.psi)).finished();
+    Eigen::ArrayXd delta_x_rotated = rotation_matrix * delta_x.matrix();
+    Eigen::ArrayXd delta_y_rotated = rotation_matrix * delta_y.matrix();
+    auto mask_core = (delta_x_rotated.array() * delta_x_rotated.array() / pow(hillas_parameter.length, 2) + delta_y_rotated.array() * delta_y_rotated.array() / pow(hillas_parameter.width, 2)) < 1;
+    double concentration_core = masked_image.dot(mask_core.cast<double>().matrix()) / hillas_parameter.intensity;
+    return ConcentrationParameter{concentration_cog, concentration_core, concentration_pixel};
+}
+MorphologyParameter ImageProcessor::morphology_parameter(const CameraGeometry& camera_geometry, const Eigen::Vector<bool, -1>& image_mask)
+{
+    std::unordered_map<size_t, std::vector<size_t>> island_map;
+    Eigen::Vector<bool, -1> pixel_in_island = Eigen::Vector<bool, -1>::Zero(image_mask.size());
+    size_t island_id = 0;
+    for(size_t i = 0; i < image_mask.size(); ++i)
+    {
+        std::queue<size_t> queue;
+        if(image_mask[i] && !pixel_in_island[i])
+        {
+            queue.push(i);
+            pixel_in_island[i] = true;
+            island_map[island_id].push_back(i);
+            while(!queue.empty())
+            {
+                auto pixel = queue.front();
+                queue.pop();
+                for(int k = 0; k < camera_geometry.neigh_matrix.outerSize(); ++ k)
+                {
+                    for(Eigen::SparseMatrix<int>::InnerIterator it(camera_geometry.neigh_matrix, k); it; ++it)
+                    {
+                        if(it.value() > 0 && it.row() == pixel && !pixel_in_island[it.col()])
+                        {
+                            queue.push(it.col());
+                            pixel_in_island[it.col()] = true;
+                            island_map[island_id].push_back(it.col());
+                        }
+                    }
+                }
+            }
+            island_id++;
+        }
+    }
+    int num_island = island_map.size();
+    int n_pixels = image_mask.count();
+    int n_small_islands = 0;
+    int n_medium_islands = 0;
+    int n_large_islands = 0;
+    for(const auto& [island_id, island_pixels]: island_map)
+    {
+        if(island_pixels.size() < 10)
+        {
+            n_small_islands++;
+        }
+        else if(island_pixels.size() < 30)
+        {
+            n_medium_islands++;
+        }
+        else
+        {
+            n_large_islands++;
+        }
+    }
+    return MorphologyParameter{n_pixels, num_island, n_small_islands, n_medium_islands, n_large_islands};
 
 }
 json ImageProcessor::get_default_config()
 {
-    std::stringstream ss;
-    ss << R"(
+    std::string default_config = R"(
     {
-        "image_cleaner_type": "Tailcuts_cleaner",
+        "image_cleaner_type": "Tailcuts_cleaner"
     }
     )";
-    json base_config = Configurable::from_string(ss.str());
+    json base_config = Configurable::from_string(default_config);
     base_config["Tailcuts_cleaner"] = TailcutsCleaner::get_default_config();
     return base_config;
 }
