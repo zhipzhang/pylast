@@ -30,10 +30,6 @@ SimtelFileHandler::SimtelFileHandler(const std::string& filename) : filename(fil
     }
     iobuf->output_file = NULL;
     iobuf->max_length = 1000000000L;
-    hsdata = (AllHessData*)calloc(1, sizeof(AllHessData));
-    if(hsdata == NULL) {
-        throw std::runtime_error("Cannot allocate memory for hsdata");
-    }
     item_header = {0, 0, 0, 0, 0, 0, 0, 0};
     history_container = {1, NULL, NULL, NULL, 0};
     metadata_list = {-1, NULL};
@@ -161,7 +157,7 @@ void SimtelFileHandler::only_read_blocks(std::vector<BlockType> block_types) {
     }
 }
 bool SimtelFileHandler::only_read_mc_event() {
-    only_read_blocks({BlockType::Mc_Event, BlockType::Mc_Shower});
+    only_read_blocks({BlockType::Mc_Event, BlockType::Mc_Shower, BlockType::RunHeader});
     if(no_more_blocks) return false;
     return true;
 }
@@ -170,11 +166,12 @@ void SimtelFileHandler::read_until_event() {
     read_block();
     block_handler[BlockType::Mc_Shower](); // handle mc shower block after read_util
 }
-void SimtelFileHandler::load_next_event() {
+bool SimtelFileHandler::load_next_event() {
     read_until_block(BlockType::SimtelEvent);
     read_block();
-    if(no_more_blocks) return;
+    if(no_more_blocks) return false;
     block_handler[BlockType::SimtelEvent](); // handle simtel event block after read_util
+    return true;
 }
 void SimtelFileHandler::_read_history() {
     LOG_SCOPE("handle history block")
@@ -208,6 +205,15 @@ void SimtelFileHandler::_read_metadata() {
 }
 void SimtelFileHandler::_read_runheader() {
     LOG_SCOPE("handle runheader block")
+    if(hsdata == nullptr) {
+        hsdata = (AllHessData*)calloc(1, sizeof(AllHessData));
+        if(hsdata == NULL) {
+            throw std::runtime_error("Cannot allocate memory for hsdata");
+        }
+    }
+    else {
+        memset(hsdata, 0, sizeof(AllHessData));
+    }
     if(read_simtel_runheader(iobuf, &hsdata->run_header) < 0) {
         spdlog::error("Failed to read runheader");
         throw std::runtime_error("Failed to read runheader");

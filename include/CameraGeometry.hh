@@ -39,8 +39,8 @@ public:
     Eigen::VectorXi pix_type;
     /** @brief Camera rotation [degree] */
     double cam_rotation;
-    /** @brief Neighbor matrix  Row i is the neighbor of pixel i */
-    Eigen::SparseMatrix<int> neigh_matrix;
+    /** @brief Neighbor matrix  row i is the neighbor of pixel i */
+    Eigen::SparseMatrix<int, Eigen::RowMajor> neigh_matrix;
     /** @brief Map from width to border pixel mask */
     std::unordered_map<int, Eigen::Vector<bool, -1>> border_pixel_mask; 
     /** @brief Pixel width [m] */

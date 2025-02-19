@@ -81,7 +81,7 @@ public:
     void read_until_block(BlockType block_type);
     void only_read_blocks(std::vector<BlockType> block_types);
     bool only_read_mc_event();
-    void load_next_event();
+    bool load_next_event();
     /**
      * @brief read the file until the actual shower
      * 

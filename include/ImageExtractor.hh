@@ -12,7 +12,6 @@
 #include "Eigen/Dense"
 #include <cstddef>
 #include <utility>
-#include "Eigen/src/Core/Matrix.h"
 #include "SubarrayDescription.hh"
 #include "optional"
 #include "Configurable.hh"

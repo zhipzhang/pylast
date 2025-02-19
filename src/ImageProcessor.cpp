@@ -1,5 +1,6 @@
 #include "ImageProcessor.hh"
 #include "CameraGeometry.hh"
+#include "Eigen/Dense"
 #include "ImageParameters.hh"
 #include "spdlog/spdlog.h"
 #include <queue>
@@ -138,8 +139,8 @@ ConcentrationParameter ImageProcessor::concentration_parameter(const CameraGeome
     auto mask_cog = distance < camera_geometry.pix_width[0];
     double concentration_cog = masked_image.dot(mask_cog.cast<double>().matrix()) / hillas_parameter.intensity;
     Eigen::Matrix2d rotation_matrix = (Eigen::Matrix2d() << cos(hillas_parameter.psi), sin(hillas_parameter.psi), -sin(hillas_parameter.psi), cos(hillas_parameter.psi)).finished();
-    Eigen::ArrayXd delta_x_rotated = rotation_matrix * delta_x.matrix();
-    Eigen::ArrayXd delta_y_rotated = rotation_matrix * delta_y.matrix();
+    Eigen::ArrayXd delta_x_rotated = rotation_matrix.row(0)(0) * delta_x.array() + rotation_matrix.row(0)(1) * delta_y.array();
+    Eigen::ArrayXd delta_y_rotated = rotation_matrix.row(1)(0) * delta_x.array() + rotation_matrix.row(1)(1) * delta_y.array();
     auto mask_core = (delta_x_rotated.array() * delta_x_rotated.array() / pow(hillas_parameter.length, 2) + delta_y_rotated.array() * delta_y_rotated.array() / pow(hillas_parameter.width, 2)) < 1;
     double concentration_core = masked_image.dot(mask_core.cast<double>().matrix()) / hillas_parameter.intensity;
     return ConcentrationParameter{concentration_cog, concentration_core, concentration_pixel};
@@ -161,16 +162,13 @@ MorphologyParameter ImageProcessor::morphology_parameter(const CameraGeometry& c
             {
                 auto pixel = queue.front();
                 queue.pop();
-                for(int k = 0; k < camera_geometry.neigh_matrix.outerSize(); ++ k)
+                for(Eigen::SparseMatrix<int, Eigen::RowMajor>::InnerIterator it(camera_geometry.neigh_matrix, pixel); it; ++it)
                 {
-                    for(Eigen::SparseMatrix<int>::InnerIterator it(camera_geometry.neigh_matrix, k); it; ++it)
+                    if(it.value() > 0 && !pixel_in_island[it.col()])
                     {
-                        if(it.value() > 0 && it.row() == pixel && !pixel_in_island[it.col()])
-                        {
-                            queue.push(it.col());
-                            pixel_in_island[it.col()] = true;
-                            island_map[island_id].push_back(it.col());
-                        }
+                        queue.push(it.col());
+                        pixel_in_island[it.col()] = true;
+                        island_map[island_id].push_back(it.col());
                     }
                 }
             }

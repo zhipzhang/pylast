@@ -22,6 +22,5 @@
     virtual ~EventMonitor() = default;
     EventMonitor(EventMonitor&&) = default;
     EventMonitor& operator=(EventMonitor&&) = default;
-    void add_telmonitor(int tel_id, int n_channels, int n_pixels, double* pedestal_per_sample, double* dc_to_pe, int max_pixels);
  };
 

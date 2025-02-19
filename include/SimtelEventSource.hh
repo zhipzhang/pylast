@@ -31,7 +31,7 @@ private:
     virtual void init_atmosphere_model() override;
     virtual void init_metaparam() override;
     virtual void init_subarray() override;
-    virtual void _load_next_events() ;
+    virtual bool _load_next_events() ;
     virtual bool is_finished() const override {return simtel_file_handler->no_more_blocks;}
     void set_simulation_config();
     void set_telescope_settings(int tel_id);

@@ -24,13 +24,13 @@ NB_MODULE(_pyeventsource, m){
         .def("load_simulated_showers", &EventSource::load_all_simulated_showers)
         .def("__iter__",
             [](EventSource &source) {
-                return nb::make_iterator<nb::rv_policy::reference_internal>(
+                return nb::make_iterator<nb::rv_policy::move>(
                     nb::type<EventSource>(),
                     "EventSourceIterator",
                     source.begin(),
                     source.end()
                 );
-            }, nb::keep_alive<0, 1>());
+            });
     nb::class_<SimulationConfiguration>(m, "SimulationConfiguration")
         .def(nb::init<>())
         .def_ro("run_number", &SimulationConfiguration::run_number)

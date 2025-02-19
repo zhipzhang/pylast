@@ -1,8 +1,6 @@
 #include "SimtelEventSource.hh"
 #include "CameraDescription.hh"
 #include "CameraGeometry.hh"
-#include "Eigen/src/Core/util/Constants.h"
-#include "Eigen/src/Core/util/Macros.h"
 #include "LACT_hessioxxx/include/io_basic.h"
 #include "LACT_hessioxxx/include/io_hess.h"
 #include "SimtelFileHandler.hh"
@@ -211,13 +209,15 @@ void SimtelEventSource::load_all_simulated_showers()
     std::thread loader_thread(load_showers);
     loader_thread.join();
 }
-void SimtelEventSource::_load_next_events()
+bool SimtelEventSource::_load_next_events()
 {
-    simtel_file_handler->load_next_event();
+    return simtel_file_handler->load_next_event();
 }
 ArrayEvent SimtelEventSource::get_event()
 {
-    _load_next_events();
+    if (!_load_next_events()) {
+        return ArrayEvent(); // If no more events, return an empty event
+    }
     ArrayEvent event;
     event.simulation  = SimulatedEvent();
     event.simulation->shower.shower_primary_id = simtel_file_handler->hsdata->mc_shower.primary_id;
@@ -245,6 +245,10 @@ void SimtelEventSource::read_adc_samples(ArrayEvent& event)
     }
     for(const auto& tel_id: allowed_tels) {
         auto tel_index = simtel_file_handler->tel_id_to_index[tel_id];
+        if(!simtel_file_handler->hsdata->event.teldata[tel_index].known)
+        {
+            continue;
+        }
         if(simtel_file_handler->hsdata->event.teldata[tel_index].raw->known)
         {
             uint32_t* high_gain_waveform_sum = nullptr;
@@ -294,7 +298,7 @@ void SimtelEventSource::read_adc_samples(ArrayEvent& event)
                     std::move(low_gain_waveform),
                     high_gain_waveform_sum,
                     low_gain_waveform_sum);
-                }
+        }
     }
 }
 void SimtelEventSource::apply_simtel_calibration(ArrayEvent& event)
@@ -311,7 +315,7 @@ void SimtelEventSource::apply_simtel_calibration(ArrayEvent& event)
         for(int ipix = 0; ipix < n_pixels; ipix++) {
             int selected_gain_channel = gain_selection[ipix];
             for(int isample = 0; isample < n_samples; isample++) {
-                r1_waveform(ipix, isample) = (r0_tel->waveform[selected_gain_channel](ipix, isample) - event.monitor->tels[tel_id]->pedestal_per_sample[selected_gain_channel][ipix]) * event.monitor->tels[tel_id]->dc_to_pe[selected_gain_channel][ipix];
+                r1_waveform(ipix, isample) = (r0_tel->waveform[selected_gain_channel](ipix, isample) - event.monitor->tels[tel_id]->pedestal_per_sample(selected_gain_channel, ipix)) * event.monitor->tels[tel_id]->dc_to_pe(selected_gain_channel, ipix);
             }
         }
         event.r1->add_tel(tel_id, n_pixels, n_samples, std::move(r1_waveform), std::move(gain_selection));
@@ -319,23 +323,32 @@ void SimtelEventSource::apply_simtel_calibration(ArrayEvent& event)
 }
 void SimtelEventSource::read_event_monitor(ArrayEvent& event)
 {
-    double *dc_to_pe = nullptr;
-    double *pedestal_per_sample = nullptr;
     if(!event.monitor) {
         event.monitor = EventMonitor();
     }
     for(const auto& tel_id: allowed_tels) {
         auto tel_index = simtel_file_handler->tel_id_to_index[tel_id];
+        if(!simtel_file_handler->hsdata->event.teldata[tel_index].known)
+        {
+            continue;
+        }
         if(simtel_file_handler->hsdata->tel_lascal[tel_index].known && simtel_file_handler->hsdata->tel_moni[tel_index].known)
         {
             auto n_channels = simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_gains;
             auto n_pixels = simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels;
-            pedestal_per_sample = &simtel_file_handler->hsdata->tel_moni[tel_index].pedsamp[0][0];
-            dc_to_pe = &simtel_file_handler->hsdata->tel_lascal[tel_index].calib[0][0];
-            if(n_channels == 0 || n_pixels == 0) {
-                continue;
+            Eigen::Matrix<double, -1, -1, Eigen::RowMajor> pedestal_per_sample(n_channels, n_pixels);
+            for(int ich = 0; ich < n_channels; ich++) {
+                for(int ipix = 0; ipix < n_pixels; ipix++) {
+                    pedestal_per_sample(ich, ipix) = simtel_file_handler->hsdata->tel_moni[tel_index].pedsamp[ich][ipix];
+                }
             }
-            event.monitor->add_telmonitor(tel_id, n_channels, n_pixels, pedestal_per_sample, dc_to_pe, H_MAX_PIX);
+            Eigen::Matrix<double, -1, -1, Eigen::RowMajor> dc_to_pe(n_channels, n_pixels);
+            for(int ich = 0; ich < n_channels; ich++) {
+                for(int ipix = 0; ipix < n_pixels; ipix++) {
+                    dc_to_pe(ich, ipix) = simtel_file_handler->hsdata->tel_lascal[tel_index].calib[ich][ipix];
+                }
+            }
+            event.monitor->add_tel(tel_id, n_channels, n_pixels, std::move(pedestal_per_sample), std::move(dc_to_pe));
         }
     }
 }
