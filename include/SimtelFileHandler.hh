@@ -137,4 +137,6 @@ private:
     void handle_simtel_event();
     void handle_mc_pesum();
     std::unordered_map<BlockType, std::function<void()>> block_handler;
+    // In case of valgrind, let's clear the hsdata memory here
+    void clear_memory();
 };

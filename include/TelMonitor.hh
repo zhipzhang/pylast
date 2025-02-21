@@ -29,14 +29,14 @@
  {
    public:
     TelMonitor() = default;
-    TelMonitor(int n_channels, int n_pixels, double* pedestal_per_sample, double* dc_to_pe, int max_pixels);
+    TelMonitor(int n_channels, int n_pixels, Eigen::Matrix<double, -1, -1, Eigen::RowMajor> pedestal_per_sample, Eigen::Matrix<double, -1, -1, Eigen::RowMajor> dc_to_pe);
     virtual ~TelMonitor() = default;
     TelMonitor(const TelMonitor&) = delete;
     TelMonitor& operator=(const TelMonitor&) = delete;
     TelMonitor(TelMonitor&&) = default;
     TelMonitor& operator=(TelMonitor&&) = default;
-    std::array<Eigen::VectorXd, 2> pedestal_per_sample;
-    std::array<Eigen::VectorXd, 2> dc_to_pe;
+    Eigen::Matrix<double, -1, -1, Eigen::RowMajor> pedestal_per_sample;
+    Eigen::Matrix<double, -1, -1, Eigen::RowMajor> dc_to_pe;
     int n_channels;
     int n_pixels;
  };

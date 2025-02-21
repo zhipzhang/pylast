@@ -49,4 +49,5 @@ public:
     std::array<double, 3> reference_position ;
     void add_telescope(const telescope_id_t tel_id,  TelescopeDescription&& tel_description, const std::array<double, 3>& tel_position);
     const string print() const;
+    std::vector<telescope_id_t> get_ordered_telescope_ids() const;
 };

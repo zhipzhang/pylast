@@ -70,3 +70,9 @@ protected:
     ClassType(ParamType ParamName): Configurable(), ParamName(ParamName) { initialize(); } \
     ClassType(ParamType ParamName, const json& config): Configurable(config), ParamName(ParamName) { initialize(); } \
     ClassType(ParamType ParamName, const std::string& config_str): Configurable(config_str), ParamName(ParamName) { initialize(); }
+
+#define DECLARE_CONFIGURABLE_DOUBLE_DEFINITIONS(ParamType1, ParamName1, ParamType2, ParamName2, ClassType) \
+    ClassType(ParamType1 ParamName1, ParamType2 ParamName2): Configurable(), ParamName1(ParamName1), ParamName2(ParamName2) { initialize(); } \
+    ClassType(ParamType1 ParamName1, ParamType2 ParamName2, const json& config): Configurable(config), ParamName1(ParamName1), ParamName2(ParamName2) { initialize(); } \
+    ClassType(ParamType1 ParamName1, ParamType2 ParamName2, const std::string& config_str): Configurable(config_str), ParamName1(ParamName1), ParamName2(ParamName2) { initialize(); }
+
