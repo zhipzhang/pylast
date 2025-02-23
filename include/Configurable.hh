@@ -18,7 +18,8 @@ class Configurable
 public:
     Configurable() = default;
     Configurable(const json& config): config(config) {}
-    Configurable(const std::string& config_str): config(from_string(config_str)) {}
+    Configurable(const std::string& config_str): config(from_string(config_str, nullptr)) {}
+    Configurable(const std::string& config_str, std::function<void(const std::string&)> callback): config(from_string(config_str, callback)) {}
 
     void initialize()
     {
@@ -27,6 +28,7 @@ public:
         {
             final_config.merge_patch(config);
         }
+        printf("final_config: %s\n", final_config.dump().c_str());
         configure(final_config);
     }
 
@@ -44,11 +46,29 @@ public:
         return json::parse(file);
     }
 
+    static json from_string(const std::string& str, std::function<void(const std::string&)> callback)
+    {
+            try
+            {
+                return json::parse(str);
+            }
+            catch(const std::exception& e)
+            {
+                if(callback == nullptr)
+                {
+                    throw std::runtime_error("Failed to parse string: " + std::string(e.what()));
+                }
+                else
+                {
+                    callback(str);
+                    return json();
+                }
+            }
+    }
     static json from_string(const std::string& str)
     {
-        return json::parse(str);
+        return from_string(str, nullptr);
     }
-
     virtual ~Configurable() = default;
 
 protected:

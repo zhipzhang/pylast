@@ -15,8 +15,8 @@ set(BuildConfig "LACT_PROD0" CACHE STRING "Configuration to use for building hes
 message(STATUS "hessioxxx BuildConfig='${BuildConfig}'")
 
 add_subdirectory(bernlohr/LACT_hessioxxx)
+add_subdirectory(muparser)
 add_definitions(-D${BuildConfig})
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/bernlohr/)
 
 
 set(LAST_ARRAY_EVENT_SOURCE_FILES
@@ -55,9 +55,21 @@ set(IMAGE_PROCESSOR_SOURCE_FILES
     ImageCleaner.cpp)
 add_library(image_processor SHARED ${IMAGE_PROCESSOR_SOURCE_FILES})
 target_link_libraries(image_processor PUBLIC basic_event)
+
 add_library(simtel_event SHARED ${SIMTEL_SOURCE_FILES})
 target_link_libraries(simtel_event PUBLIC basic_event hessio last_array_event)
+target_include_directories(simtel_event PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/bernlohr/)
 
+set(DATA_WRITER_SOURCE_FILES
+    DataWriter.cpp
+    )
+add_library(data_writer SHARED ${DATA_WRITER_SOURCE_FILES})
+target_link_libraries(data_writer PUBLIC basic_event)
+set(QUERY_SOURCE_FILES
+    StereoQuery.cpp
+    )
+add_library(query SHARED ${QUERY_SOURCE_FILES})
+target_link_libraries(query PUBLIC muparser::muparser)
 
 if(BUILD_PYTHON_BINDINGS)
     set(BINDING_FILES
