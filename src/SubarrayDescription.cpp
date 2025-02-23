@@ -20,6 +20,16 @@ void SubarrayDescription::add_telescope(const telescope_id_t tel_id, TelescopeDe
     tel_positions[tel_id] = tel_position;
 }
 
+std::vector<telescope_id_t> SubarrayDescription::get_ordered_telescope_ids() const
+{
+    std::vector<telescope_id_t> ordered_tel_ids;
+    for(const auto& [tel_id, _] : tels)
+    {
+        ordered_tel_ids.push_back(tel_id);
+    }
+    std::sort(ordered_tel_ids.begin(), ordered_tel_ids.end());
+    return ordered_tel_ids;
+}
 const string SubarrayDescription::print() const
 {
     return fmt::format("SubarrayDescription:\n  tel_descriptions: <dict[tel_id, TelescopeDescription]>\n  tel_positions: <dict[tel_id, array<double,3>]>\n  reference_position: <array<double,3>>\n");

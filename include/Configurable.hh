@@ -75,4 +75,3 @@ protected:
     ClassType(ParamType1 ParamName1, ParamType2 ParamName2): Configurable(), ParamName1(ParamName1), ParamName2(ParamName2) { initialize(); } \
     ClassType(ParamType1 ParamName1, ParamType2 ParamName2, const json& config): Configurable(config), ParamName1(ParamName1), ParamName2(ParamName2) { initialize(); } \
     ClassType(ParamType1 ParamName1, ParamType2 ParamName2, const std::string& config_str): Configurable(config_str), ParamName1(ParamName1), ParamName2(ParamName2) { initialize(); }
-

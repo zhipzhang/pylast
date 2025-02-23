@@ -212,6 +212,18 @@ void SimtelFileHandler::_read_runheader() {
         }
     }
     else {
+        for(auto itel = 0; itel < hsdata->run_header.ntel; itel++) {
+            if(hsdata->event.teldata[itel].raw != NULL) {
+                free(hsdata->event.teldata[itel].raw);
+            }
+            if(hsdata->event.teldata[itel].pixtm != NULL) {
+                free(hsdata->event.teldata[itel].pixtm);
+            }
+            if(hsdata->event.teldata[itel].img != NULL) {
+                free(hsdata->event.teldata[itel].img);
+            }
+            
+        }
         memset(hsdata, 0, sizeof(AllHessData));
     }
     if(read_simtel_runheader(iobuf, &hsdata->run_header) < 0) {
@@ -564,6 +576,22 @@ SimtelFileHandler::~SimtelFileHandler() {
         fileclose(input_file);
     }
     if(hsdata != NULL) {
+        clear_memory();
+    }
+}
+void SimtelFileHandler::clear_memory() {
+    if(hsdata != NULL) {
+        for(auto itel = 0; itel < hsdata->run_header.ntel; itel++) {
+            if(hsdata->event.teldata[itel].raw != NULL) {
+                free(hsdata->event.teldata[itel].raw);
+            }
+            if(hsdata->event.teldata[itel].pixtm != NULL) {
+                free(hsdata->event.teldata[itel].pixtm);
+            }
+            if(hsdata->event.teldata[itel].img != NULL) {
+                free(hsdata->event.teldata[itel].img);
+            }
+        }
         free(hsdata);
     }
 }
