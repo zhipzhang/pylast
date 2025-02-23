@@ -44,7 +44,7 @@ class ConcentrationParameter
     ConcentrationParameter() = default;
     ~ConcentrationParameter() = default;
     double concentration_cog; // one pixel diameter from the cog
-    double concentration_core; // all_pixels inside the hillas ellipse
+    double concentration_core; // all_pixels inside the hillas ellipse, transformed to the hillas ellipse
     double concentration_pixel; // brightest pixel
 };
 

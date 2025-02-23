@@ -70,6 +70,7 @@ void ImageProcessor::operator()(ArrayEvent& event)
     }
 
 }
+// TODO: Add the unit test for the hillas parameter
 HillasParameter ImageProcessor::hillas_parameter(const CameraGeometry& camera_geometry, const Eigen::VectorXd& masked_image)
 {
     // Use the mask to get the image
@@ -130,6 +131,7 @@ LeakageParameter ImageProcessor::leakage_parameter(CameraGeometry& camera_geomet
     return LeakageParameter{pixel_width_1, pixel_width_2, intensity_width_1, intensity_width_2};
 
 }
+// TODO: Add the unit test for the concentration parameter
 ConcentrationParameter ImageProcessor::concentration_parameter(const CameraGeometry& camera_geometry, const Eigen::VectorXd& masked_image, const HillasParameter& hillas_parameter)
 {
     double concentration_pixel = masked_image.maxCoeff()/ hillas_parameter.intensity;
@@ -138,6 +140,8 @@ ConcentrationParameter ImageProcessor::concentration_parameter(const CameraGeome
     Eigen::ArrayXd distance = (delta_x.array() * delta_x.array() + delta_y.array() * delta_y.array()).sqrt();
     auto mask_cog = distance < camera_geometry.pix_width[0];
     double concentration_cog = masked_image.dot(mask_cog.cast<double>().matrix()) / hillas_parameter.intensity;
+
+    // Rotate the axis anti-clockwise by the psi angle
     Eigen::Matrix2d rotation_matrix = (Eigen::Matrix2d() << cos(hillas_parameter.psi), sin(hillas_parameter.psi), -sin(hillas_parameter.psi), cos(hillas_parameter.psi)).finished();
     Eigen::ArrayXd delta_x_rotated = rotation_matrix.row(0)(0) * delta_x.array() + rotation_matrix.row(0)(1) * delta_y.array();
     Eigen::ArrayXd delta_y_rotated = rotation_matrix.row(1)(0) * delta_x.array() + rotation_matrix.row(1)(1) * delta_y.array();
@@ -164,7 +168,7 @@ MorphologyParameter ImageProcessor::morphology_parameter(const CameraGeometry& c
                 queue.pop();
                 for(Eigen::SparseMatrix<int, Eigen::RowMajor>::InnerIterator it(camera_geometry.neigh_matrix, pixel); it; ++it)
                 {
-                    if(it.value() > 0 && !pixel_in_island[it.col()])
+                    if(it.value() > 0 && !pixel_in_island[it.col()] && image_mask[it.col()])
                     {
                         queue.push(it.col());
                         pixel_in_island[it.col()] = true;
