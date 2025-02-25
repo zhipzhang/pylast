@@ -234,6 +234,7 @@ ArrayEvent SimtelEventSource::get_event()
         read_true_image(event);
     }
     read_event_monitor(event);
+    read_pointing(event);
     read_adc_samples(event);
     apply_simtel_calibration(event);
     return event;
@@ -351,6 +352,34 @@ void SimtelEventSource::read_event_monitor(ArrayEvent& event)
             event.monitor->add_tel(tel_id, n_channels, n_pixels, std::move(pedestal_per_sample), std::move(dc_to_pe));
         }
     }
+}
+void SimtelEventSource::read_pointing(ArrayEvent& event)
+{
+    if(!event.pointing) {
+        event.pointing = Pointing();
+    }
+    for(const auto& tel_id: allowed_tels) {
+        auto tel_index = simtel_file_handler->tel_id_to_index[tel_id];
+        if(simtel_file_handler->hsdata->event.trackdata[tel_index].cor_known)
+        {
+            // Have corrected pointing information    
+            double azimuth = simtel_file_handler->hsdata->event.trackdata[tel_index].azimuth_cor;
+            double altitude = simtel_file_handler->hsdata->event.trackdata[tel_index].altitude_cor;
+            event.pointing->add_tel(tel_id, azimuth, altitude);
+        }
+        else if(simtel_file_handler->hsdata->event.trackdata[tel_index].raw_known)
+        {
+            // Have raw pointing information
+            double azimuth = simtel_file_handler->hsdata->event.trackdata[tel_index].azimuth_raw;
+            double altitude = simtel_file_handler->hsdata->event.trackdata[tel_index].altitude_raw;
+            event.pointing->add_tel(tel_id, azimuth, altitude);
+        }
+        else 
+        {
+            spdlog::warn("No pointing information for tel_id: {}", tel_id);
+        }
+    }
+    event.pointing->set_array_pointing(simtel_file_handler->hsdata->run_header.direction[0], simtel_file_handler->hsdata->run_header.direction[1]);
 }
 void SimtelEventSource::read_true_image(ArrayEvent& event)
 {

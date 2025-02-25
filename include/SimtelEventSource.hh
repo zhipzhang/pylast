@@ -38,6 +38,7 @@ private:
     void read_true_image(ArrayEvent& event);
     void read_adc_samples(ArrayEvent& event);
     void read_event_monitor(ArrayEvent& event);
+    void read_pointing(ArrayEvent& event);
     void apply_simtel_calibration(ArrayEvent& event);
     ArrayEvent get_event() override;
     CameraGeometry get_telescope_camera_geometry(int tel_index);
