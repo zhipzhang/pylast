@@ -1,12 +1,12 @@
-#include "StereoQuery.hh"
+#include "ImageQuery.hh"
 
-void StereoQuery::init_variables()
+void ImageQuery::init_variables()
 {
     init_hillas_parameter();
     init_leakage_parameter();
 }
 
-void StereoQuery::init_hillas_parameter()
+void ImageQuery::init_hillas_parameter()
 {
     parser_.DefineVar("hillas_length", &hillas_parameter_.length);
     parser_.DefineVar("hillas_width", &hillas_parameter_.width);
@@ -15,7 +15,7 @@ void StereoQuery::init_hillas_parameter()
     parser_.DefineVar("hillas_y", &hillas_parameter_.y);
     parser_.DefineVar("hillas_intensity", &hillas_parameter_.intensity);
 }
-void StereoQuery::init_leakage_parameter()
+void ImageQuery::init_leakage_parameter()
 {
     parser_.DefineVar("leakage_pixels_width_1", &leakage_parameter_.pixels_width_1);
     parser_.DefineVar("leakage_pixels_width_2", &leakage_parameter_.pixels_width_2);
@@ -23,10 +23,10 @@ void StereoQuery::init_leakage_parameter()
     parser_.DefineVar("leakage_intensity_width_2", &leakage_parameter_.intensity_width_2);
 }
 
-void StereoQuery::configure(const json& config)
+void ImageQuery::configure(const json& config)
 {
     try {
-        const json& cfg = config.contains("StereoQuery") ? config.at("StereoQuery") : config;
+        const json& cfg = config.contains("ImageQuery") ? config.at("ImageQuery") : config;
         for (const auto& [key, value] : cfg.items()) {
             add_expr(value);
         }
@@ -37,7 +37,7 @@ void StereoQuery::configure(const json& config)
     }
 }
 
-bool StereoQuery::operator()(const ImageParameters &image_parameter)
+bool ImageQuery::operator()(const ImageParameters &image_parameter)
 {
     hillas_parameter_ = image_parameter.hillas;
     leakage_parameter_ = image_parameter.leakage;
@@ -45,7 +45,7 @@ bool StereoQuery::operator()(const ImageParameters &image_parameter)
         return parser_.Eval();
     }
     catch(mu::Parser::exception_type& e) {
-        printf("Error evaluating StereoQuery:\n");
+        printf("Error evaluating ImageQuery:\n");
         printf("Message:  %s\n", e.GetMsg().c_str());
         printf("Formula:  %s\n", e.GetExpr().c_str());
         printf("Token:    %s\n", e.GetToken().c_str());

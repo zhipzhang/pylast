@@ -14,9 +14,9 @@
  #include "Configurable.hh"
  #include "ImageParameters.hh"
  #include "ExprQuery.hh"
- class StereoQuery : public ExprQuery, public Configurable{
+ class ImageQuery : public ExprQuery, public Configurable{
     public:
-    StereoQuery(const std::string& expr):Configurable(expr, [this](const std::string& expr){
+    ImageQuery(const std::string& expr):Configurable(expr, [this](const std::string& expr){
         set_expr(expr);
     })
     {
@@ -26,7 +26,7 @@
         }
         init_variables();
     }
-    ~StereoQuery() = default;
+    ~ImageQuery() = default;
     bool operator() (const ImageParameters& image_parameter);
     protected:
         void init_variables() override;
