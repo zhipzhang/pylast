@@ -12,7 +12,6 @@
 
 #include <string>
 #include "Eigen/Dense"
-#include "Eigen/src/Core/Matrix.h"
 using std::string;
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
