@@ -97,11 +97,11 @@ HillasParameter ImageProcessor::hillas_parameter(const CameraGeometry& camera_ge
     {
         Eigen::VectorXd eigen_values = eigensolver.eigenvalues();
         Eigen::MatrixXd eigen_vectors = eigensolver.eigenvectors();
-        length = std::sqrt(eigen_values(0));
-        width = std::sqrt(eigen_values(1));
-        if(eigen_vectors(0, 0) != 0)
+        length = std::sqrt(eigen_values(1));
+        width = std::sqrt(eigen_values(0));
+        if(eigen_vectors(1, 0) != 0)
         {
-            psi = std::atan2(eigen_vectors(1, 0), eigen_vectors(0, 0));
+            psi = std::atan2(eigen_vectors(1, 1), eigen_vectors(1, 0));
         }
         else
         {
