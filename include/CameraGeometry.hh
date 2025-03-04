@@ -55,6 +55,22 @@ public:
     ~CameraGeometry() = default;
     const string print() const;
     Eigen::Vector<bool, -1> get_border_pixel_mask(int width);
+    Eigen::VectorXd get_pix_x_fov() const
+    {
+        if(pix_x_fov.size() == 0)
+        {
+            return pix_x;
+        }
+        return pix_x_fov;
+    }
+    Eigen::VectorXd get_pix_y_fov() const
+    {
+        if(pix_y_fov.size() == 0)
+        {
+            return pix_y;
+        }
+        return pix_y_fov;
+    }
 private:
     void compute_neighbor_matrix(bool diagonal = false);
 };

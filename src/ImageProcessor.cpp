@@ -76,12 +76,12 @@ HillasParameter ImageProcessor::hillas_parameter(const CameraGeometry& camera_ge
     // Use the mask to get the image
     double intensity = masked_image.sum();
     Eigen::MatrixXd cov_matrix{2, 2};
-    double x = camera_geometry.pix_x_fov.dot(masked_image)/intensity;
-    double y = camera_geometry.pix_y_fov.dot(masked_image)/intensity;
+    double x = camera_geometry.get_pix_x_fov().dot(masked_image)/intensity;
+    double y = camera_geometry.get_pix_y_fov().dot(masked_image)/intensity;
     double r = std::sqrt(x*x + y*y);
     double phi = std::atan2(y, x);
-    Eigen::VectorXd delta_x = camera_geometry.pix_x_fov.array() - x;
-    Eigen::VectorXd delta_y = camera_geometry.pix_y_fov.array() - y;
+    Eigen::VectorXd delta_x = camera_geometry.get_pix_x_fov().array() - x;
+    Eigen::VectorXd delta_y = camera_geometry.get_pix_y_fov().array() - y;
     cov_matrix(0, 0) = (delta_x.array().square() * masked_image.array()).sum()/(intensity - 1);
     cov_matrix(1, 1) = (delta_y.array().square() * masked_image.array()).sum()/(intensity - 1);
     cov_matrix(0, 1) = (delta_x.array() * delta_y.array() * masked_image.array()).sum()/(intensity - 1);
