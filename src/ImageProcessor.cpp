@@ -21,7 +21,7 @@ Eigen::Vector<bool, -1> ImageProcessor::tailcuts_clean(const CameraGeometry& cam
         pixel_in_picture = (pixel_above_picture.array() && have_enough_neighbors.array()).matrix();
     }
     Eigen::Vector<bool, -1> pixel_above_boundary = (image.array() >= boundary_thresh);
-    Eigen::Vector<bool, -1> pixel_with_picture_neighbors = (camera_geometry.neigh_matrix * pixel_in_picture.cast<int>()).array() > 0;
+    Eigen::Vector<bool, -1> pixel_with_picture_neighbors = (camera_geometry.neigh_matrix * pixel_in_picture.cast<int>()).array() > 0 ;
     if(keep_isolated_pixels)
     {
         return (pixel_above_boundary.array() && pixel_with_picture_neighbors.array()) || pixel_in_picture.array();
@@ -54,6 +54,10 @@ void ImageProcessor::operator()(ArrayEvent& event)
         // Mask for the image 
         auto image_mask = (*image_cleaner)(subarray.tels.at(tel_id).camera_description.camera_geometry, dl0_camera->image);
         Eigen::VectorXd masked_image = image_mask.select(dl0_camera->image, Eigen::VectorXd::Zero(dl0_camera->image.size()));
+        if(masked_image.sum() < 50)
+        {
+            continue;
+        }
         HillasParameter hillas_parameter = ImageProcessor::hillas_parameter(subarray.tels.at(tel_id).camera_description.camera_geometry, masked_image);
         LeakageParameter leakage_parameter = ImageProcessor::leakage_parameter(const_cast<CameraGeometry&>(subarray.tels.at(tel_id).camera_description.camera_geometry), masked_image);
         ConcentrationParameter concentration_parameter = ImageProcessor::concentration_parameter(subarray.tels.at(tel_id).camera_description.camera_geometry, masked_image, hillas_parameter);
@@ -99,9 +103,9 @@ HillasParameter ImageProcessor::hillas_parameter(const CameraGeometry& camera_ge
         Eigen::MatrixXd eigen_vectors = eigensolver.eigenvectors();
         length = std::sqrt(eigen_values(1));
         width = std::sqrt(eigen_values(0));
-        if(eigen_vectors(1, 0) != 0)
+        if(eigen_vectors.col(1)[0] != 0)
         {
-            psi = std::atan2(eigen_vectors(1, 1), eigen_vectors(1, 0));
+            psi = std::atan2(eigen_vectors.col(1)[1], eigen_vectors.col(1)[0]);
         }
         else
         {

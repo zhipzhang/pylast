@@ -33,14 +33,19 @@ struct CartesianRepresentation
 
 struct SphericalRepresentation
 {
+    SphericalRepresentation() = default;
     SphericalRepresentation(double azimuth, double altitude) : azimuth(azimuth), altitude(altitude) {};
+    SphericalRepresentation(const SphericalRepresentation& other) = default;
+    SphericalRepresentation(SphericalRepresentation&& other) = default;
+    SphericalRepresentation& operator=(const SphericalRepresentation& other) = default;
+    SphericalRepresentation& operator=(SphericalRepresentation&& other) = default;
     double azimuth;
     double altitude;
     CartesianRepresentation transform_to_cartesian() const
     {
         return CartesianRepresentation(
             std::cos(azimuth) * std::cos(altitude),
-            std::sin(azimuth) * std::cos(altitude),
+            -std::sin(azimuth) * std::cos(altitude),
             std::sin(altitude)
         );
     }
@@ -56,6 +61,11 @@ class Line2D;
 struct Point2D
 {
     Point2D(Eigen::Vector2d point) : point(point) {};
+    Point2D(double x, double y) : point(x, y) {};
+    Point2D(Point2D&& other) = default;
+    Point2D(const Point2D& other) = default;
+    Point2D& operator=(const Point2D& other) = default;
+    Point2D& operator=(Point2D&& other) = default;
     Point2D(std::initializer_list<double> point)
     {
         if(point.size() != 2)
@@ -69,12 +79,15 @@ struct Point2D
         return point == other.point;
     }
     double distance(const Line2D& line) const;
+    double x() const { return point.x(); }
+    double y() const { return point.y(); }
     Eigen::Vector2d point;
 };
 
 struct Line2D
 {
     Line2D(Eigen::Vector2d point, Eigen::Vector2d direction) : line(point, direction) {};
+    Line2D(Point2D point, Eigen::Vector2d direction) : line(point.point, direction) {};
     Line2D(std::initializer_list<double> point, std::initializer_list<double> direction)
     {
         if(point.size() != 2 || direction.size() != 2)
@@ -103,6 +116,13 @@ struct Line2D
         }
     }
     Eigen::ParametrizedLine<double, 2> line;
+};
+
+struct Point3D
+{
+    Point3D(Eigen::Vector3d point) : point(point) {};
+    Point3D(double x, double y, double z) : point(x, y, z) {};
+    Eigen::Vector3d point;
 };
 
 struct CameraPoint: public Point2D

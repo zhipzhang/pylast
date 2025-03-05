@@ -29,7 +29,7 @@ json Calibrator::get_default_config()
 {
     std::string default_config = R"(
     {
-        "image_extractor_type": "FullWaveFormExtractor"
+        "image_extractor_type": "LocalPeakExtractor"
     }
     )";
     json base_config = Configurable::from_string(default_config);
