@@ -19,6 +19,9 @@ void bind_imageprocessor(nb::module_ &m)
              nb::arg("subarray"))
         .def("__call__", [](ImageProcessor& self, ArrayEvent& event) {
             self(event);
+        })
+        .def("__repr__", [](ImageProcessor& self) {
+            return "ImageProcessor:\n  Config: " + self.get_config_str();
         });
 }
 

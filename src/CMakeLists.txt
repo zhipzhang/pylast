@@ -1,16 +1,3 @@
-# Define a macro to conditionally add Python bindings
-macro(add_python_binding MODULE_NAME SOURCES BINDING_FILES LIBRARIES)
-    message(STATUS "Building Python binding for module '${MODULE_NAME}'")
-    nanobind_add_module(${MODULE_NAME}
-        STABLE_ABI
-            ${SOURCES}
-            ${BINDING_FILES}
-        )
-        target_link_libraries(${MODULE_NAME} PRIVATE ${LIBRARIES})
-      # set_property(TARGET ${MODULE_NAME} APPEND PROPERTY INSTALL_RPATH "$ORIGIN")
-        install(TARGETS ${MODULE_NAME} LIBRARY DESTINATION pylast)
-        install(TARGETS ${LIBRARIES} LIBRARY DESTINATION pylast)
-endmacro()
 set(BuildConfig "LACT_PROD0" CACHE STRING "Configuration to use for building hessio")
 message(STATUS "hessioxxx BuildConfig='${BuildConfig}'")
 
@@ -66,32 +53,24 @@ set(DATA_WRITER_SOURCE_FILES
 add_library(data_writer SHARED ${DATA_WRITER_SOURCE_FILES})
 target_link_libraries(data_writer PUBLIC basic_event)
 set(QUERY_SOURCE_FILES
-    StereoQuery.cpp
+    ImageQuery.cpp
     )
 add_library(query SHARED ${QUERY_SOURCE_FILES})
 target_link_libraries(query PUBLIC muparser::muparser)
 
-if(BUILD_PYTHON_BINDINGS)
-    set(BINDING_FILES
-        pyarrayevent_bind.cpp
-        pysubarray_bind.cpp
-        pylast_bind.cpp
-        pycalibrator_bind.cpp
+set (COORDINATES_SOURCE_FILES
+    Coordinates.cpp
+    CoordFrames.cpp
     )
-    set(MY_LIBS
-        simtel_event 
-        calibrator
-        image_processor)
-    install(TARGETS hessio LIBRARY DESTINATION pylast)
-    add_python_binding(_pylast_arrayevent  "" pyarrayevent_bind.cpp  last_array_event)
-    add_python_binding(_pylast_subarray  "" pysubarray_bind.cpp  basic_event)
-    add_python_binding(_pylast_imageprocessor "" pyimageprocessor_bind.cpp image_processor)
-    add_python_binding(_pylast_calibrator "" pycalibrator_bind.cpp calibrator)
-    add_python_binding(_pyeventsource LoggerInitialize.cpp pyeventsource_bind.cpp basic_event)
-    add_python_binding(_pysimtelsource "" pysimtelsource_bind.cpp simtel_event)
+set (RECONSTRUCTION_SOURCE_FILES
+    GeometryReconstructor.cpp
+    HillasReconstructor.cpp
+    ShowerProcessor.cpp
+    )
+add_library(reconstructor SHARED ${RECONSTRUCTION_SOURCE_FILES} ${COORDINATES_SOURCE_FILES})
+target_link_libraries(reconstructor PUBLIC basic_event query)
 
-endif()
 
 
 add_executable(debug debug.cpp LoggerInitialize.cpp)
-target_link_libraries(debug PRIVATE simtel_event image_processor calibrator)
+target_link_libraries(debug PRIVATE simtel_event image_processor calibrator reconstructor)
