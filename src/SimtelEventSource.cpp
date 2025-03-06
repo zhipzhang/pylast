@@ -374,10 +374,6 @@ void SimtelEventSource::read_pointing(ArrayEvent& event)
             double altitude = simtel_file_handler->hsdata->event.trackdata[tel_index].altitude_raw;
             event.pointing->add_tel(tel_id, azimuth, altitude);
         }
-        else 
-        {
-            spdlog::warn("No pointing information for tel_id: {}", tel_id);
-        }
     }
     event.pointing->set_array_pointing(simtel_file_handler->hsdata->run_header.direction[0], simtel_file_handler->hsdata->run_header.direction[1]);
 }

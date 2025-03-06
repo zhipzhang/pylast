@@ -16,6 +16,7 @@
 #include "EventMonitor.hh"
 #include "DL0Event.hh"
 #include "DL1Event.hh"
+#include "DL2Event.hh"
 #include "Pointing.hh"
  class ArrayEvent {
 public:
@@ -33,5 +34,6 @@ public:
     std::optional<DL0Event> dl0;
     std::optional<DL1Event> dl1;
     std::optional<Pointing> pointing;
+    std::optional<DL2Event> dl2;
     //std::optional<R1Event> r1_event;
 };

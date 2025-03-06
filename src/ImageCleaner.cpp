@@ -11,7 +11,7 @@ json TailcutsCleaner::get_default_config()
         "picture_thresh": 10,
         "boundary_thresh": 5,
         "keep_isolated_pixels": false,
-        "min_number_picture_neighbors": 0
+        "min_number_picture_neighbors": 2
     }
     )");
 }

@@ -47,8 +47,6 @@ Eigen::VectorXd ImageExtractor::compute_integration_correction(const Eigen::Matr
         int start = 0;
         int max_index = 0;
         sampled_pulse.maxCoeff(&max_index);
-        std::cout << "max_index: " << max_index << std::endl;
-        std::cout<< "sample_size: " << sampled_pulse.size() << std::endl;
         start = max_index - window_shift;
         if (start < 0) {
             start = 0;
@@ -72,7 +70,6 @@ Eigen::VectorXd ImageExtractor::compute_integration_correction(const Eigen::Matr
     }
     
     // Return the correction factors
-    std::cout << "correction: " << correction << std::endl;
     return correction;
 }
 FullWaveFormExtractor::FullWaveFormExtractor(const SubarrayDescription& subarray):
@@ -154,7 +151,6 @@ void LocalPeakExtractor::correction(Eigen::VectorXd& charge, const Eigen::Vector
             this->window_shift
         );
         this->cached_correction = std::move(correction);
-        std::cout << "correction: " << this->cached_correction->value()<< std::endl;
     }
     
     for(int ipix = 0; ipix < charge.size(); ipix++)

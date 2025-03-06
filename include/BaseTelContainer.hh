@@ -11,6 +11,7 @@
  #pragma once
  #include <unordered_map>
  #include <memory>
+ #include <map>
 
 
 template<typename TelData>
@@ -42,9 +43,9 @@ class BaseTelContainer{
             auto it = tels.find(tel_id);
             return it != tels.end() ? it->second.get() : nullptr;
         }
-        std::unordered_map<int, TelData*> get_tels() const {
-            std::unordered_map<int, TelData*> rels;
-            for(auto& pair : tels){
+        std::map<int, TelData*> get_tels() const {
+            std::map<int, TelData*> rels;
+            for(const auto& pair : tels){
                 rels[pair.first] = pair.second.get();
             }
             return rels;

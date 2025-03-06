@@ -28,8 +28,11 @@ public:
         {
             final_config.merge_patch(config);
         }
-        printf("final_config: %s\n", final_config.dump().c_str());
         configure(final_config);
+    }
+    std::string get_config_str(int indent = 2) const
+    {
+        return final_config.dump(indent);
     }
 
     virtual void configure(const json& config) = 0;
