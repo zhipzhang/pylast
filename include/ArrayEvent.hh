@@ -35,5 +35,7 @@ public:
     std::optional<DL1Event> dl1;
     std::optional<Pointing> pointing;
     std::optional<DL2Event> dl2;
+    int event_id;
+    int run_id;
     //std::optional<R1Event> r1_event;
 };

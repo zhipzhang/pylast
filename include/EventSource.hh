@@ -90,7 +90,7 @@ public:
     Iterator end(){return Iterator(this, max_events);}
     virtual void load_all_simulated_showers() = 0;
 protected:
-    virtual bool is_finished() const = 0;
+    virtual bool is_finished() = 0;
     virtual void init_simulation_config() = 0;
     virtual ArrayEvent get_event() = 0;
     virtual void init_atmosphere_model() = 0;

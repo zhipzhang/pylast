@@ -591,6 +591,12 @@ void SimtelFileHandler::clear_memory() {
             if(hsdata->event.teldata[itel].img != NULL) {
                 free(hsdata->event.teldata[itel].img);
             }
+            if(hsdata->mc_event.mc_pe_list[itel].atimes != NULL) {
+                free(hsdata->mc_event.mc_pe_list[itel].atimes);
+            }
+            if(hsdata->mc_event.mc_pe_list[itel].amplitudes != NULL) {
+                free(hsdata->mc_event.mc_pe_list[itel].amplitudes);
+            }
         }
         free(hsdata);
     }

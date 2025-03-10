@@ -19,6 +19,13 @@ class R0Camera
 {
     public:
         R0Camera(int n_pixels, int n_samples, Eigen::Matrix<uint16_t, -1, -1, Eigen::RowMajor> high_gain_waveform, Eigen::Matrix<uint16_t, -1, -1, Eigen::RowMajor> low_gain_waveform, Eigen::Vector<uint32_t, -1> high_gain_waveform_sum, Eigen::Vector<uint32_t, -1> low_gain_waveform_sum);
+        R0Camera(int n_pixels, int n_samples, Eigen::Matrix<uint16_t, -1, -1, Eigen::RowMajor> high_gain_waveform, Eigen::Matrix<uint16_t, -1, -1, Eigen::RowMajor> low_gain_waveform)
+        {
+            this->n_pixels = n_pixels;
+            this->n_samples = n_samples;
+            waveform[0] = std::move(high_gain_waveform);
+            waveform[1] = std::move(low_gain_waveform);
+        }
         ~R0Camera() = default;
         R0Camera(const R0Camera& other) = delete;
         R0Camera& operator=(const R0Camera& other) = delete;

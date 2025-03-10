@@ -82,7 +82,7 @@ bool HillasReconstructor::reconstruct(const std::unordered_map<int, HillasParame
     geometry.tilted_core_y = tilted_y;
     geometry.tilted_core_uncertainty_x = tilted_sigma_x;
     geometry.tilted_core_uncertainty_y = tilted_sigma_y;
-    geometry.telescopes = Eigen::Map<Eigen::VectorXi>(telescopes.data(), telescopes.size());
+    geometry.telescopes = telescopes;
     return true;
 }
 

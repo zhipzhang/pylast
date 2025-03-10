@@ -15,7 +15,7 @@
 #include <unordered_map>
 #include <string>
 #include "TelImpactParameter.hh"
-
+#include <stdexcept>
 class TelReconstructedParameter
 {
     public:
@@ -66,6 +66,15 @@ class DL2Event
         {
             TelReconstructedParameter tel_reconstructed_parameter;
             tel_reconstructed_parameter.impact_parameters[geometry_reconstructor_name] = TelImpactParameter(impact_parameter, 0);
+            tels[tel_id] = tel_reconstructed_parameter;
+        }
+        void add_tel_geometry(int tel_id, std::vector<double> impact_parameters, std::vector<std::string> reconstructor_names)
+        {
+            TelReconstructedParameter tel_reconstructed_parameter;
+            for(size_t i = 0; i < impact_parameters.size(); i++)
+            {
+                tel_reconstructed_parameter.impact_parameters[reconstructor_names[i]] = TelImpactParameter(impact_parameters[i], 0);
+            }
             tels[tel_id] = tel_reconstructed_parameter;
         }
 };

@@ -10,7 +10,7 @@
  */
 
 #pragma once
-#include "Eigen/Dense"
+#include <vector>
 class ReconstructedGeometry
 {
     public:
@@ -30,6 +30,6 @@ class ReconstructedGeometry
         double tilted_core_uncertainty_x;
         double tilted_core_uncertainty_y;
         double hmax;
-        Eigen::VectorXi telescopes;
+        std::vector<int> telescopes;
         
 };

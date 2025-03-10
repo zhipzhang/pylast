@@ -48,6 +48,9 @@ public:
     /** @brief Reference position of the subarray */
     std::array<double, 3> reference_position ;
     void add_telescope(const telescope_id_t tel_id,  TelescopeDescription&& tel_description, const std::array<double, 3>& tel_position);
+    void add_tel_pos(const telescope_id_t tel_id, std::array<double, 3> tel_position){
+        tel_positions[tel_id] = tel_position;
+    }
     const string print() const;
     std::vector<telescope_id_t> get_ordered_telescope_ids() const;
 };

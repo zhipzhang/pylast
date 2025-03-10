@@ -220,6 +220,8 @@ ArrayEvent SimtelEventSource::get_event()
     }
     ArrayEvent event;
     event.simulation  = SimulatedEvent();
+    event.run_id = simtel_file_handler->hsdata->run_header.run;
+    event.event_id = simtel_file_handler->hsdata->mc_event.event;
     event.simulation->shower.shower_primary_id = simtel_file_handler->hsdata->mc_shower.primary_id;
     event.simulation->shower.energy = simtel_file_handler->hsdata->mc_shower.energy;
     event.simulation->shower.alt = simtel_file_handler->hsdata->mc_shower.altitude;

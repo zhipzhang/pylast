@@ -32,7 +32,7 @@ private:
     virtual void init_metaparam() override;
     virtual void init_subarray() override;
     virtual bool _load_next_events() ;
-    virtual bool is_finished() const override {return simtel_file_handler->no_more_blocks;}
+    virtual bool is_finished()  override {return simtel_file_handler->no_more_blocks;}
     void set_simulation_config();
     void set_telescope_settings(int tel_id);
     void read_true_image(ArrayEvent& event);
