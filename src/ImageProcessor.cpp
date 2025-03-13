@@ -114,8 +114,8 @@ HillasParameter ImageProcessor::hillas_parameter(const CameraGeometry& camera_ge
     }
     // Uint vector along the major axis is (cos(psi), sin(psi))
     Eigen::VectorXd longitudinal = delta_x.array() * std::cos(psi) + delta_y.array() * std::sin(psi);
-    double m3_long = pow(longitudinal.array(), 3).matrix().dot(masked_image);
-    double m4_long = pow(longitudinal.array(), 4).matrix().dot(masked_image);
+    double m3_long = pow(longitudinal.array(), 3).matrix().dot(masked_image)/intensity;
+    double m4_long = pow(longitudinal.array(), 4).matrix().dot(masked_image)/intensity;
     skewness = m3_long/pow(length, 3);
     kurtosis = m4_long/pow(length, 4);
 
@@ -142,7 +142,7 @@ ConcentrationParameter ImageProcessor::concentration_parameter(const CameraGeome
     auto delta_x = camera_geometry.pix_x_fov.array() - hillas_parameter.x;
     auto delta_y = camera_geometry.pix_y_fov.array() - hillas_parameter.y;
     Eigen::ArrayXd distance = (delta_x.array() * delta_x.array() + delta_y.array() * delta_y.array()).sqrt();
-    auto mask_cog = distance < camera_geometry.pix_width[0];
+    auto mask_cog = distance < camera_geometry.pix_width_fov[0];
     double concentration_cog = masked_image.dot(mask_cog.cast<double>().matrix()) / hillas_parameter.intensity;
 
     // Rotate the axis anti-clockwise by the psi angle

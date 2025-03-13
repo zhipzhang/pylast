@@ -125,12 +125,14 @@ void SimtelEventSource::set_telescope_settings(int tel_id)
     {
         camera_geometry.pix_x_fov = camera_geometry.pix_x / optics.effective_focal_length;
         camera_geometry.pix_y_fov = camera_geometry.pix_y / optics.effective_focal_length;
+        camera_geometry.pix_width_fov = camera_geometry.pix_width / optics.effective_focal_length;
     }
     else
     {
-        spdlog::warn("Effective Area is not available, so using the equivalent focal length");
+        spdlog::warn("Effective focal length is not available, so using the equivalent focal length");
         camera_geometry.pix_x_fov = camera_geometry.pix_x / optics.equivalent_focal_length;
         camera_geometry.pix_y_fov = camera_geometry.pix_y / optics.equivalent_focal_length;
+        camera_geometry.pix_width_fov = camera_geometry.pix_width / optics.equivalent_focal_length;
     }
     auto camera_description = CameraDescription(camera_name, std::move(camera_geometry), std::move(camera_readout));
     auto telescope_description = TelescopeDescription(std::move(camera_description), std::move(optics));

@@ -55,6 +55,20 @@ std::vector<std::pair<int, int>> HillasReconstructor::get_tel_pairs()
     }
     return tel_pairs;
 }
+void HillasReconstructor::operator()(ArrayEvent& event)
+{
+    GeometryReconstructor::operator()(event);
+    if(hillas_dicts.size() < 2)
+    {
+        // Set dl2 to Is_valid = false
+        geometry.is_valid = false;
+        event.dl2->geometry[this->name()] = geometry;
+        return;
+    }
+    reconstruct(hillas_dicts);
+    geometry.direction_error = compute_angle_separation(event.simulation->shower.az, event.simulation->shower.alt, geometry.az, geometry.alt);
+    event.dl2->geometry[this->name()] = geometry;
+}
 bool HillasReconstructor::reconstruct(const std::unordered_map<int, HillasParameter>& hillas_dicts)
 {
     if(hillas_dicts.size() < 2)
@@ -62,17 +76,16 @@ bool HillasReconstructor::reconstruct(const std::unordered_map<int, HillasParame
         return false;
     }
     tilted_frame = std::make_unique<TiltedGroundFrame>(array_pointing_direction);
-    nominal_frame = std::make_unique<TelescopeFrame>(array_pointing_direction);
     fill_nominal_hillas_dicts(hillas_dicts);
     auto [fov_x, fov_y, sigma_x, sigma_y] = reconstruction_nominal_intersection();
-    auto rec_direction = SkyDirection(*nominal_frame, fov_x, fov_y).transform_to(AltAzFrame());
+    auto [rec_az, rec_alt] = convert_to_sky(fov_x, fov_y);
     auto [tilted_x, tilted_y, tilted_sigma_x, tilted_sigma_y] = reconstruction_tilted_intersection();
     auto tilted_core_position = CartesianPoint(tilted_x, tilted_y, 0);
     auto intersection_position = tilted_core_position.transform_to_ground(*tilted_frame);
-    auto [core_x, core_y] = project_to_ground(intersection_position, rec_direction);
+    auto [core_x, core_y] = project_to_ground(intersection_position, SkyDirection(AltAzFrame(), rec_az, rec_alt));
     geometry.is_valid = true;
-    geometry.alt = rec_direction->altitude;
-    geometry.az = rec_direction->azimuth;
+    geometry.alt = rec_alt;
+    geometry.az = rec_az;
     geometry.alt_uncertainty = sigma_x;
     geometry.az_uncertainty = sigma_y;
 
@@ -168,21 +181,4 @@ std::tuple<double, double, double, double> HillasReconstructor::reconstruction_t
 double HillasReconstructor::knonrad_weight(double reduced_amplitude, double delta_1, double delta_2, double sin_part)
 {
     return reduced_amplitude * delta_1 * delta_2 * pow(sin_part, 2);
-}
-
-json HillasReconstructor::get_default_config()
-{
-    auto default_config = R"({
-        "ImageQuery": {
-            "100p.e.": "hillas_intensity > 100",
-            "less leakage": "leakage_intensity_width_2 < 0.3"
-        }
-    })";
-    return from_string(default_config);
-}
-
-void HillasReconstructor::configure(const json& config)
-{
-    auto image_query_config = config.at("ImageQuery");
-    query_ = std::make_unique<ImageQuery>(image_query_config.dump());
 }

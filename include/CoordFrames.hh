@@ -68,6 +68,7 @@ class TelescopeFrame: public Frame<TelescopeFrame>
 public:
     TelescopeFrame(double azimuth, double altitude)
     : pointing_direction(azimuth, altitude) {
+        // from z-positive to origin, clockwise rotate the x-axis to the azimuth
         auto rotation_azimuth = Eigen::AngleAxisd(azimuth, Eigen::Vector3d::UnitZ());
         // Sim_telarray Coordinates: X to the north, Y to the west, Z to the Up
         auto rotation_altitude = Eigen::AngleAxisd(-(M_PI/2 - altitude), Eigen::Vector3d::UnitY());

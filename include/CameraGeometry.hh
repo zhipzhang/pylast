@@ -45,6 +45,8 @@ public:
     std::unordered_map<int, Eigen::Vector<bool, -1>> border_pixel_mask; 
     /** @brief Pixel width [m] */
     Eigen::VectorXd pix_width;
+    /** @brief Pixel width in the fov frame [rad] */
+    Eigen::VectorXd pix_width_fov; 
     CameraGeometry() = default;
     CameraGeometry(std::string camera_name, int num_pixels, double* pix_x, double* pix_y, double* pix_area, int* pix_type, double cam_rotation);
 

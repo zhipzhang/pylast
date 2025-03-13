@@ -11,6 +11,7 @@
 
  #pragma once
 
+#include <optional>
 class HillasParameter
 {
     public:
@@ -60,6 +61,15 @@ class MorphologyParameter
     int n_large_islands;
     
 };
+
+class ExtraParameters
+{
+    public:
+    ExtraParameters() = default;
+    ~ExtraParameters() = default;
+    double miss;
+    double disp;
+};
 class ImageParameters {
 public:
     ImageParameters() = default;
@@ -69,4 +79,5 @@ public:
     LeakageParameter leakage;
     ConcentrationParameter concentration;
     MorphologyParameter morphology;
+    std::optional<ExtraParameters> extra;
 };

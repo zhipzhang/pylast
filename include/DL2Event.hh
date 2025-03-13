@@ -27,6 +27,8 @@ class TelReconstructedParameter
         TelReconstructedParameter& operator=(TelReconstructedParameter&& other) noexcept = default;
         
         std::unordered_map<std::string, TelImpactParameter> impact_parameters;
+        double estimate_energy = 0;
+        double disp = 0;
         
         // Returns the impact parameter value when there's only one entry
         TelImpactParameter& impact() {
@@ -62,6 +64,10 @@ class DL2Event
         DL2Event& operator=(DL2Event&& other) noexcept = default;
         std::unordered_map<std::string, ReconstructedGeometry> geometry;
         std::unordered_map<int, TelReconstructedParameter> tels;
+        void add_geometry(std::string name, ReconstructedGeometry geometry)
+        {
+            this->geometry[name] = geometry;
+        }
         void add_tel_geometry(int tel_id, double impact_parameter, std::string geometry_reconstructor_name)
         {
             TelReconstructedParameter tel_reconstructed_parameter;
@@ -76,5 +82,9 @@ class DL2Event
                 tel_reconstructed_parameter.impact_parameters[reconstructor_names[i]] = TelImpactParameter(impact_parameters[i], 0);
             }
             tels[tel_id] = tel_reconstructed_parameter;
+        }
+        void set_estimate_energy(int tel_id, double energy)
+        {
+            tels[tel_id].estimate_energy = energy;
         }
 };
