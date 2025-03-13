@@ -87,4 +87,5 @@ NB_MODULE(_pyeventsource, m){
     m.def("initialize_logger", &initialize_logger,
           nb::arg("log_level") = "info", 
           nb::arg("log_file") = "");
+    m.def("shutdown_logger", &shutdown_logger);
 }

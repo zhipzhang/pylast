@@ -19,8 +19,9 @@ namespace nb = nanobind;
 
 void bind_dl2_event(nb::module_ &m) {
     nb::class_<DL2Event>(m, "DL2Event")
-        .def_ro("geometry", &DL2Event::geometry)
+        .def_ro("geometry", &DL2Event::geometry, nb::rv_policy::reference_internal)
         .def_ro("tels", &DL2Event::tels)
+        .def("add_geometry", &DL2Event::add_geometry)
         .def("__repr__", [](DL2Event& self) {
             std::string repr = "DL2Event:\n";
             
@@ -51,20 +52,28 @@ void bind_dl2_event(nb::module_ &m) {
             return repr;
         });
     nb::class_<ReconstructedGeometry>(m, "ReconstructedGeometry")
-        .def_ro("alt", &ReconstructedGeometry::alt)
-        .def_ro("az", &ReconstructedGeometry::az)
-        .def_ro("core_x", &ReconstructedGeometry::core_x)
-        .def_ro("core_y", &ReconstructedGeometry::core_y)
-        .def_ro("core_pos_error", &ReconstructedGeometry::core_pos_error)
-        .def_ro("tilted_core_x", &ReconstructedGeometry::tilted_core_x)
-        .def_ro("tilted_core_y", &ReconstructedGeometry::tilted_core_y)
-        .def_ro("tilted_core_uncertainty_x", &ReconstructedGeometry::tilted_core_uncertainty_x)
-        .def_ro("tilted_core_uncertainty_y", &ReconstructedGeometry::tilted_core_uncertainty_y)
-        .def_ro("hmax", &ReconstructedGeometry::hmax)
-        .def_ro("direction_error", &ReconstructedGeometry::direction_error)
-        .def_ro("alt_uncertainty", &ReconstructedGeometry::alt_uncertainty)
-        .def_ro("az_uncertainty", &ReconstructedGeometry::az_uncertainty)
+        .def_rw("is_valid", &ReconstructedGeometry::is_valid)
+        .def_rw("alt", &ReconstructedGeometry::alt)
+        .def_rw("az", &ReconstructedGeometry::az)
+        .def_rw("core_x", &ReconstructedGeometry::core_x)
+        .def_rw("core_y", &ReconstructedGeometry::core_y)
+        .def_rw("core_pos_error", &ReconstructedGeometry::core_pos_error)
+        .def_rw("tilted_core_x", &ReconstructedGeometry::tilted_core_x)
+        .def_rw("tilted_core_y", &ReconstructedGeometry::tilted_core_y)
+        .def_rw("tilted_core_uncertainty_x", &ReconstructedGeometry::tilted_core_uncertainty_x)
+        .def_rw("tilted_core_uncertainty_y", &ReconstructedGeometry::tilted_core_uncertainty_y)
+        .def_rw("hmax", &ReconstructedGeometry::hmax)
+        .def_rw("direction_error", &ReconstructedGeometry::direction_error)
+        .def_rw("alt_uncertainty", &ReconstructedGeometry::alt_uncertainty)
+        .def_rw("az_uncertainty", &ReconstructedGeometry::az_uncertainty)
         .def_ro("telescopes", &ReconstructedGeometry::telescopes)
+        .def("set_telescopes", [](ReconstructedGeometry& self, nb::list telescopes) {
+            std::vector<int> tel_vec;
+            for (auto item : telescopes) {
+                tel_vec.push_back(nb::cast<int>(item));
+            }
+            self.telescopes = tel_vec;
+        })
         .def("__repr__", [](ReconstructedGeometry& self) {
             return fmt::format("ReconstructedGeometry:\n"
                               "  alt: {}\n"
@@ -79,6 +88,7 @@ void bind_dl2_event(nb::module_ &m) {
         });
     nb::class_<TelReconstructedParameter>(m, "TelReconstructedParameter")
         .def_ro("impact_parameters", &TelReconstructedParameter::impact_parameters)
+        .def_rw("disp", &TelReconstructedParameter::disp)
         .def_prop_ro("impact", [](TelReconstructedParameter& self) -> nb::object {
             if(self.impact_parameters.size() == 1) {
                 return nb::cast(self.impact_parameters.begin()->second);
@@ -143,6 +153,7 @@ void bind_dl1_event(nb::module_ &m) {
         .def_ro("leakage", &ImageParameters::leakage)
         .def_ro("concentration", &ImageParameters::concentration)
         .def_ro("morphology", &ImageParameters::morphology)
+        .def_ro("extra", &ImageParameters::extra)
         .def("__repr__", [](ImageParameters& self) {
             return "ImageParameters: contains hillas, leakage, concentration, and morphology parameters";
         });
@@ -163,9 +174,11 @@ void bind_dl1_event(nb::module_ &m) {
         .def_ro("width", &HillasParameter::width)
         .def_ro("length", &HillasParameter::length)
         .def_ro("phi", &HillasParameter::phi)
+        .def_ro("psi", &HillasParameter::psi)
         .def_ro("intensity", &HillasParameter::intensity)
         .def_ro("skewness", &HillasParameter::skewness)
         .def_ro("kurtosis", &HillasParameter::kurtosis)
+        .def_ro("r", &HillasParameter::r)
         .def("__repr__", [](HillasParameter& self) {
             return fmt::format("HillasParameter:\n  x: {}\n  y: {}\n  width: {}\n  length: {}\n  phi: {}\n  intensity: {}", 
                               self.x, self.y, self.width, self.length, self.phi, self.intensity);
@@ -187,6 +200,12 @@ void bind_dl1_event(nb::module_ &m) {
         .def("__repr__", [](ConcentrationParameter& self) {
             return fmt::format("ConcentrationParameter:\n  concentration_cog: {}\n  concentration_core: {}\n  concentration_pixel: {}", 
                               self.concentration_cog, self.concentration_core, self.concentration_pixel);
+        });
+    nb::class_<ExtraParameters>(m, "extra")
+        .def_ro("miss", &ExtraParameters::miss)
+        .def_ro("disp", &ExtraParameters::disp)
+        .def("__repr__", [](ExtraParameters& self) {
+            return fmt::format("ExtraParameters:\n  miss: {}\n  disp: {}", self.miss, self.disp);
         });
 }
 void bind_dl0_event(nb::module_ &m) {
@@ -329,7 +348,9 @@ void bind_array_event(nb::module_ &m) {
         .def_ro("r1", &ArrayEvent::r1)
         .def_ro("dl0", &ArrayEvent::dl0)
         .def_ro("dl1", &ArrayEvent::dl1)
-        .def_ro("dl2", &ArrayEvent::dl2)
+        .def_ro("dl2", &ArrayEvent::dl2, nb::rv_policy::reference_internal)
+        .def_ro("event_id", &ArrayEvent::event_id)
+        .def_ro("run_id", &ArrayEvent::run_id)
         .def("__repr__", [](ArrayEvent& self) {
             std::string repr = "ArrayEvent:\n";
             
@@ -390,4 +411,5 @@ NB_MODULE(_pylast_arrayevent, m) {
     bind_tel_monitor(m);
     bind_array_event(m);
     bind_simulated_shower_array(m);
+    
 }

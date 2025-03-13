@@ -44,7 +44,7 @@ add_library(image_processor SHARED ${IMAGE_PROCESSOR_SOURCE_FILES})
 target_link_libraries(image_processor PUBLIC basic_event)
 
 add_library(simtel_event SHARED ${SIMTEL_SOURCE_FILES})
-target_link_libraries(simtel_event PUBLIC basic_event hessio last_array_event)
+target_link_libraries(simtel_event PUBLIC basic_event hessio)
 target_include_directories(simtel_event PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/bernlohr/)
 
 set(DATA_WRITER_SOURCE_FILES
