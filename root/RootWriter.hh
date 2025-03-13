@@ -59,10 +59,9 @@ class RootWriter: public FileWriter
         RootArrayEvent array_event;
 
         
+        template<typename T>
+        void initialize_data_level(const std::string& level_name, std::optional<T>& data_level, std::optional<RootEventIndex>& index);
         // Helper methods for initializing branches
-        void initialize_image_parameters(ImageParameters& params, TTree& tree);
-        void initialize_dl0_branches(TTree& tree, ROOT::RVecD& image, ROOT::RVecD& peak_time);
-        void initialize_waveform_branches(TTree& tree, ROOT::RVecI& n_samples, std::vector<ROOT::RVecD>& waveforms);
         void initialize_simulation_config_branches(TTree& tree, SimulationConfiguration& config);
         void initialize_simulation_shower_branches(TTree& tree, SimulatedShower& shower);
         // Helper method to create or get a directory

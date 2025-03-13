@@ -359,26 +359,16 @@ void RootWriter::write_r0(const ArrayEvent& event)
     }
     TTree* r0_tree = get_tree("r0");
     TTree* r0_index_tree = get_tree("r0_index");
-    if(!r0_tree)
+    if(!r0_tree || !r0_index_tree)
     {
-        array_event.r0 = RootR0Event();
-        if(!array_event.r0_index.has_value())
-        {
-            array_event.r0_index = RootEventIndex();
-        }
-        TDirectory* dir = get_or_create_directory("/events/r0");
-        dir->cd();
-        r0_tree = array_event.r0->initialize();
-        r0_index_tree = array_event.r0_index->initialize("r0_index", "Index for R0 data");
-        trees["r0"] = r0_tree;
-        trees["r0_index"] = r0_index_tree;
-        directories["r0"] = dir;
-        directories["r0_index"] = dir;
-        build_index["r0"] = true;
+        spdlog::debug("initialize r0 and r0_index");
+        initialize_data_level<RootR0Event>("r0", array_event.r0, array_event.r0_index);
+        r0_tree = get_tree("r0");
+        r0_index_tree = get_tree("r0_index");
     }
     auto& root_r0 = array_event.r0.value();
     const auto& r0 = event.r0.value();
-    auto root_r0_index = array_event.r0_index.value();
+    auto& root_r0_index = array_event.r0_index.value();
     root_r0_index.telescopes.clear();
     root_r0.event_id = event.event_id;
     root_r0_index.event_id = event.event_id;
@@ -410,26 +400,16 @@ void RootWriter::write_r1(const ArrayEvent& event)
     
     auto r1_tree = get_tree("r1");
     auto index_tree = get_tree("r1_index");
-    if(!r1_tree)
+    if(!r1_tree || !index_tree)
     {
-        array_event.r1 = RootR1Event();
-        if(!array_event.r1_index.has_value())
-        {
-            array_event.r1_index = RootEventIndex();
-        }
-        TDirectory* dir = get_or_create_directory("/events/r1");
-        dir->cd();
-        r1_tree = array_event.r1->initialize();
-        index_tree = array_event.r1_index->initialize("r1_index", "Index for R1 data");
-        trees["r1"] = r1_tree;
-        trees["r1_index"] = index_tree;
-        directories["r1_index"] = dir;
-        directories["r1"] = dir;
-        build_index["r1"] = true;
+        spdlog::debug("initialize r1 and r1_index");
+        initialize_data_level<RootR1Event>("r1", array_event.r1, array_event.r1_index);
+        r1_tree = get_tree("r1");
+        index_tree = get_tree("r1_index");
     }
     auto& root_r1 = array_event.r1.value();
     const auto& r1 = event.r1.value();
-    auto root_r1_index = array_event.r1_index.value();
+    auto& root_r1_index = array_event.r1_index.value();
     root_r1_index.telescopes.clear();
     root_r1.event_id = event.event_id;
     root_r1_index.event_id = event.event_id;
@@ -461,26 +441,16 @@ void RootWriter::write_dl0(const ArrayEvent& event)
     
     auto dl0_tree = get_tree("dl0");
     auto index_tree = get_tree("dl0_index");
-    if(!dl0_tree)
+    if(!dl0_tree || !index_tree)
     {
-        array_event.dl0 = RootDL0Event();
-        if(!array_event.dl0_index.has_value())
-        {
-            array_event.dl0_index = RootEventIndex();
-        }
-        TDirectory* dir = get_or_create_directory("/events/dl0");
-        dir->cd();
-        dl0_tree = array_event.dl0->initialize();
-        index_tree = array_event.dl0_index->initialize("dl0_index", "Index for DL0 data");
-        trees["dl0"] = dl0_tree;
-        trees["dl0_index"] = index_tree;
-        directories["dl0_index"] = dir;
-        directories["dl0"] = dir;
-        build_index["dl0"] = true;
+        spdlog::debug("initialize dl0 and dl0_index");
+        initialize_data_level<RootDL0Event>("dl0", array_event.dl0, array_event.dl0_index);
+        dl0_tree = get_tree("dl0");
+        index_tree = get_tree("dl0_index");
     }
     auto& root_dl0 = array_event.dl0.value();
     const auto& dl0 = event.dl0.value();
-    auto root_dl0_index = array_event.dl0_index.value();
+    auto& root_dl0_index = array_event.dl0_index.value();
     root_dl0_index.telescopes.clear();
     root_dl0.event_id = event.event_id;
     root_dl0_index.event_id = event.event_id;
@@ -512,27 +482,17 @@ void RootWriter::write_dl1(const ArrayEvent& event, bool write_image)
     // Get trees or create if not exist
     auto dl1_tree = get_tree("dl1");
     auto index_tree = get_tree("dl1_index");
-    if(!dl1_tree)
+    if(!dl1_tree || !index_tree)
     {
-        array_event.dl1 = RootDL1Event();
-        if(!array_event.dl1_index.has_value())
-        {
-            array_event.dl1_index = RootEventIndex();
-        }
-        TDirectory* dir = get_or_create_directory("/events/dl1");
-        dir->cd();
-        dl1_tree = array_event.dl1->initialize(write_image);
-        index_tree = array_event.dl1_index->initialize("dl1_index", "Index for DL1 data");
-        trees["dl1"] = dl1_tree;
-        trees["dl1_index"] = index_tree;
-        directories["dl1_index"] = dir;
-        directories["dl1"] = dir;
-        build_index["dl1"] = true;
+        spdlog::debug("initialize dl1 and dl1_index");
+        initialize_data_level<RootDL1Event>("dl1", array_event.dl1, array_event.dl1_index);
+        dl1_tree = get_tree("dl1");
+        index_tree = get_tree("dl1_index");
     }
     
     const auto& dl1 = event.dl1.value();
     auto& root_dl1 = array_event.dl1.value();
-    auto root_dl1_index = array_event.dl1_index.value();
+    auto& root_dl1_index = array_event.dl1_index.value();
     root_dl1.event_id = event.event_id;
     root_dl1_index.event_id = event.event_id;
     root_dl1_index.telescopes.clear();
@@ -551,6 +511,11 @@ void RootWriter::write_dl1(const ArrayEvent& event, bool write_image)
         root_dl1.params.leakage = camera->image_parameters.leakage;
         root_dl1.params.concentration = camera->image_parameters.concentration;
         root_dl1.params.morphology = camera->image_parameters.morphology;
+        if(camera->image_parameters.extra.has_value())
+        {
+            root_dl1.miss = camera->image_parameters.extra->miss;
+            root_dl1.disp = camera->image_parameters.extra->disp;
+        }
         dl1_tree->Fill();
     }
     index_tree->Fill();
@@ -579,12 +544,12 @@ void RootWriter::write_dl2(const ArrayEvent& event)
         {
             TDirectory* dir = get_or_create_directory("/events/dl2/geometry");
             dir->cd();
-            array_event.dl2_geometry.push_back(RootDL2Geometry(name));
-            geom_tree = array_event.dl2_geometry.back()->initialize();
+            array_event.dl2_geometry_map[name] = RootDL2Geometry(name);
+            geom_tree = array_event.dl2_geometry_map[name]->initialize();
             trees[name] = geom_tree;
             directories[name] = dir;
         }
-        auto& root_geom = array_event.dl2_geometry.back().value();
+        auto& root_geom = array_event.dl2_geometry_map[name].value();
         root_geom.event_id = event.event_id;
         root_geom.reconstructor_name = name;
         root_geom.geometry = geom;
@@ -594,23 +559,13 @@ void RootWriter::write_dl2(const ArrayEvent& event)
     auto index_tree = get_tree("dl2_index");
     if(!dl2_tree)
     {
-        array_event.dl2 = RootDL2Event();
-        if(!array_event.dl2_index.has_value())
-        {
-            array_event.dl2_index = RootEventIndex();
-        }
-        TDirectory* dir = get_or_create_directory("/events/dl2");
-        dir->cd();
-        dl2_tree = array_event.dl2->initialize();
-        trees["dl2"] = dl2_tree;
-        index_tree = array_event.dl2_index->initialize("dl2_index", "Index for DL2 data");
-        trees["dl2_index"] = index_tree;
-        directories["dl2_index"] = dir;
-        directories["dl2"] = dir;
-        build_index["dl2"] = true;
+        spdlog::debug("initialize dl2 and dl2_index");
+        initialize_data_level<RootDL2Event>("dl2", array_event.dl2, array_event.dl2_index);
+        dl2_tree = get_tree("dl2");
+        index_tree = get_tree("dl2_index");
     }
     auto& root_dl2 = array_event.dl2.value();
-    auto root_dl2_index = array_event.dl2_index.value();
+    auto& root_dl2_index = array_event.dl2_index.value();
     root_dl2_index.telescopes.clear();
     root_dl2.event_id = event.event_id;
     root_dl2_index.event_id = event.event_id;
@@ -646,18 +601,12 @@ void RootWriter::write_monitor(const ArrayEvent& event)
     
     auto monitor_tree = get_tree("monitor");
     auto monitor_index_tree = get_tree("monitor_index");
-    if(!monitor_tree)
+    if(!monitor_tree || !monitor_index_tree)
     {
-        array_event.monitor = RootMonitor();
-        array_event.monitor_index = RootEventIndex();
-        TDirectory* dir = get_or_create_directory("events");
-        monitor_tree = array_event.monitor->initialize();
-        monitor_index_tree = array_event.monitor_index->initialize("monitor_index", "Index for monitor data");
-        trees["monitor"] = monitor_tree;
-        trees["monitor_index"] = monitor_index_tree;
-        directories["monitor_index"] = dir;
-        directories["monitor"] = dir;
-        build_index["monitor"] = true;
+        spdlog::debug("initialize monitor and monitor_index");
+        initialize_data_level<RootMonitor>("monitor", array_event.monitor, array_event.monitor_index);
+        monitor_tree = get_tree("monitor");
+        monitor_index_tree = get_tree("monitor_index");
     }
     
     const auto& monitor = event.monitor.value();
@@ -818,4 +767,24 @@ TTree* RootWriter::get_tree(const std::string& tree_name)
         return trees[tree_name];
     }
     return nullptr;
+}
+
+template<typename T>
+void RootWriter::initialize_data_level(const std::string& level_name, std::optional<T>& data_level, std::optional<RootEventIndex>& index)
+{
+    TDirectory* dir = get_or_create_directory("events/" + level_name);
+    if(!dir)
+    {
+        throw std::runtime_error("failed to create directory: events/" + level_name);
+    }
+    dir->cd();
+    data_level = T();
+    index = RootEventIndex();
+    auto tree = data_level->initialize();
+    auto index_tree = index->initialize(level_name + "_index", "Index for " + level_name + " data");
+    trees[level_name] = tree;
+    trees[level_name + "_index"] = index_tree;
+    directories[level_name] = dir;
+    directories[level_name + "_index"] = dir;
+    build_index[level_name] = true;
 }

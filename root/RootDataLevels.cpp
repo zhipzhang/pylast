@@ -27,8 +27,10 @@ TTree* RootEventIndex::initialize(const std::string& name, const std::string& ti
 
 void RootEventIndex::initialize(TTree* tree)
 {
+    index_tree = tree;
+    telescopes_ptr = &telescopes;
     tree->SetBranchAddress("event_id", &event_id);
-    tree->SetBranchAddress("telescopes", &telescopes);
+    tree->SetBranchAddress("telescopes", &telescopes_ptr);
 }
 
 //------------------------------------------------------------------------------
@@ -49,12 +51,15 @@ TTree* RootR0Event::initialize()
 
 void RootR0Event::initialize(TTree* tree)
 {
+    data_tree = tree;
+    low_gain_waveform_ptr = &low_gain_waveform;
+    high_gain_waveform_ptr = &high_gain_waveform;
     tree->SetBranchAddress("event_id", &event_id);
     tree->SetBranchAddress("tel_id", &tel_id);
     tree->SetBranchAddress("n_pixels", &n_pixels);
     tree->SetBranchAddress("n_samples", &n_samples);
-    tree->SetBranchAddress("low_gain_waveform", &low_gain_waveform);
-    tree->SetBranchAddress("high_gain_waveform", &high_gain_waveform);
+    tree->SetBranchAddress("low_gain_waveform", &low_gain_waveform_ptr);
+    tree->SetBranchAddress("high_gain_waveform", &high_gain_waveform_ptr);
 }
 
 //------------------------------------------------------------------------------
@@ -74,11 +79,14 @@ TTree* RootR1Event::initialize()
 
 void RootR1Event::initialize(TTree* tree)
 {
+    data_tree = tree;
+    waveform_ptr = &waveform;
+    gain_selection_ptr = &gain_selection;
     tree->SetBranchAddress("event_id", &event_id);
     tree->SetBranchAddress("tel_id", &tel_id);
     tree->SetBranchAddress("n_pixels", &n_pixels);
-    tree->SetBranchAddress("waveform", &waveform);
-    tree->SetBranchAddress("gain_selection", &gain_selection);
+    tree->SetBranchAddress("waveform", &waveform_ptr);
+    tree->SetBranchAddress("gain_selection", &gain_selection_ptr);
 }
 
 //------------------------------------------------------------------------------
@@ -98,11 +106,14 @@ TTree* RootDL0Event::initialize()
 
 void RootDL0Event::initialize(TTree* tree)
 {
+    data_tree = tree;
+    image_ptr = &image;
+    peak_time_ptr = &peak_time;
     tree->SetBranchAddress("event_id", &event_id);
     tree->SetBranchAddress("tel_id", &tel_id);
     tree->SetBranchAddress("n_pixels", &n_pixels);
-    tree->SetBranchAddress("image", &image);
-    tree->SetBranchAddress("peak_time", &peak_time);
+    tree->SetBranchAddress("image", &image_ptr);
+    tree->SetBranchAddress("peak_time", &peak_time_ptr);
 }
 
 //------------------------------------------------------------------------------
@@ -144,8 +155,9 @@ TTree* RootDL1Event::initialize()
     tree->Branch("morphology_num_medium_islands", &params.morphology.n_medium_islands);
     tree->Branch("morphology_num_large_islands", &params.morphology.n_large_islands);
     
-    
-    
+    // Extra parameters
+    tree->Branch("extra_miss", &miss);
+    tree->Branch("extra_disp", &disp);
     return tree;
 }
 TTree* RootDL1Event::initialize(bool have_image)
@@ -167,16 +179,19 @@ TTree* RootDL1Event::initialize(bool have_image)
 
 void RootDL1Event::initialize(TTree* tree)
 {
+    data_tree = tree;
     // Basic telescope data
+    tree->SetBranchAddress("event_id", &event_id);
+    tree->SetBranchAddress("tel_id", &tel_id);
     if(tree->GetBranch("image"))
     {
+        image_ptr = &image;
+        peak_time_ptr = &peak_time;
+        mask_ptr = &mask;
         spdlog::debug("DL1 have stored image parts");
-        tree->SetBranchAddress("event_id", &event_id);
-        tree->SetBranchAddress("tel_id", &tel_id);
-        tree->SetBranchAddress("n_pixels", &n_pixels);
-        tree->SetBranchAddress("image", &image);
-        tree->SetBranchAddress("peak_time", &peak_time);
-        tree->SetBranchAddress("mask", &mask);
+        tree->SetBranchAddress("image", &image_ptr);
+        tree->SetBranchAddress("peak_time", &peak_time_ptr);
+        tree->SetBranchAddress("mask", &mask_ptr);
     }
     // Now handle the image parameters
     // Hillas parameters
@@ -209,6 +224,9 @@ void RootDL1Event::initialize(TTree* tree)
     tree->SetBranchAddress("morphology_num_medium_islands", &params.morphology.n_medium_islands);
     tree->SetBranchAddress("morphology_num_large_islands", &params.morphology.n_large_islands);
 
+    // Extra parameters
+    tree->SetBranchAddress("extra_miss", &miss);
+    tree->SetBranchAddress("extra_disp", &disp);
 }
 
 //------------------------------------------------------------------------------
@@ -229,10 +247,14 @@ TTree* RootPointing::initialize()
 
 void RootPointing::initialize(TTree* tree)
 {
+    data_tree = tree;
+    tel_az_ptr = &tel_az;
+    tel_alt_ptr = &tel_alt;
+    tel_id_ptr = &tel_id;
     tree->SetBranchAddress("event_id", &event_id);
-    tree->SetBranchAddress("tel_id", &tel_id);
-    tree->SetBranchAddress("tel_az", &tel_az);
-    tree->SetBranchAddress("tel_alt", &tel_alt);
+    tree->SetBranchAddress("tel_id", &tel_id_ptr);
+    tree->SetBranchAddress("tel_az", &tel_az_ptr);
+    tree->SetBranchAddress("tel_alt", &tel_alt_ptr);
     tree->SetBranchAddress("array_az", &array_az);
     tree->SetBranchAddress("array_alt", &array_alt);
 }
@@ -255,12 +277,15 @@ TTree* RootMonitor::initialize()
 
 void RootMonitor::initialize(TTree* tree)
 {
+    data_tree = tree;
+    dc_to_pe_ptr = &dc_to_pe;   
+    pedestals_ptr = &pedestals;
     tree->SetBranchAddress("event_id", &event_id);
     tree->SetBranchAddress("tel_id", &tel_id);
     tree->SetBranchAddress("n_channels", &n_channels);
     tree->SetBranchAddress("n_pixels", &n_pixels);
-    tree->SetBranchAddress("dc_to_pe", &dc_to_pe);
-    tree->SetBranchAddress("pedestals", &pedestals);
+    tree->SetBranchAddress("dc_to_pe", &dc_to_pe_ptr);
+    tree->SetBranchAddress("pedestals", &pedestals_ptr);
 }
 //------------------------------------------------------------------------------
 // RootSimulationShower implementation
@@ -284,8 +309,8 @@ TTree* RootSimulationShower::initialize()
 
 void RootSimulationShower::initialize(TTree* tree)
 {
+    data_tree = tree;
     tree->SetBranchAddress("event_id", &event_id);
-    tree->SetBranchAddress("shower", &shower);
     tree->SetBranchAddress("energy", &shower.energy);
     tree->SetBranchAddress("alt", &shower.alt);
     tree->SetBranchAddress("az", &shower.az);
@@ -323,6 +348,8 @@ TTree* RootDL2Geometry::initialize()
 
 void RootDL2Geometry::initialize(TTree* tree)
 {
+    data_tree = tree;
+    telescopes_ptr = &geometry.telescopes;
     tree->SetBranchAddress("event_id", &event_id);
     tree->SetBranchAddress("is_valid", &geometry.is_valid);
     tree->SetBranchAddress("alt", &geometry.alt);
@@ -338,7 +365,7 @@ void RootDL2Geometry::initialize(TTree* tree)
     tree->SetBranchAddress("tilted_core_uncertainty_x", &geometry.tilted_core_uncertainty_x);
     tree->SetBranchAddress("tilted_core_uncertainty_y", &geometry.tilted_core_uncertainty_y);
     tree->SetBranchAddress("hmax", &geometry.hmax);
-    tree->SetBranchAddress("telescopes", &geometry.telescopes);
+    tree->SetBranchAddress("telescopes", &telescopes_ptr);
 }
 
 TTree* RootDL2Event::initialize()
@@ -354,9 +381,134 @@ TTree* RootDL2Event::initialize()
 
 void RootDL2Event::initialize(TTree* tree)
 {
+    data_tree = tree;
+    reconstructor_name_ptr = &reconstructor_name;
+    distance_ptr = &distance;
+    distance_error_ptr = &distance_error;
     tree->SetBranchAddress("event_id", &event_id);
     tree->SetBranchAddress("tel_id", &tel_id);
-    tree->SetBranchAddress("reconstructor_name", &reconstructor_name);
-    tree->SetBranchAddress("distance", &distance);
-    tree->SetBranchAddress("distance_error", &distance_error);
+    tree->SetBranchAddress("reconstructor_name", &reconstructor_name_ptr);
+    tree->SetBranchAddress("distance", &distance_ptr);
+    tree->SetBranchAddress("distance_error", &distance_error_ptr);
+}
+
+
+int RootArrayEvent::test_entries()
+{
+    int simulation_entries = 0;
+    int r0_entries = 0;
+    int r1_entries = 0;
+    int dl0_entries = 0;
+    int dl1_entries = 0;
+    int monitor_entries = 0;
+    int dl2_entries = 0;
+    int pointing_entries = 0;
+    
+    // Get entries for each data level if available
+    if(simulation.has_value())
+    {
+        simulation_entries = simulation->GetEntries().value();
+    }
+    if(r0_index.has_value())
+    {
+        r0_entries = r0_index->index_tree->GetEntries();
+    }
+    if(r1_index.has_value())
+    {
+        r1_entries = r1_index->index_tree->GetEntries();
+    }
+    if(dl0_index.has_value())
+    {
+        dl0_entries = dl0_index->index_tree->GetEntries();
+    }
+    if(dl1_index.has_value())
+    {
+        dl1_entries = dl1_index->index_tree->GetEntries();
+    }
+    if(monitor_index.has_value())
+    {
+        monitor_entries = monitor_index->index_tree->GetEntries();
+    }
+    if(dl2_index.has_value())
+    {
+        dl2_entries = dl2_index->index_tree->GetEntries();
+    }
+    if(pointing.has_value())
+    {
+        pointing_entries = pointing->GetEntries().value();
+    }
+    
+    // Verify that all available data levels have the same number of entries
+    int reference_entries = -1;
+    
+    // Find the first non-zero entry count to use as reference
+    for (int entries : {r0_entries, r1_entries, dl0_entries, dl1_entries, monitor_entries, dl2_entries, pointing_entries})
+    {
+        if (entries > 0)
+        {
+            reference_entries = entries;
+            break;
+        }
+    }
+    
+    // If we have any data, verify consistency
+    if (reference_entries > 0)
+    {
+        if (r0_entries > 0) assert(r0_entries == reference_entries);
+        if (r1_entries > 0) assert(r1_entries == reference_entries);
+        if (dl0_entries > 0) assert(dl0_entries == reference_entries);
+        if (dl1_entries > 0) assert(dl1_entries == reference_entries);
+        if (monitor_entries > 0) assert(monitor_entries == reference_entries);
+        if (dl2_entries > 0) assert(dl2_entries == reference_entries);
+        if (pointing_entries > 0) assert(pointing_entries == reference_entries);
+    }
+    entries = reference_entries;
+    return reference_entries;
+}
+void RootArrayEvent::load_next_event()
+{
+    if(has_event())
+    {
+        if(simulation.has_value())
+        {
+            if(!simulation->get_entry(current_entry))
+            {
+                spdlog::error("Failed to load next event for simulation");
+            }
+        }
+        fill_tel_entries<RootR0Event>(r0, r0_index, r0_tel_entries);
+        fill_tel_entries<RootR1Event>(r1, r1_index, r1_tel_entries);
+        fill_tel_entries<RootDL0Event>(dl0, dl0_index, dl0_tel_entries);
+        fill_tel_entries<RootDL1Event>(dl1, dl1_index, dl1_tel_entries);
+        fill_tel_entries<RootMonitor>(monitor, monitor_index, monitor_tel_entries);
+        fill_tel_entries<RootDL2Event>(dl2, dl2_index, dl2_tel_entries);
+        // Store the index now.
+        for(auto [name, geometry]: dl2_geometry_map)
+        {
+            geometry->get_entry(current_entry);
+        }
+        current_entry++;
+    }
+}
+
+template<typename T>
+void RootArrayEvent::fill_tel_entries(std::optional<T>& data_level, std::optional<RootEventIndex>& index, RVecI& tel_entries)
+{
+    tel_entries.clear();
+    if(data_level.has_value() && index.has_value())
+    {
+        if(!index->get_entry(current_entry) )
+        {
+            spdlog::error("Failed to load next event for index");
+        }
+        int event_id = index->event_id;
+        for(auto tel_id: index->telescopes)
+        {
+            auto entry_number = data_level->get_entry_number(event_id, tel_id);
+            if(entry_number.has_value())
+            {
+                tel_entries.push_back(entry_number.value());
+            }
+        }
+    }
 }
