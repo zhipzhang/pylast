@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "pylast"
-version = "0.0.1"
+version = "0.0.2"
 description = "A simple example of using nanobind to bind C++ code to Python"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -23,6 +23,8 @@ minimum-version = "0.4"
 
 # Setuptools-style build caching in a local directory
 build-dir = "build/{wheel_tag}"
-
 # Build stable ABI wheels for CPython 3.12+
 wheel.py-api = "cp312"
+
+[project.scripts]
+hillas_reco = "pylast.ulities.hillas_reco:hillas_reco"

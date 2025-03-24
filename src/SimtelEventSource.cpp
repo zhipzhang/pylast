@@ -301,8 +301,8 @@ void SimtelEventSource::read_adc_samples(ArrayEvent& event)
                     simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_samples,
                     std::move(high_gain_waveform),
                     std::move(low_gain_waveform),
-                    high_gain_waveform_sum,
-                    low_gain_waveform_sum);
+                    std::move(high_gain_waveform_sum),
+                    std::move(low_gain_waveform_sum));
         }
     }
 }

@@ -13,6 +13,7 @@ json DataWriter::get_default_config()
         "write_r1": true,
         "write_dl0": true,
         "write_dl1": true,
+        "write_dl1_image": false,
         "write_dl2": true,
         "write_monitor": true,
         "write_pointing": true,
@@ -55,6 +56,7 @@ void DataWriter::configure(const json& config)
     write_r1_enabled = config.value("write_r1", false);
     write_dl0_enabled = config.value("write_dl0", false);
     write_dl1_enabled = config.value("write_dl1", true);
+    write_dl1_image_enabled = config.value("write_dl1_image", false);
     write_dl2_enabled = config.value("write_dl2", true);
     write_monitor_enabled = config.value("write_monitor", false);
     write_pointing_enabled = config.value("write_pointing", false);
@@ -91,7 +93,7 @@ void DataWriter::operator()(const ArrayEvent& event)
     
     if(write_dl1_enabled && event.dl1.has_value())
     {
-        file_writer->write_dl1(event);
+        file_writer->write_dl1(event, write_dl1_image_enabled);
     }
     
     if(write_dl2_enabled && event.dl2.has_value())
@@ -178,5 +180,12 @@ void DataWriter::write_pointing(const ArrayEvent& event)
     if(file_writer)
     {
         file_writer->write_pointing(event);
+    }
+}
+void DataWriter::write_statistics(const Statistics& statistics)
+{
+    if(file_writer)
+    {
+        file_writer->write_statistics(statistics);
     }
 }

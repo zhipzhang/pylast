@@ -15,7 +15,7 @@ public:
     }
 
     void register_writer(const std::string& type, Creator creator) {
-        spdlog::info("Registering writer type: {}", type);
+        spdlog::debug("Registering writer type: {}", type);
         creators_[type] = creator;
     }
 

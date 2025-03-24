@@ -51,6 +51,7 @@ class RootWriter: public FileWriter
         void write_monitor(const ArrayEvent& event) override;
         void write_pointing(const ArrayEvent& event) override;
         
+        void write_statistics(const Statistics& statistics) override;
         // Write event with components based on configuration
         void write_event(const ArrayEvent& event) override;
         //void write_simulation_config() override;

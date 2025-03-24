@@ -13,7 +13,7 @@
  #include "Configurable.hh"
  #include "ArrayEvent.hh"
  #include "EventSource.hh"
-#include "spdlog/pattern_formatter-inl.h"
+ #include "Statistics.hh"
 
 
  class FileWriter
@@ -43,6 +43,7 @@
         
         // Write all parts of the event (or those enabled in configuration)
         virtual void write_event(const ArrayEvent& event) = 0;
+        virtual void write_statistics(const Statistics& statistics) = 0;
         //virtual void write_simulation_config() = 0;
     protected:
         EventSource& source;
@@ -79,6 +80,7 @@
         void write_dl2(const ArrayEvent& event);
         void write_monitor(const ArrayEvent& event);
         void write_pointing(const ArrayEvent& event);
+        void write_statistics(const Statistics& statistics);
         
         // Write all parts of the event (or those enabled in configuration)
         //void write_event(const ArrayEvent& event);
@@ -95,6 +97,7 @@
         bool write_r1_enabled = false;
         bool write_dl0_enabled = false;
         bool write_dl1_enabled = true;
+        bool write_dl1_image_enabled = false;
         bool write_dl2_enabled = true;
         bool write_monitor_enabled = false;
         bool write_pointing_enabled = false;

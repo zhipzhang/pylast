@@ -1,3 +1,11 @@
-build/
+build*/
 **/__pycache__/
 ./*/.DS_Store
+Release/
+test*
+.vscode/
+Test/
+*.txt
+*.log
+.cache/
+./src/pylast/*

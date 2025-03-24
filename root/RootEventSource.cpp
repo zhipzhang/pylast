@@ -6,7 +6,7 @@
 #include "spdlog/spdlog.h"
 #include <cassert>
 #include "TKey.h"
-
+#include <iostream>
 RootEventSource::RootEventSource(const std::string& filename, int64_t max_events, std::vector<int> subarray, bool load_subarray_from_env)
     : EventSource(filename, max_events, subarray),
       load_subarray_from_env(load_subarray_from_env)
@@ -176,7 +176,7 @@ void RootEventSource::initialize_array_event()
     TDirectory* simulation_dir = file->GetDirectory("/events/simulation");
     if(!simulation_dir)
     {
-        spdlog::debug("no simulation directory found");
+        spdlog::warn("no simulation directory found");
     }
     else
     {
@@ -275,9 +275,12 @@ ArrayEvent RootEventSource::get_event()
     }
     ArrayEvent event;
     array_event.load_next_event();
-    event.simulation = SimulatedEvent();
-    event.simulation->shower = array_event.simulation->shower;
-    event.event_id = array_event.simulation->event_id;
+    if(array_event.simulation.has_value())
+    {
+        event.simulation = SimulatedEvent();
+        event.simulation->shower = array_event.simulation->shower;
+        event.event_id = array_event.simulation->event_id;
+    }
     if(array_event.r0.has_value())
     {
         event.r0 = R0Event();

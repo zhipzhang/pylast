@@ -4,6 +4,8 @@
 #include "spdlog/spdlog.h"
 #include "ROOT/RVec.hxx"
 #include "DataWriterFactory.hh"
+#include "TH1F.h"
+#include "TH2F.h"
 
 REGISTER_WRITER(root, [](EventSource& source, const std::string& filename) { return std::make_unique<RootWriter>(source, filename); });
 RootWriter::RootWriter(EventSource& source, const std::string& filename):
@@ -38,11 +40,9 @@ void RootWriter::close()
             throw std::runtime_error("directory not found: " + name);
         }
         directories[name]->cd();
-        spdlog::info("Writing tree: {}", name);
         if(build_index[name])
         {
             int ret = tree->BuildIndex("event_id", "tel_id");
-            spdlog::info("return value is {}", ret);
         }
         tree->Write();
     }
@@ -572,7 +572,6 @@ void RootWriter::write_dl2(const ArrayEvent& event)
     for(const auto& [tid, dl2_tel] : dl2.tels)
     {
         root_dl2.clear();
-        spdlog::info("Writing impact for telescope {}", tid);
         root_dl2.tel_id = tid;
         root_dl2_index.telescopes.push_back(tid);
         for(const auto& [name, impact] : dl2_tel.impact_parameters)
@@ -787,4 +786,51 @@ void RootWriter::initialize_data_level(const std::string& level_name, std::optio
     directories[level_name] = dir;
     directories[level_name + "_index"] = dir;
     build_index[level_name] = true;
+}
+void RootWriter::write_statistics(const Statistics& statistics)
+{
+    if(!file)
+    {
+        throw std::runtime_error("file not open");
+    }
+    TDirectory* dir = get_or_create_directory("statistics");
+    dir->cd();
+    // In ROOT Format, we just convert the histogram to TH1D Or TH2D
+    int ihist = 0;
+    for(const auto& [name, hist] : statistics.histograms)
+    {
+        if(hist->get_dimension() == 1)
+        {
+            auto h1d = dynamic_cast<Histogram1D<float>*>(hist.get());
+            auto new_hist = new TH1F(("h" + std::to_string(ihist)).c_str(), name.c_str(), h1d->bins(), 
+                                     h1d->get_low_edge(), h1d->get_high_edge());
+            
+            // Fill the histogram with bin contents
+            for(int i = 0; i < h1d->bins(); i++)
+            {
+                new_hist->SetBinContent(i+1, h1d->get_bin_content(i));
+            }
+            
+            new_hist->Write();
+            ihist++;
+        }
+        else if(hist->get_dimension() == 2)
+        {
+            auto h2d = dynamic_cast<Histogram2D<float>*>(hist.get());
+            auto new_hist = new TH2F(("h" + std::to_string(ihist)).c_str(), name.c_str(), 
+                                     h2d->x_bins(), h2d->get_x_low_edge(), h2d->get_x_high_edge(),
+                                     h2d->y_bins(), h2d->get_y_low_edge(), h2d->get_y_high_edge());
+            
+            // Fill the histogram with bin contents
+            for(int i = 0; i < h2d->x_bins(); i++)
+            {
+                for(int j = 0; j < h2d->y_bins(); j++)
+                {
+                    new_hist->SetBinContent(i+1, j+1, h2d->operator()(i, j));
+                }
+            }
+            new_hist->Write();
+            ihist++;
+        }
+    }
 }

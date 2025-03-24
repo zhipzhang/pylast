@@ -30,6 +30,7 @@ add_python_binding(_pyeventsource "${PYEVENTSOURCE_SOURCES}" basic_event)
 add_python_binding(_pysimtelsource pysimtelsource_bind.cpp simtel_event)
 add_python_binding(_pylast_showerprocessor pyshowerprocessor_bind.cpp reconstructor)
 add_python_binding(_pylast_datawriter "${DATAWRITER_SOURCES}" "${DATAWRITER_LIBRARIES}")
+add_python_binding(_pystatistic pystatistic_bind.cpp "")
 
 add_python_binding(_pyrooteventsource  pyrooteventsource_bind.cpp root_event)
 install(TARGETS query LIBRARY DESTINATION pylast)
