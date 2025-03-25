@@ -331,8 +331,8 @@ ArrayEvent RootEventSource::get_event()
             array_event.dl1->get_entry(ientry);
             int tel_id = array_event.dl1->tel_id;
             int n_pixels = array_event.dl1->n_pixels;
-            Eigen::VectorXd image = Eigen::Map<Eigen::VectorXd>(array_event.dl1->image.data(), n_pixels);
-            Eigen::VectorXd peak_time = Eigen::Map<Eigen::VectorXd>(array_event.dl1->peak_time.data(), n_pixels);
+            Eigen::VectorXf image = Eigen::Map<Eigen::VectorXf>(array_event.dl1->image.data(), n_pixels);
+            Eigen::VectorXf peak_time = Eigen::Map<Eigen::VectorXf>(array_event.dl1->peak_time.data(), n_pixels);
             Eigen::Vector<bool, -1> mask = Eigen::Map<Eigen::Vector<bool, -1>>(array_event.dl1->mask.data(), n_pixels);
             DL1Camera dl1_camera;
             dl1_camera.image = std::move(image);

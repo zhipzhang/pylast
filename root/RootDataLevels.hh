@@ -194,8 +194,8 @@ class RootDL1Event : public RootDataLevels
        int event_id;
        int tel_id;
        int n_pixels;
-       RVecD image;
-       RVecD peak_time;
+       RVecF image;
+       RVecF peak_time;
        RVec<bool> mask;
        
        // Image parameters (complete structure)
@@ -209,8 +209,8 @@ class RootDL1Event : public RootDataLevels
        TTree* initialize(bool have_image);
        virtual void initialize(TTree* tree) override;
     private:
-        RVecD* image_ptr = nullptr;
-        RVecD* peak_time_ptr = nullptr;
+        RVecF* image_ptr = nullptr;
+        RVecF* peak_time_ptr = nullptr;
         RVec<bool>* mask_ptr = nullptr;
 };
 

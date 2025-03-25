@@ -488,6 +488,12 @@ void RootWriter::write_dl1(const ArrayEvent& event, bool write_image)
         initialize_data_level<RootDL1Event>("dl1", array_event.dl1, array_event.dl1_index);
         dl1_tree = get_tree("dl1");
         index_tree = get_tree("dl1_index");
+        if(write_image)
+        {
+            dl1_tree->Branch("image", &array_event.dl1->image);
+            dl1_tree->Branch("peak_time", &array_event.dl1->peak_time);
+            dl1_tree->Branch("mask", &array_event.dl1->mask);
+        }
     }
     
     const auto& dl1 = event.dl1.value();
@@ -503,8 +509,8 @@ void RootWriter::write_dl1(const ArrayEvent& event, bool write_image)
         if(write_image)
         {
             root_dl1.n_pixels = camera->image.size();
-            root_dl1.image = std::move(RVecD(camera->image.data(), root_dl1.n_pixels));
-            root_dl1.peak_time = std::move(RVecD(camera->peak_time.data(), root_dl1.n_pixels));
+            root_dl1.image = std::move(RVecF(camera->image.data(), root_dl1.n_pixels));
+            root_dl1.peak_time = std::move(RVecF(camera->peak_time.data(), root_dl1.n_pixels));
             root_dl1.mask = std::move(RVec<bool>(camera->mask.data(), root_dl1.n_pixels));
         }
         root_dl1.params.hillas = camera->image_parameters.hillas;

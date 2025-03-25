@@ -63,8 +63,8 @@ void ImageProcessor::operator()(ArrayEvent& event)
         ConcentrationParameter concentration_parameter = ImageProcessor::concentration_parameter(subarray.tels.at(tel_id).camera_description.camera_geometry, masked_image, hillas_parameter);
         MorphologyParameter morphology_parameter = ImageProcessor::morphology_parameter(subarray.tels.at(tel_id).camera_description.camera_geometry, image_mask);
         // Tempory image are copyed from dl0_camera
-        dl1_camera.image = dl0_camera->image;
-        dl1_camera.peak_time = dl0_camera->peak_time;
+        dl1_camera.image = dl0_camera->image.cast<float>();
+        dl1_camera.peak_time = dl0_camera->peak_time.cast<float>();
         dl1_camera.mask = std::move(image_mask);  // Image mask is not used in the future
         dl1_camera.image_parameters.hillas = hillas_parameter;
         dl1_camera.image_parameters.leakage = leakage_parameter;

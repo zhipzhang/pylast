@@ -23,8 +23,8 @@ class DL1Camera
     DL1Camera& operator=(DL1Camera&& other) noexcept = default;
 
     ImageParameters image_parameters;
-    Eigen::VectorXd image;
-    Eigen::VectorXd peak_time;
+    Eigen::VectorXf image;
+    Eigen::VectorXf peak_time;
     Eigen::Vector<bool, -1> mask;
 };
 class DL1Event: public BaseTelContainer<DL1Camera>
