@@ -6,16 +6,22 @@
 #include "spdlog/spdlog.h"
 void ShowerProcessor::configure(const json& config)
 {
-    for(auto& geometry_types: config["GeometryReconstructionTypes"])
-    {
-        if(geometry_types == "HillasReconstructor")
+    try {
+        auto cfg = config.contains("ShowerProcessor") ? config["ShowerProcessor"] : config;
+        for(auto& geometry_types: cfg["GeometryReconstructionTypes"])
         {
-            geometry_reconstructors.push_back(std::make_unique<HillasReconstructor>(subarray, config["HillasReconstructor"]));
+            if(geometry_types == "HillasReconstructor")
+            {
+                geometry_reconstructors.push_back(std::make_unique<HillasReconstructor>(subarray, cfg["HillasReconstructor"]));
+            }
+            else
+            {
+                spdlog::debug("Unknown geometry reconstruction type: {}", geometry_types.dump());
+            }
         }
-        else
-        {
-            spdlog::debug("Unknown geometry reconstruction type: {}", geometry_types.dump());
-        }
+    }
+    catch(const std::exception& e) {
+        throw std::runtime_error("Error configuring ShowerProcessor: " + std::string(e.what()));
     }
 }
 

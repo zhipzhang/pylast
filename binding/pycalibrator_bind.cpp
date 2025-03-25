@@ -12,7 +12,7 @@ namespace nb = nanobind;
 void bind_calibrator(nb::module_ &m)
 {
     nb::class_<Calibrator>(m, "Calibrator")
-        .def(nb::init<const SubarrayDescription&, const std::string&>(), nb::arg("subarray"), nb::arg("config") )
+        .def(nb::init<const SubarrayDescription&, const std::string&>(), nb::arg("subarray"), nb::arg("config_str") )
         .def(nb::init<const SubarrayDescription&>(), nb::arg("subarray"))
         .def("__call__", [](Calibrator& self, ArrayEvent& event) {
             self(event);

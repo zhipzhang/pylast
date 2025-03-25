@@ -25,18 +25,16 @@ class ShowerProcessor:
     def _parse_config(self, config_str):
         try:
             config = json.loads(config_str)
+            config = config.get("ShowerProcessor", config)
         except json.JSONDecodeError:
             raise ValueError("Invalid JSON configuration string.")
-
-        for name, reco_config in config.items():
-            if name in self.C_RECONSTRUCTORS:
-                self.c_reconstructor_config[name] = reco_config
-            elif name in self.PY_RECONSTRUCTORS:
-                self.py_reconstructor_configs[name] = reco_config  # Store Python configs
+        for reconstruction_type in config["GeometryReconstructionTypes"]:
+            if reconstruction_type in self.C_RECONSTRUCTORS:
+                self.c_reconstructor_config[reconstruction_type] = config[reconstruction_type]
+            elif reconstruction_type in self.PY_RECONSTRUCTORS:
+                self.py_reconstructor_configs[reconstruction_type] = config[reconstruction_type]
             else:
-                # Handle unknown reconstructors (log, raise exception, or ignore)
-                print(f"Warning: Unknown reconstructor '{name}' in configuration.")
-                # Or: raise ValueError(f"Unknown reconstructor: {name}")
+                raise ValueError(f"Unknown reconstruction type: {reconstruction_type}")
 
     def __call__(self, event):
         """Processes an event using the configured reconstructors."""

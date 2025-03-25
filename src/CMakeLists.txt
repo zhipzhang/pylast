@@ -1,10 +1,24 @@
-set(BuildConfig "LACT_PROD0" CACHE STRING "Configuration to use for building hessio")
-message(STATUS "hessioxxx BuildConfig='${BuildConfig}'")
+# Function to set appropriate definitions based on build configuration
+function(set_hessio_definitions config)
+  if(config STREQUAL "LACT_PROD0")
+    add_definitions(
+      -DMAXIMUM_TELESCOPES=32
+      -DMAXIMUM_PIXELS=3000
+      -DMAXIMUM_SECTORS=6000
+      -DMAXIMUM_PIXELSECTORS=19
+      -DMAXIMUM_DRAWERS=3000
+      -DMAXIMUM_SLICES=128
+    )
+  endif()
+endfunction()
+
+# Apply the definitions based on the current BuildConfig
+
 
 add_subdirectory(bernlohr/LACT_hessioxxx)
 add_subdirectory(muparser)
-add_definitions(-D${BuildConfig})
 
+set_hessio_definitions("LACT_PROD0")
 
 set(LAST_ARRAY_EVENT_SOURCE_FILES
     R0Event.cpp

@@ -7,3 +7,4 @@ from ._pylast_imageprocessor import *
 from ._pylast_showerprocessor import *
 from ._pylast_datawriter import *
 from ._pyrooteventsource import *
+from ._pystatistic import *

@@ -21,7 +21,7 @@ struct Finally {
 template <typename Func>
 Finally<Func> finally(Func func) { return {func}; }
 
-const std::string ihep_url = "root://eos01.ihep.ac.cn/";
+const std::string ihep_url = "root://eos01.ihep.ac.cn:/";
 using std::string;
 SimtelFileHandler::SimtelFileHandler(const std::string& filename) : filename(filename) {
     SPDLOG_TRACE("SimtelFileHandler constructor ");
@@ -67,17 +67,16 @@ void SimtelFileHandler::open_file(const std::string& filename) {
         // If filename starts with "eos", prepend the IHEP URL
         string full_path = ihep_url  + filename;
         spdlog::info("Opening EOS file: {}", full_path);
-        input_file = fileopen(full_path.c_str(), "rb");
+        input_file = fileopen(full_path.c_str(), "r");
         if(input_file == NULL)
         {
             spdlog::error("Failed to open EOS file: {}", full_path);
             throw std::runtime_error(spdlog::fmt_lib::format("Failed to open EOS file: {}", full_path));
         }
-        return;
     }
     else
     {
-        input_file = fileopen(filename.c_str(), "rb");
+        input_file = fileopen(filename.c_str(), "r");
         if(input_file == NULL)
         {
             spdlog::error("Failed to open file: {}", filename);

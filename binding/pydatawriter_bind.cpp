@@ -12,7 +12,7 @@ void bind_datawriter(nb::module_ &m)
 {
     nb::class_<DataWriter>(m, "DataWriter")
         .def(nb::init< EventSource&, const std::string&>(), nb::arg("source"), nb::arg("filename"), nb::rv_policy::reference_internal)
-        .def(nb::init< EventSource&, const std::string&, const std::string&>(), nb::arg("source"), nb::arg("filename"), nb::arg("config"))
+        .def(nb::init< EventSource&, const std::string&, const std::string&>(), nb::arg("source"), nb::arg("filename"), nb::arg("config_str"))
         .def("__call__", [](DataWriter& self, ArrayEvent& event) {
             self(event);
         })
