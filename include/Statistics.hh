@@ -25,6 +25,23 @@
 
         std::unordered_map<std::string, std::shared_ptr<Histogram<float>>> histograms;
         
+        Statistics& operator+=(const Statistics& other) {
+            if (histograms.empty())
+            {
+                histograms = other.histograms;
+            }
+            else
+            {
+                for (const auto& [key, value] : other.histograms)
+                {
+                    if (histograms.find(key) != histograms.end())
+                    {
+                        *histograms.at(key) =  *histograms.at(key) + *value;
+                    }
+                }
+            }
+            return *this;
+        }
         template<typename HistType>
         void add_histogram(const std::string& name, HistType histogram) {
             histograms.emplace(name, std::make_shared<HistType>(std::move(histogram)));

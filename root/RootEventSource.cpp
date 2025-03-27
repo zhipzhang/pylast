@@ -7,6 +7,8 @@
 #include <cassert>
 #include "TKey.h"
 #include <iostream>
+#include "TH1F.h"
+#include "TH2F.h"
 RootEventSource::RootEventSource(const std::string& filename, int64_t max_events, std::vector<int> subarray, bool load_subarray_from_env)
     : EventSource(filename, max_events, subarray),
       load_subarray_from_env(load_subarray_from_env)
@@ -14,6 +16,7 @@ RootEventSource::RootEventSource(const std::string& filename, int64_t max_events
     spdlog::debug("RootEventSource constructor");
     initialize();
     initialize_array_event();
+    initialize_statistics();
 }
 
 void RootEventSource::open_file()
@@ -407,4 +410,71 @@ ArrayEvent RootEventSource::operator[](int index)
     }
     array_event.get_event(index);
     return get_event();
+}
+
+void RootEventSource::initialize_statistics()
+{
+    TDirectory* statistics_dir = file->GetDirectory("/statistics/");
+    if(!statistics_dir)
+    {
+        spdlog::debug("no statistics directory found");
+        return;
+    }
+    // Get all histogram objects in the statistics directory
+    TIter next(statistics_dir->GetListOfKeys());
+    TKey* key;
+    statistics = Statistics();
+    
+    while ((key = static_cast<TKey*>(next()))) {
+        TObject* obj = key->ReadObj();
+        std::string name = obj->GetTitle();
+        
+        // Handle 1D histograms
+        if (obj->IsA() == TH1F::Class()) {
+            TH1F* h1 = static_cast<TH1F*>(obj);
+            int nbins = h1->GetNbinsX();
+            float min = h1->GetXaxis()->GetXmin();
+            float max = h1->GetXaxis()->GetXmax();
+            
+            auto hist = make_regular_histogram<float>(min, max, nbins);
+            
+            // Fill the histogram with bin contents
+            for (int i = 1; i <= nbins; i++) {
+                float bin_center = h1->GetBinCenter(i);
+                float bin_content = h1->GetBinContent(i);
+                if (bin_content > 0) {
+                    hist.fill(bin_center, bin_content);
+                }
+            }
+            
+            statistics->add_histogram(name, hist);
+        }
+        // Handle 2D histograms
+        else if (obj->IsA() == TH2F::Class()) {
+            TH2F* h2 = static_cast<TH2F*>(obj);
+            int nbins_x = h2->GetNbinsX();
+            int nbins_y = h2->GetNbinsY();
+            float min_x = h2->GetXaxis()->GetXmin();
+            float max_x = h2->GetXaxis()->GetXmax();
+            float min_y = h2->GetYaxis()->GetXmin();
+            float max_y = h2->GetYaxis()->GetXmax();
+            
+            auto hist = make_regular_histogram_2d<float>(min_x, max_x, nbins_x, min_y, max_y, nbins_y);
+            
+            // Fill the histogram with bin contents
+            for (int i = 1; i <= nbins_x; i++) {
+                for (int j = 1; j <= nbins_y; j++) {
+                    float bin_content = h2->GetBinContent(i, j);
+                    if (bin_content > 0) {
+                        float x_center = h2->GetXaxis()->GetBinCenter(i);
+                        float y_center = h2->GetYaxis()->GetBinCenter(j);
+                        hist.fill(x_center, y_center, bin_content);
+                    }
+                }
+            }
+            
+            statistics->add_histogram(name, hist);
+        }
+    }
+    
 }

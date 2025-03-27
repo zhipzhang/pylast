@@ -6,6 +6,7 @@
 #include "nanobind/stl/shared_ptr.h"
 #include "nanobind/eigen/dense.h"
 #include "nanobind/stl/vector.h"
+#include "spdlog/fmt/fmt.h"
 namespace nb = nanobind;
 
 using namespace eigen_histogram;
@@ -23,9 +24,19 @@ NB_MODULE(_pystatistic, m){
             } else {
                 throw std::runtime_error("Unsupported histogram type");
             }
+        })
+        .def("__iadd__", [](Statistics& self, const Statistics& other) {
+            self += other;
+            return self;
+        })
+        .def("__repr__", [](const Statistics& self) {
+            return fmt::format("Statistics with {} histograms", self.histograms.size());
         });
     nb::class_<Histogram<float>>(m, "Histogram")
-        .def("reset", &Histogram<float>::reset);
+        .def("reset", &Histogram<float>::reset)
+        .def("__repr__", [](const Histogram<float>& self) {
+            return fmt::format("Histogram(dimension={})", self.get_dimension());
+        });
     nb::class_<Histogram1D<float>, Histogram<float>>(m, "Histogram1D")
         .def_prop_ro("bins", &Histogram1D<float>::bins)
         .def_prop_ro("underflow", &Histogram1D<float>::underflow)
@@ -49,7 +60,11 @@ NB_MODULE(_pystatistic, m){
             Eigen::VectorXf weights = Eigen::VectorXf::Ones(values.size());
             self.fill(values, weights);
         })
-        .def("center", &Histogram1D<float>::center);
+        .def("center", &Histogram1D<float>::center)
+        .def("__repr__", [](const Histogram1D<float>& self) {
+            return fmt::format("Histogram1D(bins={}, range=[{:.2f}, {:.2f}])", 
+                self.bins(), self.get_low_edge(), self.get_high_edge());
+        });
     nb::class_<Histogram2D<float>, Histogram<float>>(m, "Histogram2D")
         .def_prop_ro("x_bins", &Histogram2D<float>::x_bins)
         .def_prop_ro("y_bins", &Histogram2D<float>::y_bins)
@@ -65,8 +80,12 @@ NB_MODULE(_pystatistic, m){
         })
         .def("fill", [](Histogram2D<float>& self, float x, float y, float weight) {
             self.fill(x, y, weight);
+        })
+        .def("__repr__", [](const Histogram2D<float>& self) {
+            return fmt::format("Histogram2D(x_bins={}, x_range=[{:.2f}, {:.2f}], y_bins={}, y_range=[{:.2f}, {:.2f}])", 
+                self.x_bins(), self.get_x_low_edge(), self.get_x_high_edge(),
+                self.y_bins(), self.get_y_low_edge(), self.get_y_high_edge());
         });
     m.def("make_regular_histogram", &make_regular_histogram<float>, nb::arg("min"), nb::arg("max"), nb::arg("bins"));
     m.def("make_regular_histogram2d", &make_regular_histogram_2d<float>, nb::arg("min_x"), nb::arg("max_x"), nb::arg("bins_x"), nb::arg("min_y"), nb::arg("max_y"), nb::arg("bins_y"));
 }
-

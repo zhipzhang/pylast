@@ -20,6 +20,7 @@
 #include "SubarrayDescription.hh"
 #include "ArrayEvent.hh"
 #include <optional>
+#include "Statistics.hh"
 #include "SimulatedShowerArray.hh"
 using std::string;
 class EventSource
@@ -72,7 +73,7 @@ public:
 
     std::optional<SimulationConfiguration> simulation_config;
     std::optional<SubarrayDescription> subarray;
-
+    std::optional<Statistics> statistics;
     int64_t max_events;
     std::vector<int> allowed_tels;
     std::optional<TableAtmosphereModel> atmosphere_model;

@@ -40,6 +40,7 @@
         void initialize_data_level(const std::string& level_name, std::optional<T>& data_level, std::optional<RootEventIndex>& index);
         bool read_next_event();
         RootArrayEvent array_event;
+        void initialize_statistics();
         bool load_subarray_from_env;  // In case we can read subarray from environment variable
         std::unique_ptr<TFile> file;
  };

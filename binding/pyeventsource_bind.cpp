@@ -21,6 +21,7 @@ NB_MODULE(_pyeventsource, m){
         .def_ro("metaparam", &EventSource::metaparam)
         .def_ro("subarray", &EventSource::subarray)
         .def_ro("shower_array", &EventSource::shower_array)
+        .def_ro("statistics", &EventSource::statistics)
         .def("load_simulated_showers", &EventSource::load_all_simulated_showers)
         .def("__iter__",
             [](EventSource &source) {

@@ -217,6 +217,7 @@ public:
     virtual void reset() = 0;
     virtual void print(std::ostream& os = std::cout) const = 0;
     virtual int get_dimension() const = 0;
+    virtual Histogram<Precision>& operator+ (const Histogram<Precision>& other) = 0;
 };
 
 // 1D Histogram class
@@ -267,7 +268,25 @@ public:
 
     // Move assignment
     Histogram1D& operator=(Histogram1D&& other) noexcept = default;
-
+    Histogram1D& operator+ (const Histogram<Precision>& other) override {
+    const Histogram1D<Precision>* hist1d = dynamic_cast<const Histogram1D<Precision>*>(&other);
+    if (!hist1d) {
+        throw std::invalid_argument("Cannot add histograms of different types");
+    }
+        // Check if histograms are compatible
+    if (bins_.size() != hist1d->bins_.size() || 
+        axis_->get_low_edge() != hist1d->get_low_edge() || 
+        axis_->get_high_edge() != hist1d->get_high_edge()) {
+        throw std::invalid_argument("Cannot add histograms with different binning");
+    }
+    
+    // Add bin contents
+    bins_ += hist1d->bins_;
+    underflow_ += hist1d->underflow_;
+    overflow_ += hist1d->overflow_;
+    
+    return *this;
+    }
     // Fill a single value
     void fill(Precision x, Precision weight = 1.0) {
         int idx = axis_->index(x);
@@ -429,6 +448,28 @@ public:
 
     // Move constructor
     Histogram2D(Histogram2D&& other) noexcept = default;
+    Histogram2D& operator+ (const Histogram<Precision>& other) override {
+        const Histogram2D<Precision>* hist2d = dynamic_cast<const Histogram2D<Precision>*>(&other);
+        if (!hist2d) {
+            throw std::invalid_argument("Cannot add histograms of different types");
+        }
+        if (bins_.rows() != hist2d->bins_.rows() || 
+            bins_.cols() != hist2d->bins_.cols() || 
+            x_axis_->get_low_edge() != hist2d->get_x_low_edge() || 
+            x_axis_->get_high_edge() != hist2d->get_x_high_edge() || 
+            y_axis_->get_low_edge() != hist2d->get_y_low_edge() || 
+            y_axis_->get_high_edge() != hist2d->get_y_high_edge()) {
+            throw std::invalid_argument("Cannot add histograms with different binning");
+        }
+        bins_ += hist2d->bins_;
+        underflow_x_ += hist2d->underflow_x_;
+        overflow_x_ += hist2d->overflow_x_;
+        underflow_y_ += hist2d->underflow_y_;
+        overflow_y_ += hist2d->overflow_y_;
+        underflow_xy_ += hist2d->underflow_xy_;
+        overflow_xy_ += hist2d->overflow_xy_;
+        return *this;
+    }
 
     // Copy assignment
     Histogram2D& operator=(const Histogram2D& other) {
