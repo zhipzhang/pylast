@@ -318,6 +318,8 @@ void RootSimulationShower::initialize(TTree* tree)
     tree->SetBranchAddress("core_y", &shower.core_y);
     tree->SetBranchAddress("h_first_int", &shower.h_first_int);
     tree->SetBranchAddress("x_max", &shower.x_max);
+    tree->SetBranchAddress("starting_grammage", &shower.starting_grammage);
+    tree->SetBranchAddress("shower_primary_id", &shower.shower_primary_id);
 }
 
 //------------------------------------------------------------------------------

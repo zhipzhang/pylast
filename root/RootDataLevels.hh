@@ -313,6 +313,12 @@ class RootPointing : public RootDataLevels
        
        virtual TTree* initialize() override;
        virtual void initialize(TTree* tree) override;
+       void clear()
+       {
+           tel_id.clear();
+           tel_az.clear();
+           tel_alt.clear();
+       }
     private:
         RVecI* tel_id_ptr = nullptr;
         RVecD* tel_az_ptr = nullptr;

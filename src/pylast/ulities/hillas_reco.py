@@ -47,7 +47,7 @@ def default_config():
     config["data_writer"]["output_type"] = "root"
     config["data_writer"]["eos_url"] = "root://eos01.ihep.ac.cn/"
     config["data_writer"]["overwrite"] = True
-    config["data_writer"]["write_simulation_shower"] = False
+    config["data_writer"]["write_simulation_shower"] = True
     config["data_writer"]["write_simulated_camera"] = False
     config["data_writer"]["write_r0"] = False
     config["data_writer"]["write_r1"] = False

@@ -29,3 +29,4 @@ wheel.py-api = "cp312"
 [project.scripts]
 hillas_reco = "pylast.ulities.hillas_reco:hillas_reco"
 merge_root = "pylast.ulities.merge_root:merge_root"
+simplified_convert = "pylast.ulities.simplified_convert:simplified_convert"

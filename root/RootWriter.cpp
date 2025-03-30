@@ -42,7 +42,7 @@ void RootWriter::close()
         directories[name]->cd();
         if(build_index[name])
         {
-            int ret = tree->BuildIndex("event_id", "tel_id");
+            tree->BuildIndex("event_id", "tel_id");
         }
         tree->Write();
     }
@@ -668,6 +668,7 @@ void RootWriter::write_pointing(const ArrayEvent& event)
         root_pointing.tel_alt.push_back(point->altitude);
     }
     pointing_tree->Fill();
+    root_pointing.clear();
 }
 
 void RootWriter::write_event(const ArrayEvent& event)

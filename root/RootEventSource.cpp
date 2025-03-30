@@ -18,9 +18,13 @@ RootEventSource::RootEventSource(const std::string& filename, int64_t max_events
     initialize_array_event();
     initialize_statistics();
 }
-
+const std::string ihep_url = "root://eos01.ihep.ac.cn:/";
 void RootEventSource::open_file()
 {
+    if(input_filename.substr(0, 4) == "/eos")
+    {
+        input_filename = ihep_url + input_filename;
+    }
     file = std::unique_ptr<TFile>(TFile::Open(input_filename.c_str(), "READ"));
     if(!file)
     {
@@ -284,6 +288,10 @@ ArrayEvent RootEventSource::get_event()
         event.simulation->shower = array_event.simulation->shower;
         event.event_id = array_event.simulation->event_id;
     }
+    else
+    {
+        event.event_id = 0;
+    }
     if(array_event.r0.has_value())
     {
         event.r0 = R0Event();
@@ -392,6 +400,14 @@ ArrayEvent RootEventSource::get_event()
             double azimuth = array_event.pointing->tel_az[tel_id];
             double altitude = array_event.pointing->tel_alt[tel_id];
             event.pointing->add_tel(tel_id, azimuth, altitude);
+        }
+    }
+    if(event.event_id == 0)
+    {
+        // try to get event_id from dl1
+        if(array_event.dl1.has_value())
+        {
+            event.event_id = array_event.dl1->event_id;
         }
     }
     return event;
