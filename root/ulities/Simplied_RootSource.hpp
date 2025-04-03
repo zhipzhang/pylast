@@ -9,6 +9,9 @@ struct TelescopeData
     ImageParameters params;
     double rec_impact_parameter;
     double true_impact_parameter;
+    double true_alt;
+    double true_az;
+    double true_energy;
 };
 struct EventData
 {
@@ -19,7 +22,7 @@ struct EventData
     double hillas_rec_az;
     double hillas_rec_core_x;
     double hillas_rec_core_y;
-
+    double hillas_direction_error;
 };
 void initialize_telescope_tree(TTree *tree,  TelescopeData &data);
 
@@ -28,6 +31,9 @@ void initialize_telescope_tree(TTree* tree,  TelescopeData& data)
     tree->Branch("event_id", &data.event_id);
     tree->Branch("tel_id", &data.tel_id);
     tree->Branch("rec_impact_parameter", &data.rec_impact_parameter);
+    tree->Branch("true_alt", &data.true_alt);
+    tree->Branch("true_az", &data.true_az);
+    tree->Branch("true_energy", &data.true_energy);
     // Image parameters
     tree->Branch("hillas_length", &data.params.hillas.length);
     tree->Branch("hillas_width", &data.params.hillas.width);
@@ -66,7 +72,7 @@ void initialize_event_tree(TTree* tree,  EventData& data)
 {
     tree->Branch("event_id", &data.event_id);
     tree->Branch("hillas_n_tels", &data.hillas_n_tels);
-
+    tree->Branch("hillas_direction_error", &data.hillas_direction_error);
     tree->Branch("hillas_rec_alt", &data.hillas_rec_alt);
     tree->Branch("hillas_rec_az", &data.hillas_rec_az);
     tree->Branch("hillas_rec_core_x", &data.hillas_rec_core_x);

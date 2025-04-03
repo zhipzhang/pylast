@@ -89,6 +89,7 @@ int main(int argc, const char* argv[])
                 event_data.hillas_rec_az = event.dl2->geometry.at("HillasReconstructor").az;
                 event_data.hillas_rec_core_x = event.dl2->geometry.at("HillasReconstructor").core_x;
                 event_data.hillas_rec_core_y = event.dl2->geometry.at("HillasReconstructor").core_y;
+                event_data.hillas_direction_error = event.dl2->geometry.at("HillasReconstructor").direction_error;
                 event_data.shower = event.simulation->shower;
                 eventtree->Fill();
                 for(const auto& [tel_id, rec_impact]: event.dl2->tels)
@@ -97,6 +98,9 @@ int main(int argc, const char* argv[])
                     data.tel_id = tel_id;
                     data.rec_impact_parameter = rec_impact.impact_parameters.at("HillasReconstructor").distance;
                     data.params = event.dl1->tels.at(tel_id)->image_parameters;
+                    data.true_alt = event.simulation->shower.alt;
+                    data.true_az = event.simulation->shower.az;
+                    data.true_energy = event.simulation->shower.energy;
                     teltree->Fill();
                 }
             }

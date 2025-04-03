@@ -42,11 +42,17 @@ void RootWriter::close()
         directories[name]->cd();
         if(build_index[name])
         {
-            tree->BuildIndex("event_id", "tel_id");
+            int ret = tree->BuildIndex("event_id", "tel_id");
+            if(ret < 0)
+            {
+                throw std::runtime_error("failed to build index for tree: " + name);
+            }
+            spdlog::info("building index for tree: {}", name);
         }
         tree->Write();
     }
-    file->Close();
+    file->Write();
+    spdlog::info("writing file: {}", filename);
 }
 
 void RootWriter::write_atmosphere_model()
@@ -490,9 +496,9 @@ void RootWriter::write_dl1(const ArrayEvent& event, bool write_image)
         index_tree = get_tree("dl1_index");
         if(write_image)
         {
-            dl1_tree->Branch("image", &array_event.dl1->image);
-            dl1_tree->Branch("peak_time", &array_event.dl1->peak_time);
-            dl1_tree->Branch("mask", &array_event.dl1->mask);
+            dl1_tree->Branch("image", &array_event.dl1->image, 256000, 0);
+            dl1_tree->Branch("peak_time", &array_event.dl1->peak_time, 256000, 0);
+            dl1_tree->Branch("mask", &array_event.dl1->mask, 256000, 0);
         }
     }
     
@@ -577,7 +583,9 @@ void RootWriter::write_dl2(const ArrayEvent& event)
     root_dl2_index.event_id = event.event_id;
     for(const auto& [tid, dl2_tel] : dl2.tels)
     {
-        root_dl2.clear();
+        root_dl2.reconstructor_name.clear();
+        root_dl2.distance.clear();
+        root_dl2.distance_error.clear();
         root_dl2.tel_id = tid;
         root_dl2_index.telescopes.push_back(tid);
         for(const auto& [name, impact] : dl2_tel.impact_parameters)
