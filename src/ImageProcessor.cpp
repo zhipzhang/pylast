@@ -62,6 +62,7 @@ void ImageProcessor::operator()(ArrayEvent& event)
         LeakageParameter leakage_parameter = ImageProcessor::leakage_parameter(const_cast<CameraGeometry&>(subarray.tels.at(tel_id).camera_description.camera_geometry), masked_image);
         ConcentrationParameter concentration_parameter = ImageProcessor::concentration_parameter(subarray.tels.at(tel_id).camera_description.camera_geometry, masked_image, hillas_parameter);
         MorphologyParameter morphology_parameter = ImageProcessor::morphology_parameter(subarray.tels.at(tel_id).camera_description.camera_geometry, image_mask);
+        IntensityParameter intensity_parameter = ImageProcessor::intensity_parameter(subarray.tels.at(tel_id).camera_description.camera_geometry, masked_image);
         // Tempory image are copyed from dl0_camera
         dl1_camera.image = dl0_camera->image.cast<float>();
         dl1_camera.peak_time = dl0_camera->peak_time.cast<float>();
@@ -70,6 +71,7 @@ void ImageProcessor::operator()(ArrayEvent& event)
         dl1_camera.image_parameters.leakage = leakage_parameter;
         dl1_camera.image_parameters.concentration = concentration_parameter;
         dl1_camera.image_parameters.morphology = morphology_parameter;
+        dl1_camera.image_parameters.intensity = intensity_parameter;
         event.dl1->add_tel(tel_id, std::move(dl1_camera));
     }
 
@@ -206,6 +208,22 @@ MorphologyParameter ImageProcessor::morphology_parameter(const CameraGeometry& c
     return MorphologyParameter{n_pixels, num_island, n_small_islands, n_medium_islands, n_large_islands};
 
 }
+IntensityParameter ImageProcessor::intensity_parameter(const CameraGeometry& camera_geometry, const Eigen::VectorXd& masked_image)
+{
+    double intensity_max = masked_image.maxCoeff();
+    double intensity_mean = masked_image.sum()/masked_image.count();
+    double intensity_std = 0;
+    for(auto ipe: masked_image)
+    {
+        if(ipe > 0)
+        {
+            intensity_std += std::pow(ipe - intensity_mean, 2);
+        }
+    }
+    intensity_std = std::sqrt(intensity_std/masked_image.count());
+    return IntensityParameter{intensity_max, intensity_mean, intensity_std};
+}
+
 json ImageProcessor::get_default_config()
 {
     std::string default_config = R"(

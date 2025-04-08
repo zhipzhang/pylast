@@ -62,6 +62,15 @@ class MorphologyParameter
     
 };
 
+class IntensityParameter
+{
+    public:
+    IntensityParameter() = default;
+    ~IntensityParameter() = default;
+    double intensity_max;
+    double intensity_mean;
+    double intensity_std;
+};
 class ExtraParameters
 {
     public:
@@ -79,5 +88,6 @@ public:
     LeakageParameter leakage;
     ConcentrationParameter concentration;
     MorphologyParameter morphology;
+    IntensityParameter intensity;
     std::optional<ExtraParameters> extra;
 };
