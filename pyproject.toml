@@ -1,5 +1,5 @@
 [build-system]
-requires = ["scikit-build-core >=0.4.3", "nanobind >=1.3.2"]
+requires = ["scikit-build-core >=0.4.3", "nanobind >=1.3.2", "typing_extensions"]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -26,6 +26,8 @@ build-dir = "build/{wheel_tag}"
 # Build stable ABI wheels for CPython 3.12+
 wheel.py-api = "cp312"
 
+# Include model files in the package
+sdist.include = ["model/*"]
 [project.scripts]
 hillas_reco = "pylast.ulities.hillas_reco:hillas_reco"
 merge_root = "pylast.ulities.merge_root:merge_root"

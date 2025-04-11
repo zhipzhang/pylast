@@ -8,6 +8,8 @@
 #include "nanobind/make_iterator.h"
 #include "nanobind/stl/optional.h"
 #include "LoggerInitialize.hh"
+#include "RootEventSource.hh"
+#include "SimtelEventSource.hh"
 namespace nb = nanobind;
 
 NB_MODULE(_pyeventsource, m){
@@ -89,4 +91,10 @@ NB_MODULE(_pyeventsource, m){
           nb::arg("log_level") = "info", 
           nb::arg("log_file") = "");
     m.def("shutdown_logger", &shutdown_logger);
+    nb::class_<RootEventSource, EventSource>(m, "RootEventSource")
+        .def(nb::init<const std::string&, int64_t, std::vector<int>, bool>(), nb::arg("filename"), nb::arg("max_events") = -1, nb::arg("subarray")=std::vector<int>{}, nb::arg("load_subarray_from_env")=false)
+        .def("__getitem__", &RootEventSource::operator[]);
+    nb::class_<SimtelEventSource, EventSource>(m, "SimtelEventSource")
+        .def(nb::init<const std::string&, int64_t, std::vector<int>, bool>(), nb::arg("filename"), nb::arg("max_events") = -1, nb::arg("subarray")=std::vector<int>{}, nb::arg("load_simulated_showers")=false)
+        .def("__repr__", &SimtelEventSource::print);
 }
