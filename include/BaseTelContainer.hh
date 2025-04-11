@@ -12,6 +12,8 @@
  #include <unordered_map>
  #include <memory>
  #include <map>
+ #include <vector>
+ #include <algorithm>
 
 
 template<typename TelData>
@@ -49,5 +51,13 @@ class BaseTelContainer{
                 rels[pair.first] = pair.second.get();
             }
             return rels;
+        }
+        std::vector<int> get_ordered_tels() const {
+            std::vector<int> ordered_tels;
+            for(const auto& pair : tels){
+                ordered_tels.push_back(pair.first);
+            }
+            std::sort(ordered_tels.begin(), ordered_tels.end(), std::less<int>());
+            return ordered_tels;
         }
 };

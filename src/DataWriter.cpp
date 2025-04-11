@@ -68,6 +68,7 @@ void DataWriter::operator()(const ArrayEvent& event)
         return;
     
     // Only write enabled components
+    file_writer->unique_write_method(event);
     if(write_simulation_shower_enabled && event.simulation.has_value())
     {
         file_writer->write_simulation_shower(event);

@@ -29,6 +29,7 @@
         virtual void write_atmosphere_model() = 0;
         virtual void write_simulation_config() = 0;
         virtual void write_subarray() = 0;
+        virtual void unique_write_method(const ArrayEvent& event) = 0;
         
         // Methods for writing specific parts of an ArrayEvent
         virtual void write_simulation_shower(const ArrayEvent& event) = 0;

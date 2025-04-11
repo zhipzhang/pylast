@@ -155,6 +155,11 @@ TTree* RootDL1Event::initialize()
     tree->Branch("morphology_num_medium_islands", &params.morphology.n_medium_islands);
     tree->Branch("morphology_num_large_islands", &params.morphology.n_large_islands);
     
+    // Intensity parameters
+    tree->Branch("intensity_max", &params.intensity.intensity_max);
+    tree->Branch("intensity_mean", &params.intensity.intensity_mean);
+    tree->Branch("intensity_std", &params.intensity.intensity_std);
+
     // Extra parameters
     tree->Branch("extra_miss", &miss);
     tree->Branch("extra_disp", &disp);
@@ -223,6 +228,11 @@ void RootDL1Event::initialize(TTree* tree)
     tree->SetBranchAddress("morphology_num_small_islands", &params.morphology.n_small_islands);
     tree->SetBranchAddress("morphology_num_medium_islands", &params.morphology.n_medium_islands);
     tree->SetBranchAddress("morphology_num_large_islands", &params.morphology.n_large_islands);
+
+    // Intensity parameters
+    tree->SetBranchAddress("intensity_max", &params.intensity.intensity_max);
+    tree->SetBranchAddress("intensity_mean", &params.intensity.intensity_mean);
+    tree->SetBranchAddress("intensity_std", &params.intensity.intensity_std);
 
     // Extra parameters
     tree->SetBranchAddress("extra_miss", &miss);
@@ -322,6 +332,22 @@ void RootSimulationShower::initialize(TTree* tree)
     tree->SetBranchAddress("shower_primary_id", &shower.shower_primary_id);
 }
 
+TTree* RootDL2Energy::initialize()
+{
+    TTree* tree = new TTree(reconstructor_name.c_str(), "DL2 energy reconstruction");
+    tree->Branch("event_id", &event_id);
+    tree->Branch("estimate_energy", &energy.estimate_energy);
+    tree->Branch("energy_valid", &energy.energy_valid);
+    return tree;
+}
+
+void RootDL2Energy::initialize(TTree* tree)
+{
+    data_tree = tree;
+    tree->SetBranchAddress("event_id", &event_id);
+    tree->SetBranchAddress("estimate_energy", &energy.estimate_energy);
+    tree->SetBranchAddress("energy_valid", &energy.energy_valid);
+}
 //------------------------------------------------------------------------------
 // RootDL2GeometryEvent implementation
 //------------------------------------------------------------------------------
@@ -378,6 +404,7 @@ TTree* RootDL2Event::initialize()
     tree->Branch("reconstructor_name", &reconstructor_name);
     tree->Branch("distance", &distance);
     tree->Branch("distance_error", &distance_error);
+    tree->Branch("estimate_energy", &estimate_energy);
     return tree;
 }
 
@@ -392,63 +419,38 @@ void RootDL2Event::initialize(TTree* tree)
     tree->SetBranchAddress("reconstructor_name", &reconstructor_name_ptr);
     tree->SetBranchAddress("distance", &distance_ptr);
     tree->SetBranchAddress("distance_error", &distance_error_ptr);
+    tree->SetBranchAddress("estimate_energy", &estimate_energy);
 }
 
 
 int RootArrayEvent::test_entries()
 {
     int simulation_entries = 0;
-    int r0_entries = 0;
-    int r1_entries = 0;
-    int dl0_entries = 0;
-    int dl1_entries = 0;
-    int monitor_entries = 0;
-    int dl2_entries = 0;
     int pointing_entries = 0;
+    int event_index_entries = 0;
     
     // Get entries for each data level if available
     if(simulation.has_value())
     {
         simulation_entries = simulation->GetEntries().value();
     }
-    if(r0_index.has_value())
+    if(event_index.has_value())
     {
-        r0_entries = r0_index->index_tree->GetEntries();
-    }
-    if(r1_index.has_value())
-    {
-        r1_entries = r1_index->index_tree->GetEntries();
-    }
-    if(dl0_index.has_value())
-    {
-        dl0_entries = dl0_index->index_tree->GetEntries();
-    }
-    if(dl1_index.has_value())
-    {
-        dl1_entries = dl1_index->index_tree->GetEntries();
-    }
-    if(monitor_index.has_value())
-    {
-        monitor_entries = monitor_index->index_tree->GetEntries();
-    }
-    if(dl2_index.has_value())
-    {
-        dl2_entries = dl2_index->index_tree->GetEntries();
+        event_index_entries = event_index->index_tree->GetEntries();
     }
     if(pointing.has_value())
     {
         pointing_entries = pointing->GetEntries().value();
     }
-    
     // Verify that all available data levels have the same number of entries
     int reference_entries = -1;
     
     // Find the first non-zero entry count to use as reference
-    for (int entries : {r0_entries, r1_entries, dl0_entries, dl1_entries, monitor_entries, dl2_entries, pointing_entries})
+    for (int ientries : {simulation_entries, pointing_entries, event_index_entries})
     {
-        if (entries > 0)
+        if (ientries > 0)
         {
-            reference_entries = entries;
+            reference_entries = ientries;
             break;
         }
     }
@@ -456,13 +458,9 @@ int RootArrayEvent::test_entries()
     // If we have any data, verify consistency
     if (reference_entries > 0)
     {
-        if (r0_entries > 0) assert(r0_entries == reference_entries);
-        if (r1_entries > 0) assert(r1_entries == reference_entries);
-        if (dl0_entries > 0) assert(dl0_entries == reference_entries);
-        if (dl1_entries > 0) assert(dl1_entries == reference_entries);
-        if (monitor_entries > 0) assert(monitor_entries == reference_entries);
-        if (dl2_entries > 0) assert(dl2_entries == reference_entries);
+        if (simulation_entries > 0) assert(simulation_entries == reference_entries);
         if (pointing_entries > 0) assert(pointing_entries == reference_entries);
+        if (event_index_entries > 0) assert(event_index_entries == reference_entries);
     }
     entries = reference_entries;
     return reference_entries;
@@ -478,16 +476,24 @@ void RootArrayEvent::load_next_event()
                 spdlog::error("Failed to load next event for simulation");
             }
         }
-        fill_tel_entries<RootR0Event>(r0, r0_index, r0_tel_entries);
-        fill_tel_entries<RootR1Event>(r1, r1_index, r1_tel_entries);
-        fill_tel_entries<RootDL0Event>(dl0, dl0_index, dl0_tel_entries);
-        fill_tel_entries<RootDL1Event>(dl1, dl1_index, dl1_tel_entries);
-        fill_tel_entries<RootMonitor>(monitor, monitor_index, monitor_tel_entries);
-        fill_tel_entries<RootDL2Event>(dl2, dl2_index, dl2_tel_entries);
+        if(event_index.has_value())
+        {
+            event_index->get_entry(current_entry);
+        }
+        fill_tel_entries<RootR0Event>(r0, event_index, r0_tel_entries);
+        fill_tel_entries<RootR1Event>(r1, event_index, r1_tel_entries);
+        fill_tel_entries<RootDL0Event>(dl0, event_index, dl0_tel_entries);
+        fill_tel_entries<RootDL1Event>(dl1, event_index, dl1_tel_entries);
+        fill_tel_entries<RootMonitor>(monitor, event_index, monitor_tel_entries);
+        fill_tel_entries<RootDL2Event>(dl2, event_index, dl2_tel_entries);
         // Store the index now.
         for(auto [name, geometry]: dl2_geometry_map)
         {
             geometry->get_entry(current_entry);
+        }
+        for(auto [name, energy]: dl2_energy_map)
+        {
+            energy->get_entry(current_entry);
         }
         current_entry++;
     }

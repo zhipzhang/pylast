@@ -67,7 +67,7 @@ class RootDataLevels
                 int entry_number = data_tree->GetEntryNumberWithIndex(event_id, tel_id);
                 if(entry_number < 0)
                 {
-                    spdlog::error("Failed to get entry number for event_id: {} and tel_id: {}", event_id, tel_id);
+                    spdlog::debug("Failed to get entry number for event_id: {} and tel_id: {}", event_id, tel_id);
                     return std::nullopt;
                 }
                 return std::optional<int>(entry_number);
@@ -236,6 +236,19 @@ class RootDL2Geometry : public RootDataLevels
        std::vector<int>* telescopes_ptr = nullptr;
 };
 
+class RootDL2Energy : public RootDataLevels
+{
+   public:
+       RootDL2Energy(const std::string& reconstructor_name) : reconstructor_name(reconstructor_name) {}
+       virtual ~RootDL2Energy() = default;
+       std::string reconstructor_name;
+       int event_id;
+       ReconstructedEnergy energy;
+       virtual TTree* initialize() override;
+       virtual void initialize(TTree* tree) override;
+    private:
+        std::string* reconstructor_name_ptr = nullptr;
+};
 /**
  * @brief Structure for DL2 telescope impact parameters, events/dl2/
  */
@@ -248,7 +261,7 @@ class RootDL2Event : public RootDataLevels
        int event_id;
        int tel_id;
        std::vector<std::string> reconstructor_name;
-       
+       double estimate_energy = 0;
        // Impact parameters structure
        std::vector<double> distance;
        std::vector<double> distance_error;
@@ -378,20 +391,17 @@ class RootArrayEvent
         virtual ~RootArrayEvent() = default;
         void initialize_writer();
         std::optional<RootSimulationShower> simulation;
-        std::optional<RootEventIndex> r0_index;
         std::optional<RootR0Event> r0;
-        std::optional<RootEventIndex> r1_index;
         std::optional<RootR1Event> r1;
-        std::optional<RootEventIndex> dl0_index;
         std::optional<RootDL0Event> dl0;
-        std::optional<RootEventIndex> dl1_index;
         std::optional<RootDL1Event> dl1;
         std::optional<RootPointing> pointing;
-        std::optional<RootEventIndex> monitor_index;
         std::optional<RootMonitor> monitor;
+
+        std::optional<RootEventIndex> event_index;
         std::unordered_map<std::string, std::optional<RootDL2Geometry>> dl2_geometry_map;
+        std::unordered_map<std::string, std::optional<RootDL2Energy>> dl2_energy_map;
         std::optional<RootDL2Event> dl2;
-        std::optional<RootEventIndex> dl2_index;
         int test_entries();
         bool has_event() {return current_entry < entries;}
         void load_next_event();

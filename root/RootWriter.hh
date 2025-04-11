@@ -54,14 +54,18 @@ class RootWriter: public FileWriter
         void write_statistics(const Statistics& statistics) override;
         // Write event with components based on configuration
         void write_event(const ArrayEvent& event) override;
+        void unique_write_method(const ArrayEvent& event) override
+        {
+            write_event_index(event);
+        }
         //void write_simulation_config() override;
     private:
         std::unique_ptr<TFile> file;
         RootArrayEvent array_event;
-
+        void write_event_index(const ArrayEvent& event);
         
         template<typename T>
-        void initialize_data_level(const std::string& level_name, std::optional<T>& data_level, std::optional<RootEventIndex>& index);
+        void initialize_data_level(const std::string& level_name, std::optional<T>& data_level);
         // Helper methods for initializing branches
         void initialize_simulation_config_branches(TTree& tree, SimulationConfiguration& config);
         void initialize_simulation_shower_branches(TTree& tree, SimulatedShower& shower);

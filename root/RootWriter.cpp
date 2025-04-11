@@ -316,6 +316,64 @@ void RootWriter::write_simulation_config()
     tree->Write();
 }
 
+
+void RootWriter::write_event_index(const ArrayEvent& event)
+{
+    if(!file)
+    {
+        throw std::runtime_error("file not open");
+    }
+    
+    // Check for any available data level to index
+    if(!event.r0.has_value() && 
+       !event.r1.has_value() && 
+       !event.dl0.has_value() && 
+       !event.dl1.has_value() && 
+       !event.dl2.has_value())
+    {
+        return;
+    }
+    auto index_tree = get_tree("event_index");
+    if(!index_tree)
+    {
+        TDirectory* dir = get_or_create_directory("/events/");
+        dir->cd();
+        TTree* tree = new TTree("event_index", "Event index");
+        array_event.event_index = RootEventIndex();
+        tree->Branch("event_id", &array_event.event_index->event_id);
+        tree->Branch("telescopes", &array_event.event_index->telescopes);
+        trees["event_index"] = tree;
+        directories["event_index"] = dir;
+        index_tree = tree;
+    }
+    array_event.event_index->telescopes.clear();
+    array_event.event_index->event_id = event.event_id;
+
+    // Get telescopes from the first available data level
+    if(event.r0.has_value()) {
+        for(const auto& tel_id : event.r0->get_ordered_tels()) {
+            array_event.event_index->telescopes.push_back(tel_id);
+        }
+    } else if(event.r1.has_value()) {
+        for(const auto& tel_id : event.r1->get_ordered_tels()) {
+            array_event.event_index->telescopes.push_back(tel_id);
+        }
+    } else if(event.dl0.has_value()) {
+        for(const auto& tel_id : event.dl0->get_ordered_tels()) {
+            array_event.event_index->telescopes.push_back(tel_id);
+        }
+    } else if(event.dl1.has_value()) {
+        for(const auto& tel_id : event.dl1->get_ordered_tels()) {
+            array_event.event_index->telescopes.push_back(tel_id);
+        }
+    } else if(event.dl2.has_value()) {
+        for(const auto& [tel_id, _] : event.dl2->tels) {
+                array_event.event_index->telescopes.push_back(tel_id);
+        }
+    }
+    index_tree->Fill();
+    
+}
 void RootWriter::write_simulation_shower(const ArrayEvent& event)
 {
     if(!file)
@@ -338,9 +396,9 @@ void RootWriter::write_simulation_shower(const ArrayEvent& event)
     if(!sim_tree)
     {
         array_event.simulation = RootSimulationShower();
-        sim_tree = array_event.simulation->initialize();
         TDirectory* dir = get_or_create_directory("/events/simulation");
         dir->cd();
+        sim_tree = array_event.simulation->initialize();
         directories["shower"] = dir;
         trees["shower"] = sim_tree;
     }
@@ -364,23 +422,17 @@ void RootWriter::write_r0(const ArrayEvent& event)
         return;
     }
     TTree* r0_tree = get_tree("r0");
-    TTree* r0_index_tree = get_tree("r0_index");
-    if(!r0_tree || !r0_index_tree)
+    if(!r0_tree)
     {
-        spdlog::debug("initialize r0 and r0_index");
-        initialize_data_level<RootR0Event>("r0", array_event.r0, array_event.r0_index);
+        spdlog::debug("initialize r0");
+        initialize_data_level<RootR0Event>("r0", array_event.r0);
         r0_tree = get_tree("r0");
-        r0_index_tree = get_tree("r0_index");
     }
     auto& root_r0 = array_event.r0.value();
     const auto& r0 = event.r0.value();
-    auto& root_r0_index = array_event.r0_index.value();
-    root_r0_index.telescopes.clear();
     root_r0.event_id = event.event_id;
-    root_r0_index.event_id = event.event_id;
     for(const auto& [tel_id, camera] : r0.get_tels())
     {
-        root_r0_index.telescopes.push_back(tel_id);
         root_r0.tel_id = tel_id;
         root_r0.n_pixels = camera->waveform[0].rows();
         root_r0.n_samples = camera->waveform[0].cols();
@@ -388,7 +440,6 @@ void RootWriter::write_r0(const ArrayEvent& event)
         root_r0.high_gain_waveform = std::move(RVec<uint16_t>(camera->waveform[1].data(), root_r0.n_pixels * root_r0.n_samples));
         r0_tree->Fill();
     }
-    r0_index_tree->Fill();
 }
 
 void RootWriter::write_r1(const ArrayEvent& event)
@@ -405,23 +456,17 @@ void RootWriter::write_r1(const ArrayEvent& event)
     }
     
     auto r1_tree = get_tree("r1");
-    auto index_tree = get_tree("r1_index");
-    if(!r1_tree || !index_tree)
+    if(!r1_tree)
     {
-        spdlog::debug("initialize r1 and r1_index");
-        initialize_data_level<RootR1Event>("r1", array_event.r1, array_event.r1_index);
+        spdlog::debug("initialize r1");
+        initialize_data_level<RootR1Event>("r1", array_event.r1);
         r1_tree = get_tree("r1");
-        index_tree = get_tree("r1_index");
     }
     auto& root_r1 = array_event.r1.value();
     const auto& r1 = event.r1.value();
-    auto& root_r1_index = array_event.r1_index.value();
-    root_r1_index.telescopes.clear();
     root_r1.event_id = event.event_id;
-    root_r1_index.event_id = event.event_id;
     for(const auto& [tel_id, camera] : r1.tels)
     {
-        root_r1_index.telescopes.push_back(tel_id);
         root_r1.tel_id = tel_id;
         root_r1.n_pixels = camera->waveform.rows();
         root_r1.n_samples = camera->waveform.cols();
@@ -429,7 +474,6 @@ void RootWriter::write_r1(const ArrayEvent& event)
         root_r1.gain_selection = std::move(RVecI(camera->gain_selection.data(), camera->gain_selection.size()));
         r1_tree->Fill();
     }
-    index_tree->Fill();
 }
 
 void RootWriter::write_dl0(const ArrayEvent& event)
@@ -446,30 +490,23 @@ void RootWriter::write_dl0(const ArrayEvent& event)
     }
     
     auto dl0_tree = get_tree("dl0");
-    auto index_tree = get_tree("dl0_index");
-    if(!dl0_tree || !index_tree)
+    if(!dl0_tree)
     {
-        spdlog::debug("initialize dl0 and dl0_index");
-        initialize_data_level<RootDL0Event>("dl0", array_event.dl0, array_event.dl0_index);
+        spdlog::debug("initialize dl0");
+        initialize_data_level<RootDL0Event>("dl0", array_event.dl0);
         dl0_tree = get_tree("dl0");
-        index_tree = get_tree("dl0_index");
     }
     auto& root_dl0 = array_event.dl0.value();
     const auto& dl0 = event.dl0.value();
-    auto& root_dl0_index = array_event.dl0_index.value();
-    root_dl0_index.telescopes.clear();
     root_dl0.event_id = event.event_id;
-    root_dl0_index.event_id = event.event_id;
     for(const auto& [tel_id, camera] : dl0.tels)
     {
-        root_dl0_index.telescopes.push_back(tel_id);
         root_dl0.tel_id = tel_id;
         root_dl0.n_pixels = camera->image.size();
         root_dl0.image = std::move(RVecD(camera->image.data(), root_dl0.n_pixels));
         root_dl0.peak_time = std::move(RVecD(camera->peak_time.data(), root_dl0.n_pixels));
         dl0_tree->Fill();
     }
-    index_tree->Fill();
 }
 
 void RootWriter::write_dl1(const ArrayEvent& event, bool write_image)
@@ -487,13 +524,11 @@ void RootWriter::write_dl1(const ArrayEvent& event, bool write_image)
     
     // Get trees or create if not exist
     auto dl1_tree = get_tree("dl1");
-    auto index_tree = get_tree("dl1_index");
-    if(!dl1_tree || !index_tree)
+    if(!dl1_tree)
     {
-        spdlog::debug("initialize dl1 and dl1_index");
-        initialize_data_level<RootDL1Event>("dl1", array_event.dl1, array_event.dl1_index);
+        spdlog::debug("initialize dl1");
+        initialize_data_level<RootDL1Event>("dl1", array_event.dl1);
         dl1_tree = get_tree("dl1");
-        index_tree = get_tree("dl1_index");
         if(write_image)
         {
             dl1_tree->Branch("image", &array_event.dl1->image, 256000, 0);
@@ -504,13 +539,9 @@ void RootWriter::write_dl1(const ArrayEvent& event, bool write_image)
     
     const auto& dl1 = event.dl1.value();
     auto& root_dl1 = array_event.dl1.value();
-    auto& root_dl1_index = array_event.dl1_index.value();
     root_dl1.event_id = event.event_id;
-    root_dl1_index.event_id = event.event_id;
-    root_dl1_index.telescopes.clear();
     for(const auto& [tid, camera] : dl1.tels)
     {
-        root_dl1_index.telescopes.push_back(tid);
         root_dl1.tel_id = tid;
         if(write_image)
         {
@@ -523,6 +554,7 @@ void RootWriter::write_dl1(const ArrayEvent& event, bool write_image)
         root_dl1.params.leakage = camera->image_parameters.leakage;
         root_dl1.params.concentration = camera->image_parameters.concentration;
         root_dl1.params.morphology = camera->image_parameters.morphology;
+        root_dl1.params.intensity = camera->image_parameters.intensity;
         if(camera->image_parameters.extra.has_value())
         {
             root_dl1.miss = camera->image_parameters.extra->miss;
@@ -530,7 +562,6 @@ void RootWriter::write_dl1(const ArrayEvent& event, bool write_image)
         }
         dl1_tree->Fill();
     }
-    index_tree->Fill();
 }
 
 void RootWriter::write_dl2(const ArrayEvent& event)
@@ -567,27 +598,40 @@ void RootWriter::write_dl2(const ArrayEvent& event)
         root_geom.geometry = geom;
         geom_tree->Fill();
     }
+    for(const auto& [name, energy] : dl2.energy)
+    {
+        auto energy_tree = get_tree(name);
+        if(!energy_tree)
+        {
+            TDirectory* dir = get_or_create_directory("/events/dl2/energy");
+            dir->cd();
+            array_event.dl2_energy_map[name] = RootDL2Energy(name);
+            energy_tree = array_event.dl2_energy_map[name]->initialize();
+            trees[name] = energy_tree;
+            directories[name] = dir;
+        }
+        auto& root_energy = array_event.dl2_energy_map[name].value();
+        root_energy.event_id = event.event_id;
+        root_energy.reconstructor_name = name;
+        root_energy.energy = energy;
+        energy_tree->Fill();
+    }
     auto dl2_tree = get_tree("dl2");
-    auto index_tree = get_tree("dl2_index");
     if(!dl2_tree)
     {
-        spdlog::debug("initialize dl2 and dl2_index");
-        initialize_data_level<RootDL2Event>("dl2", array_event.dl2, array_event.dl2_index);
+        spdlog::debug("initialize dl2");
+        initialize_data_level<RootDL2Event>("dl2", array_event.dl2);
         dl2_tree = get_tree("dl2");
-        index_tree = get_tree("dl2_index");
     }
     auto& root_dl2 = array_event.dl2.value();
-    auto& root_dl2_index = array_event.dl2_index.value();
-    root_dl2_index.telescopes.clear();
     root_dl2.event_id = event.event_id;
-    root_dl2_index.event_id = event.event_id;
     for(const auto& [tid, dl2_tel] : dl2.tels)
     {
         root_dl2.reconstructor_name.clear();
         root_dl2.distance.clear();
         root_dl2.distance_error.clear();
         root_dl2.tel_id = tid;
-        root_dl2_index.telescopes.push_back(tid);
+        root_dl2.estimate_energy = dl2_tel.estimate_energy;
         for(const auto& [name, impact] : dl2_tel.impact_parameters)
         {
             root_dl2.reconstructor_name.push_back(name);
@@ -596,7 +640,6 @@ void RootWriter::write_dl2(const ArrayEvent& event)
         }
         dl2_tree->Fill();
     }
-    index_tree->Fill();
 }
 
 void RootWriter::write_monitor(const ArrayEvent& event)
@@ -613,20 +656,16 @@ void RootWriter::write_monitor(const ArrayEvent& event)
     }
     
     auto monitor_tree = get_tree("monitor");
-    auto monitor_index_tree = get_tree("monitor_index");
-    if(!monitor_tree || !monitor_index_tree)
+    if(!monitor_tree)
     {
-        spdlog::debug("initialize monitor and monitor_index");
-        initialize_data_level<RootMonitor>("monitor", array_event.monitor, array_event.monitor_index);
+        spdlog::debug("initialize monitor");
+        initialize_data_level<RootMonitor>("monitor", array_event.monitor);
         monitor_tree = get_tree("monitor");
-        monitor_index_tree = get_tree("monitor_index");
     }
     
     const auto& monitor = event.monitor.value();
     auto& root_monitor = array_event.monitor.value();
-    auto root_monitor_index = array_event.monitor_index.value();
     root_monitor.event_id = event.event_id;
-    root_monitor_index.event_id = event.event_id;
     for(const auto& [tid, tel_monitor] : monitor.tels)
     {
         root_monitor.tel_id = tid;
@@ -636,7 +675,6 @@ void RootWriter::write_monitor(const ArrayEvent& event)
         root_monitor.pedestals = std::move(RVecD(tel_monitor->pedestal_per_sample.data(), root_monitor.n_channels * root_monitor.n_pixels));
         monitor_tree->Fill();
     }
-    monitor_index_tree->Fill();
 }
 
 void RootWriter::write_pointing(const ArrayEvent& event)
@@ -696,7 +734,7 @@ void RootWriter::write_event(const ArrayEvent& event)
     {
         write_simulation_shower(event);
     }
-    
+    write_event_index(event);
     if(event.r0.has_value())
     {
         write_r0(event);
@@ -784,7 +822,7 @@ TTree* RootWriter::get_tree(const std::string& tree_name)
 }
 
 template<typename T>
-void RootWriter::initialize_data_level(const std::string& level_name, std::optional<T>& data_level, std::optional<RootEventIndex>& index)
+void RootWriter::initialize_data_level(const std::string& level_name, std::optional<T>& data_level)
 {
     TDirectory* dir = get_or_create_directory("events/" + level_name);
     if(!dir)
@@ -793,13 +831,9 @@ void RootWriter::initialize_data_level(const std::string& level_name, std::optio
     }
     dir->cd();
     data_level = T();
-    index = RootEventIndex();
     auto tree = data_level->initialize();
-    auto index_tree = index->initialize(level_name + "_index", "Index for " + level_name + " data");
     trees[level_name] = tree;
-    trees[level_name + "_index"] = index_tree;
     directories[level_name] = dir;
-    directories[level_name + "_index"] = dir;
     build_index[level_name] = true;
 }
 void RootWriter::write_statistics(const Statistics& statistics)

@@ -202,13 +202,14 @@ void RootEventSource::initialize_array_event()
 
 
     
+    initialize_event_index();
     // Initialize R0 data level
-    initialize_data_level<RootR0Event>("r0", array_event.r0, array_event.r0_index);
-    initialize_data_level<RootR1Event>("r1", array_event.r1, array_event.r1_index);
-    initialize_data_level<RootDL0Event>("dl0", array_event.dl0, array_event.dl0_index);
-    initialize_data_level<RootDL1Event>("dl1", array_event.dl1, array_event.dl1_index);
-    initialize_data_level<RootDL2Event>("dl2", array_event.dl2, array_event.dl2_index);
-    initialize_data_level<RootMonitor>("monitor", array_event.monitor, array_event.monitor_index);
+    initialize_data_level<RootR0Event>("r0", array_event.r0);
+    initialize_data_level<RootR1Event>("r1", array_event.r1);
+    initialize_data_level<RootDL0Event>("dl0", array_event.dl0);
+    initialize_data_level<RootDL1Event>("dl1", array_event.dl1);
+    initialize_data_level<RootDL2Event>("dl2", array_event.dl2);
+    initialize_data_level<RootMonitor>("monitor", array_event.monitor);
     
     // Pointing need special handling
     TDirectory* pointing_dir = file->GetDirectory("/events/");
@@ -246,12 +247,50 @@ void RootEventSource::initialize_array_event()
             }
         }
     }
+    TDirectory* energy_dir = file->GetDirectory("/events/dl2/energy");
+    if(energy_dir) {
+        TList* keys = energy_dir->GetListOfKeys();
+        for(int i = 0; i < keys->GetSize(); i++) {
+            TKey* key = static_cast<TKey*>(keys->At(i));
+            if(strcmp(key->GetClassName(), "TTree") == 0) {
+                std::string tree_name = key->GetName();
+                auto tree = static_cast<TTree*>(energy_dir->Get(tree_name.c_str()));
+                if(tree) {
+                    array_event.dl2_energy_map[tree_name] = RootDL2Energy(tree_name);
+                    array_event.dl2_energy_map[tree_name]->initialize(tree);
+                    spdlog::debug("Found energy tree: {}", tree_name);
+                }
+            }
+        }
+    }
+    
     max_events = array_event.test_entries();
 }
 
+void RootEventSource::initialize_event_index()
+{
+    TDirectory* event_index_dir = file->GetDirectory("/events/");
+    if(!event_index_dir)
+    {
+        spdlog::debug("no events directory found");
+    }
+    else
+    {
+        auto event_index_tree = static_cast<TTree*>(event_index_dir->Get("event_index"));
+        if(!event_index_tree)
+        {
+            spdlog::debug("no event_index tree found");
+        }
+        else
+        {
+            array_event.event_index = RootEventIndex();
+            array_event.event_index->initialize(event_index_tree);
+        }
+    }
+}
 
-    template<typename T>
-    void RootEventSource::initialize_data_level(const std::string& level_name, std::optional<T>& data_level, std::optional<RootEventIndex>& index)
+template<typename T>
+void RootEventSource::initialize_data_level(const std::string& level_name, std::optional<T>& data_level)
     {
         TDirectory* dir = file->GetDirectory(("/events/" + level_name).c_str());
         if(!dir)
@@ -261,17 +300,14 @@ void RootEventSource::initialize_array_event()
         }
         
         auto tree = static_cast<TTree*>(dir->Get("tels"));
-        auto index_tree = static_cast<TTree*>(dir->Get((level_name + "_index").c_str()));
-        if(!tree || !index_tree)
+        if(!tree)
         {
-            spdlog::debug("no {} tree or {}_index tree found in {} directory", level_name, level_name, level_name);
+            spdlog::debug("no {} tree found in {} directory", level_name, level_name);
             return;
         }
         
         data_level = T();
-        index = RootEventIndex();
         data_level->initialize(tree);
-        index->initialize(index_tree);
     }
 
 ArrayEvent RootEventSource::get_event()
@@ -367,6 +403,7 @@ ArrayEvent RootEventSource::get_event()
             array_event.dl2->get_entry(ientry);
             int tel_id = array_event.dl2->tel_id;
             event.dl2->add_tel_geometry(tel_id, array_event.dl2->distance, array_event.dl2->reconstructor_name);
+            event.dl2->tels.at(tel_id).estimate_energy = array_event.dl2->estimate_energy;
         }
     }
     for(auto [name, geometry]: array_event.dl2_geometry_map)
@@ -374,6 +411,13 @@ ArrayEvent RootEventSource::get_event()
         if(geometry.has_value())
         {
             event.dl2->geometry[name] = geometry->geometry;
+        }
+    }
+    for(auto [name, energy]: array_event.dl2_energy_map)
+    {
+        if(energy.has_value())
+        {
+            event.dl2->energy[name] = energy->energy;
         }
     }
     if(array_event.monitor.has_value())

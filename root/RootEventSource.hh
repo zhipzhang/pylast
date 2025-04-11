@@ -37,7 +37,8 @@
     private:
         void initialize_array_event();
         template<typename T>
-        void initialize_data_level(const std::string& level_name, std::optional<T>& data_level, std::optional<RootEventIndex>& index);
+        void initialize_data_level(const std::string& level_name, std::optional<T>& data_level);
+        void initialize_event_index();
         bool read_next_event();
         RootArrayEvent array_event;
         void initialize_statistics();
