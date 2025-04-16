@@ -275,7 +275,7 @@ void RootPointing::initialize(TTree* tree)
 
 TTree* RootMonitor::initialize()
 {
-    TTree* tree = new TTree("monitor", "Monitor data for all telescopes");
+    TTree* tree = new TTree("tels", "Monitor data for all telescopes");
     tree->Branch("event_id", &event_id);
     tree->Branch("tel_id", &tel_id);
     tree->Branch("n_channels", &n_channels);

@@ -431,7 +431,7 @@ ArrayEvent RootEventSource::get_event()
             int n_pixels = array_event.monitor->n_pixels;
             Eigen::Matrix<double, -1, -1, Eigen::RowMajor> dc_to_pe = Eigen::Map<Eigen::Matrix<double, -1, -1, Eigen::RowMajor>>(array_event.monitor->dc_to_pe.data(), n_channels, n_pixels);
             Eigen::Matrix<double, -1, -1, Eigen::RowMajor> pedestals = Eigen::Map<Eigen::Matrix<double, -1, -1, Eigen::RowMajor>>(array_event.monitor->pedestals.data(), n_channels, n_pixels);
-            event.monitor->add_tel(tel_id, n_channels, n_pixels, std::move(dc_to_pe), std::move(pedestals));
+            event.monitor->add_tel(tel_id, n_channels, n_pixels, std::move(pedestals), std::move(dc_to_pe));
         }
     }
     if(array_event.pointing.has_value())

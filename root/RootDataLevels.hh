@@ -279,29 +279,6 @@ class RootDL2Event : public RootDataLevels
         std::vector<double>* distance_error_ptr = nullptr;
 };
 
-/**
- * @brief Structure for monitor data
- */
-class RootMonitorEvent : public RootDataLevels
-{
-   public:
-       RootMonitorEvent() = default;
-       virtual ~RootMonitorEvent() = default;
-       
-       // Event and telescope identification
-       int event_id;
-       int tel_id;
-       int n_channels;
-       int n_pixels;
-       
-       // Monitor data
-       RVecD dc_to_pe;
-       std::vector<RVecD> pedestals;  // Per channel
-       
-       virtual TTree* initialize() override;
-       virtual void initialize(TTree* tree) override;
-
-};
 
 /**
  * @brief Structure for pointing data
