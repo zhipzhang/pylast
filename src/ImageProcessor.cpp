@@ -62,7 +62,7 @@ void ImageProcessor::operator()(ArrayEvent& event)
         LeakageParameter leakage_parameter = ImageProcessor::leakage_parameter(const_cast<CameraGeometry&>(subarray.tels.at(tel_id).camera_description.camera_geometry), masked_image);
         ConcentrationParameter concentration_parameter = ImageProcessor::concentration_parameter(subarray.tels.at(tel_id).camera_description.camera_geometry, masked_image, hillas_parameter);
         MorphologyParameter morphology_parameter = ImageProcessor::morphology_parameter(subarray.tels.at(tel_id).camera_description.camera_geometry, image_mask);
-        IntensityParameter intensity_parameter = ImageProcessor::intensity_parameter(subarray.tels.at(tel_id).camera_description.camera_geometry, masked_image);
+        IntensityParameter intensity_parameter = ImageProcessor::intensity_parameter(masked_image);
         // Tempory image are copyed from dl0_camera
         dl1_camera.image = dl0_camera->image.cast<float>();
         dl1_camera.peak_time = dl0_camera->peak_time.cast<float>();
@@ -208,7 +208,7 @@ MorphologyParameter ImageProcessor::morphology_parameter(const CameraGeometry& c
     return MorphologyParameter{n_pixels, num_island, n_small_islands, n_medium_islands, n_large_islands};
 
 }
-IntensityParameter ImageProcessor::intensity_parameter(const CameraGeometry& camera_geometry, const Eigen::VectorXd& masked_image)
+IntensityParameter ImageProcessor::intensity_parameter(const Eigen::VectorXd& masked_image)
 {
     double intensity_max = masked_image.maxCoeff();
     double intensity_mean = masked_image.sum()/masked_image.count();
