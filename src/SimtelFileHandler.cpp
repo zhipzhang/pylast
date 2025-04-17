@@ -7,6 +7,9 @@
 #include "LACT_hessioxxx/include/mc_tel.h"
 #include <stdexcept>
 #include <spdlog/spdlog.h>
+#ifdef HAVE_EVENTIO_EXTENSION
+#include "EventIOWrapper.h"
+#endif
 
 #define LOG_SCOPE(message)\
     SPDLOG_DEBUG("Begin {}", message);\
@@ -63,6 +66,7 @@ void SimtelFileHandler::initilize_block_handler() {
 }
 
 void SimtelFileHandler::open_file(const std::string& filename) {
+#ifndef HAVE_EVENTIO_EXTENSION
     if (filename.substr(0, 4) == "/eos") {
         // If filename starts with "eos", prepend the IHEP URL
         string full_path = ihep_url  + filename;
@@ -84,6 +88,20 @@ void SimtelFileHandler::open_file(const std::string& filename) {
         }
     }
     iobuf->input_file = input_file;
+#else
+    if (filename.substr(0, 4) == "/eos") {
+        // If filename starts with "eos", prepend the IHEP URL
+        EventIOHandler_init(filename.c_str(), 'r', ihep_url.c_str());
+        iobuf->user_function = myuser_function;
+        iobuf->input_file = NULL;
+    }
+    else
+    {
+        EventIOHandler_init(filename.c_str(), 'r', "");
+        iobuf->input_file = NULL;
+        iobuf->user_function = myuser_function;
+    }
+#endif
 }
 
 std::optional<int> SimtelFileHandler::get_tel_index (int tel_id) const
@@ -104,8 +122,16 @@ void SimtelFileHandler::find_block() {
 }
 void SimtelFileHandler::skip_block() {
     if(no_more_blocks) return;
-    if(skip_io_block(iobuf, &item_header) != 0) {
-        throw std::runtime_error("Failed to skip block");
+    int rc = 0;
+    if((rc = skip_io_block(iobuf, &item_header)) != 0) {
+        if(rc == -2) {
+            no_more_blocks = true;
+        }
+        else
+        {
+            spdlog::error("Failed to skip block");
+            throw std::runtime_error("Failed to skip block");
+        }
     }
 }
 void SimtelFileHandler::read_block() {
@@ -124,6 +150,7 @@ void SimtelFileHandler::read_until_block(BlockType block_type) {
     find_block();
     while(item_header.type != static_cast<unsigned long>(block_type)) {
         if(no_more_blocks) return;
+        spdlog::debug("Read block type: {}", item_header.type);
         if(block_handler.find(static_cast<BlockType>(item_header.type)) != block_handler.end())
         {
             read_block();

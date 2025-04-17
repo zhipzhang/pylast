@@ -20,6 +20,15 @@ add_subdirectory(muparser)
 
 set_hessio_definitions("LACT_PROD0")
 
+find_package(CompressionHandler QUIET)
+if(CompressionHandler_FOUND)
+  message(STATUS "CompressionHandler found, Using eventio_extension")
+  add_subdirectory(eventio_extension)
+  add_definitions(-DHAVE_EVENTIO_EXTENSION)
+else()
+  message(STATUS "CompressionHandler not found")
+endif()
+
 set(LAST_ARRAY_EVENT_SOURCE_FILES
     R0Event.cpp
     R1Event.cpp
@@ -60,6 +69,9 @@ target_link_libraries(image_processor PUBLIC basic_event)
 add_library(simtel_event SHARED ${SIMTEL_SOURCE_FILES})
 target_link_libraries(simtel_event PUBLIC basic_event hessio)
 target_include_directories(simtel_event PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/bernlohr/)
+if(CompressionHandler_FOUND)
+  target_link_libraries(simtel_event PUBLIC eventio_extension)
+endif()
 
 set(DATA_WRITER_SOURCE_FILES
     DataWriter.cpp
@@ -79,6 +91,7 @@ set (COORDINATES_SOURCE_FILES
 set (RECONSTRUCTION_SOURCE_FILES
     GeometryReconstructor.cpp
     HillasReconstructor.cpp
+    MLReconstructor.cpp
     ShowerProcessor.cpp
     )
 add_library(reconstructor SHARED ${RECONSTRUCTION_SOURCE_FILES} ${COORDINATES_SOURCE_FILES})
