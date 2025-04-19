@@ -1,10 +1,11 @@
 from ..helper import ShowerProcessor as CShowerProcessor  # Consistent naming
 import json
 from .DispReconstructor import DispReconstructor
-
+from .MLEnergyReconstructor import MLEnergyReconstructor
+from .DispStereoReconstructor import DispStereoReconstructor
 class ShowerProcessor:
     C_RECONSTRUCTORS = ["HillasReconstructor"]  # Use constants for clarity
-    PY_RECONSTRUCTORS = ["DispReconstructor"]
+    PY_RECONSTRUCTORS = ["DispReconstructor", "MLEnergyReconstructor", "DispStereoReconstructor"]
 
     def __init__(self, subarray, config_str=None):
         self.subarray = subarray
@@ -12,7 +13,8 @@ class ShowerProcessor:
         self.py_reconstructor_configs = {}  # Store Python configs separately
         self.c_shower_processor = None  # Initialize to None
         self.disp_reconstructor = None
-
+        self.disp_stereo_reconstructor = None
+        self.mle_reconstructor = None
         if config_str:
             self._parse_config(config_str)
 
@@ -22,6 +24,10 @@ class ShowerProcessor:
         if self.py_reconstructor_configs:
             if "DispReconstructor" in self.py_reconstructor_configs:
                 self.disp_reconstructor = DispReconstructor(subarray, json.dumps(self.py_reconstructor_configs["DispReconstructor"]))
+            if "DispStereoReconstructor" in self.py_reconstructor_configs:
+                self.disp_stereo_reconstructor = DispStereoReconstructor(subarray, json.dumps(self.py_reconstructor_configs["DispStereoReconstructor"]))
+            if "MLEnergyReconstructor" in self.py_reconstructor_configs:
+                self.mle_reconstructor = MLEnergyReconstructor(json.dumps(self.py_reconstructor_configs["MLEnergyReconstructor"]))
     def _parse_config(self, config_str):
         try:
             config = json.loads(config_str)
@@ -35,13 +41,23 @@ class ShowerProcessor:
                 self.py_reconstructor_configs[reconstruction_type] = config[reconstruction_type]
             else:
                 raise ValueError(f"Unknown reconstruction type: {reconstruction_type}")
+        if(config.get("EnergyReconstructionTypes", None)):
+            for energy_reconstruction_type in config["EnergyReconstructionTypes"]:
+                if energy_reconstruction_type in self.PY_RECONSTRUCTORS:
+                    self.py_reconstructor_configs[energy_reconstruction_type] = config[energy_reconstruction_type]
+                else:
+                    raise ValueError(f"Unknown energy reconstruction type: {energy_reconstruction_type}")
 
     def __call__(self, event):
         """Processes an event using the configured reconstructors."""
         if self.c_shower_processor:
             self.c_shower_processor(event)
+        if self.mle_reconstructor:
+            self.mle_reconstructor(event)
         if self.disp_reconstructor:
             self.disp_reconstructor(event)
+        if self.disp_stereo_reconstructor:
+            self.disp_stereo_reconstructor(event)
         # Add logic here to use self.py_reconstructor_configs to process the event
         # with Python-based reconstructors.  This part is crucial and was missing
         # from the original code.  Example (you'll need to adapt this):

@@ -1,6 +1,7 @@
 #include "HillasReconstructor.hh"
 #include "CoordFrames.hh"
 #include "Coordinates.hh"
+#include "Utils.hh"
 
 void HillasReconstructor::fill_nominal_hillas_dicts(const std::unordered_map<int, HillasParameter>& hillas_dicts)
 {
@@ -83,12 +84,21 @@ bool HillasReconstructor::reconstruct(const std::unordered_map<int, HillasParame
     auto tilted_core_position = CartesianPoint(tilted_x, tilted_y, 0);
     auto intersection_position = tilted_core_position.transform_to_ground(*tilted_frame);
     auto [core_x, core_y] = project_to_ground(intersection_position, SkyDirection(AltAzFrame(), rec_az, rec_alt));
+
+    for(const auto tel_id: telescopes)
+    {
+        auto tel_coord = subarray.tel_positions.at(tel_id);
+        auto impact_parameter = Utils::point_line_distance(tel_coord, {core_x, core_y, 0}, {cos(rec_az), sin(rec_az), 0});
+        impact_parameters[tel_id] = impact_parameter;
+    }
+
     geometry.is_valid = true;
     geometry.alt = rec_alt;
     geometry.az = rec_az;
     geometry.alt_uncertainty = sigma_x;
     geometry.az_uncertainty = sigma_y;
 
+    geometry.hmax = reconstruction_hmax(rec_alt);
     geometry.core_x = core_x;
     geometry.core_y = core_y;
     geometry.tilted_core_x = tilted_x;
@@ -181,4 +191,26 @@ std::tuple<double, double, double, double> HillasReconstructor::reconstruction_t
 double HillasReconstructor::knonrad_weight(double reduced_amplitude, double delta_1, double delta_2, double sin_part)
 {
     return reduced_amplitude * delta_1 * delta_2 * pow(sin_part, 2);
+}
+
+double HillasReconstructor::reconstruction_hmax(double altitude)
+{
+    
+    Eigen::VectorXd hmax_v = Eigen::VectorXd::Zero(telescopes.size());
+    Eigen::VectorXd weights = Eigen::VectorXd::Zero(telescopes.size());
+    for(int i = 0; i < telescopes.size(); i++)
+    {
+        int tel_id = telescopes[i];
+        auto hillas_r = nominal_hillas_dicts[tel_id].r;
+        auto impact_parameter = impact_parameters[tel_id];
+        auto hmax_estimate = impact_parameter/hillas_r;
+        hmax_v(i) = hmax_estimate;
+        weights(i) = nominal_hillas_dicts[tel_id].intensity;
+    }
+    double hmax = hmax_v.dot(weights) / weights.sum() * sin(altitude) + 4400;
+    if(hmax > 100000)
+    {
+        hmax = 100000;
+    }
+    return hmax;
 }

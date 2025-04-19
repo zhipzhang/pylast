@@ -33,3 +33,12 @@ class ReconstructedGeometry
         std::vector<int> telescopes;
         
 };
+
+class ReconstructedEnergy
+{
+    public:
+        ReconstructedEnergy() = default;
+        ~ReconstructedEnergy() = default;
+        double estimate_energy = 0;
+        bool energy_valid = false;
+};

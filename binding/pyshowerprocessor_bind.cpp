@@ -8,6 +8,7 @@
 #include "nanobind/stl/optional.h"
 #include "ShowerProcessor.hh"
 #include "nanobind/stl/unique_ptr.h"
+#include "MLReconstructor.hh"
 namespace nb = nanobind;
 
 class PublicList: public GeometryReconstructor
@@ -47,6 +48,12 @@ void bind_showerprocessor(nb::module_ &m) {
         .def_ro("array_pointing_direction", &PublicList::array_pointing_direction)
         .def_static("compute_angle_separation", &PublicList::compute_angle_separation)
         .def("convert_to_sky", &PublicList::convert_to_sky);
+    nb::class_<MLReconstructor>(m, "MLReconstructor")
+        .def(nb::init<const std::string&>(), nb::arg("config_str"))
+        .def_ro("telescopes", &MLReconstructor::telescopes)
+        .def("__call__", [](MLReconstructor& self, ArrayEvent& event) {
+            self(event);
+        });
 }
 
 NB_MODULE(_pylast_showerprocessor, m) {

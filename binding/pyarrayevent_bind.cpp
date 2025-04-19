@@ -20,8 +20,13 @@ namespace nb = nanobind;
 void bind_dl2_event(nb::module_ &m) {
     nb::class_<DL2Event>(m, "DL2Event")
         .def_ro("geometry", &DL2Event::geometry, nb::rv_policy::reference_internal)
-        .def_ro("tels", &DL2Event::tels)
+        .def_ro("energy", &DL2Event::energy, nb::rv_policy::reference_internal)
+        .def_ro("tels", &DL2Event::tels, nb::rv_policy::reference_internal)
         .def("add_geometry", &DL2Event::add_geometry)
+        .def("add_energy", &DL2Event::add_energy)
+        .def("set_tel_estimate_energy", &DL2Event::set_tel_estimate_energy)
+        .def("set_tel_disp", &DL2Event::set_tel_disp)
+        .def_rw("hadroness", &DL2Event::hadroness)
         .def("__repr__", [](DL2Event& self) {
             std::string repr = "DL2Event:\n";
             
@@ -50,6 +55,14 @@ void bind_dl2_event(nb::module_ &m) {
             }
             
             return repr;
+        });
+    nb::class_<ReconstructedEnergy>(m, "ReconstructedEnergy")
+        .def(nb::init<>())
+        .def(nb::init<double, bool>())
+        .def_rw("estimate_energy", &ReconstructedEnergy::estimate_energy)
+        .def_rw("energy_valid", &ReconstructedEnergy::energy_valid)
+        .def("__repr__", [](ReconstructedEnergy& self) {
+            return fmt::format("ReconstructedEnergy:\n  estimate_energy: {}\n  energy_valid: {}", self.estimate_energy, self.energy_valid);
         });
     nb::class_<ReconstructedGeometry>(m, "ReconstructedGeometry")
         .def_rw("is_valid", &ReconstructedGeometry::is_valid)
@@ -88,7 +101,8 @@ void bind_dl2_event(nb::module_ &m) {
         });
     nb::class_<TelReconstructedParameter>(m, "TelReconstructedParameter")
         .def_ro("impact_parameters", &TelReconstructedParameter::impact_parameters)
-        .def_rw("disp", &TelReconstructedParameter::disp)
+        .def_ro("disp", &TelReconstructedParameter::disp)
+        .def_ro("estimate_energy", &TelReconstructedParameter::estimate_energy)
         .def_prop_ro("impact", [](TelReconstructedParameter& self) -> nb::object {
             if(self.impact_parameters.size() == 1) {
                 return nb::cast(self.impact_parameters.begin()->second);
@@ -154,6 +168,7 @@ void bind_dl1_event(nb::module_ &m) {
         .def_ro("concentration", &ImageParameters::concentration)
         .def_ro("morphology", &ImageParameters::morphology)
         .def_ro("extra", &ImageParameters::extra)
+        .def_ro("intensity", &ImageParameters::intensity)
         .def("__repr__", [](ImageParameters& self) {
             return "ImageParameters: contains hillas, leakage, concentration, and morphology parameters";
         });
@@ -206,6 +221,13 @@ void bind_dl1_event(nb::module_ &m) {
         .def_ro("disp", &ExtraParameters::disp)
         .def("__repr__", [](ExtraParameters& self) {
             return fmt::format("ExtraParameters:\n  miss: {}\n  disp: {}", self.miss, self.disp);
+        });
+    nb::class_<IntensityParameter>(m, "intensity")
+        .def_ro("intensity_max", &IntensityParameter::intensity_max)
+        .def_ro("intensity_mean", &IntensityParameter::intensity_mean)
+        .def_ro("intensity_std", &IntensityParameter::intensity_std)
+        .def("__repr__", [](IntensityParameter& self) {
+            return fmt::format("IntensityParameter:\n  intensity_max: {}\n  intensity_mean: {}\n  intensity_std: {}", self.intensity_max, self.intensity_mean, self.intensity_std);
         });
 }
 void bind_dl0_event(nb::module_ &m) {
@@ -328,8 +350,24 @@ void bind_simulated_event(nb::module_ &m) {
         .def_ro("shower_primary_id", &SimulatedShower::shower_primary_id)
         .def("__repr__", &SimulatedShower::print);
 }
-
 void bind_tel_monitor(nb::module_ &m) {
+    nb::class_<EventMonitor>(m, "EventMonitor")
+        .def_prop_ro("tels", &EventMonitor::get_tels)
+        .def("__repr__", [](EventMonitor& self) {
+            std::string repr = "EventMonitor:\n";
+            auto tels = self.get_tels();
+            if (!tels.empty()) {
+                repr += "  Telescope IDs: ";
+                bool first = true;
+                for (const auto& [tel_id, _] : tels) {
+                    if (!first) repr += ", ";
+                    repr += std::to_string(tel_id);
+                    first = false;
+                }
+                repr += "\n";
+            }
+            return repr;
+        });
     nb::class_<TelMonitor>(m, "TelMonitor")
         .def_ro("n_channels", &TelMonitor::n_channels)
         .def_ro("n_pixels", &TelMonitor::n_pixels)
@@ -340,6 +378,7 @@ void bind_tel_monitor(nb::module_ &m) {
                               self.n_channels, self.n_pixels);
         });
 }
+        
 void bind_array_event(nb::module_ &m) {
     nb::class_<ArrayEvent>(m, "ArrayEvent")
         .def_ro("simulation", &ArrayEvent::simulation)

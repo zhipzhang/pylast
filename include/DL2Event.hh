@@ -64,6 +64,12 @@ class DL2Event
         DL2Event& operator=(DL2Event&& other) noexcept = default;
         std::unordered_map<std::string, ReconstructedGeometry> geometry;
         std::unordered_map<int, TelReconstructedParameter> tels;
+        std::unordered_map<std::string, ReconstructedEnergy> energy;
+        double hadroness = 0;
+        void add_energy(std::string name, ReconstructedEnergy energy)
+        {
+            this->energy[name] = energy;
+        }
         void add_geometry(std::string name, ReconstructedGeometry geometry)
         {
             this->geometry[name] = geometry;
@@ -83,8 +89,12 @@ class DL2Event
             }
             tels[tel_id] = tel_reconstructed_parameter;
         }
-        void set_estimate_energy(int tel_id, double energy)
+        void set_tel_estimate_energy(int tel_id, double energy)
         {
             tels[tel_id].estimate_energy = energy;
+        }
+        void set_tel_disp(int tel_id, double disp)
+        {
+            tels[tel_id].disp = disp;
         }
 };
