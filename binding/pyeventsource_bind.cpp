@@ -97,4 +97,6 @@ NB_MODULE(_pyeventsource, m){
     nb::class_<SimtelEventSource, EventSource>(m, "SimtelEventSource")
         .def(nb::init<const std::string&, int64_t, std::vector<int>, bool>(), nb::arg("filename"), nb::arg("max_events") = -1, nb::arg("subarray")=std::vector<int>{}, nb::arg("load_simulated_showers")=false)
         .def("__repr__", &SimtelEventSource::print);
+    
+    m.def("write_statistics", RootHistogram::write_statistics, nb::arg("statistics"), nb::arg("filename"));
 }

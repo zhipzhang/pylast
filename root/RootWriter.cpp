@@ -1,11 +1,13 @@
 #include "RootWriter.hh"
 #include "SimulatedShower.hh"
 #include "SimulationConfiguration.hh"
+#include "TH2.h"
 #include "spdlog/spdlog.h"
 #include "ROOT/RVec.hxx"
 #include "DataWriterFactory.hh"
 #include "TH1F.h"
 #include "TH2F.h"
+#include "TProfile.h"
 
 REGISTER_WRITER(root, [](EventSource& source, const std::string& filename) { return std::make_unique<RootWriter>(source, filename); });
 RootWriter::RootWriter(EventSource& source, const std::string& filename):
@@ -632,6 +634,7 @@ void RootWriter::write_dl2(const ArrayEvent& event)
         root_dl2.distance_error.clear();
         root_dl2.tel_id = tid;
         root_dl2.estimate_energy = dl2_tel.estimate_energy;
+        root_dl2.estimate_disp = dl2_tel.disp;
         for(const auto& [name, impact] : dl2_tel.impact_parameters)
         {
             root_dl2.reconstructor_name.push_back(name);
@@ -877,6 +880,19 @@ void RootWriter::write_statistics(const Statistics& statistics)
                 {
                     new_hist->SetBinContent(i+1, j+1, h2d->operator()(i, j));
                 }
+            }
+            new_hist->Write();
+            ihist++;
+        }
+        else if(hist->get_dimension() == 0) // Profile1D
+        {
+            auto h1d = dynamic_cast<Profile1D<float>*>(hist.get());
+            auto new_hist = new TProfile(("h" + std::to_string(ihist)).c_str(), name.c_str(), h1d->bins(), 
+                                     h1d->get_low_edge(), h1d->get_high_edge());
+            for(int i = 0; i < h1d->bins(); i++)
+            {
+                new_hist->SetBinContent(i+1, h1d->mean(i));
+                new_hist->SetBinError(i+1, h1d->error(i));
             }
             new_hist->Write();
             ihist++;

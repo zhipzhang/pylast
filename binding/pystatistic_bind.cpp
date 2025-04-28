@@ -21,6 +21,9 @@ NB_MODULE(_pystatistic, m){
             } else if (nb::isinstance<Histogram2D<float>>(hist_obj)) {
                 auto hist = nb::cast<Histogram2D<float>>(hist_obj);
                 self.add_histogram(name, hist);
+            } else if (nb::isinstance<Profile1D<float>>(hist_obj)) {
+                auto hist = nb::cast<Profile1D<float>>(hist_obj);
+                self.add_histogram(name, hist);
             } else {
                 throw std::runtime_error("Unsupported histogram type");
             }
@@ -86,6 +89,21 @@ NB_MODULE(_pystatistic, m){
                 self.x_bins(), self.get_x_low_edge(), self.get_x_high_edge(),
                 self.y_bins(), self.get_y_low_edge(), self.get_y_high_edge());
         });
+    nb::class_<Profile1D<float>, Histogram1D<float>>(m, "Profile1D")
+        .def("fill", [](Profile1D<float>& self, float x, float y) {
+            self.fill(x, y);
+        }, nb::arg("x"), nb::arg("y"))
+        .def("fill", [](Profile1D<float>& self, float x, float y, float weight) {
+            self.fill(x, y, weight);
+        }, nb::arg("x"), nb::arg("y"), nb::arg("weight"))
+        .def("mean", &Profile1D<float>::mean)
+        .def("error", &Profile1D<float>::error)
+        .def("__repr__", [](const Profile1D<float>& self) {
+            return fmt::format("Profile1D(bins={}, range=[{:.2f}, {:.2f}])", 
+                self.bins(), self.get_low_edge(), self.get_high_edge());
+        });
     m.def("make_regular_histogram", &make_regular_histogram<float>, nb::arg("min"), nb::arg("max"), nb::arg("bins"));
     m.def("make_regular_histogram2d", &make_regular_histogram_2d<float>, nb::arg("min_x"), nb::arg("max_x"), nb::arg("bins_x"), nb::arg("min_y"), nb::arg("max_y"), nb::arg("bins_y"));
+    m.def("make_regular_profile", &make_regular_profile<float>, nb::arg("min"), nb::arg("max"), nb::arg("bins"));
+
 }

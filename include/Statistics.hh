@@ -63,4 +63,11 @@
                 hist_ptr->fill(static_cast<float>(x_value), static_cast<float>(y_value), weight);
             }
         }
+        template<typename T1, typename T2>
+        void fill_profile(const std::string& name, T1 x_value, T2 y_value, float weight = 1.0f) {
+            auto hist_ptr = std::dynamic_pointer_cast<Profile1D<float>>(histograms.at(name));
+            if (hist_ptr) {
+                hist_ptr->fill(static_cast<float>(x_value), static_cast<float>(y_value), weight);
+            }
+        }
  };
