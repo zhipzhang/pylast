@@ -386,12 +386,6 @@ ArrayEvent RootEventSource::get_event()
             dl1_camera.peak_time = std::move(peak_time);
             dl1_camera.mask = std::move(mask);
             dl1_camera.image_parameters = array_event.dl1->params;
-            if(array_event.dl1->miss != 0 && array_event.dl1->disp != 0)
-            {
-                dl1_camera.image_parameters.extra = ExtraParameters();
-                dl1_camera.image_parameters.extra->miss = array_event.dl1->miss;
-                dl1_camera.image_parameters.extra->disp = array_event.dl1->disp;
-            }
             event.dl1->add_tel(tel_id, std::move(dl1_camera));
         }
     }
@@ -404,6 +398,7 @@ ArrayEvent RootEventSource::get_event()
             int tel_id = array_event.dl2->tel_id;
             event.dl2->add_tel_geometry(tel_id, array_event.dl2->distance, array_event.dl2->reconstructor_name);
             event.dl2->tels.at(tel_id).estimate_energy = array_event.dl2->estimate_energy;
+            event.dl2->tels.at(tel_id).disp = array_event.dl2->estimate_disp;
         }
     }
     for(auto [name, geometry]: array_event.dl2_geometry_map)
@@ -532,7 +527,6 @@ void RootEventSource::initialize_statistics()
                     }
                 }
             }
-            
             statistics->add_histogram(name, hist);
         }
     }

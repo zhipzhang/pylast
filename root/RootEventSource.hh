@@ -15,6 +15,7 @@
  #include "RootDataLevels.hh"
  #include <memory>
  #include "TFile.h"
+ #include "RootHistogram.hh"
  class RootEventSource : public EventSource
  {
     public:

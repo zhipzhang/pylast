@@ -559,8 +559,7 @@ void RootWriter::write_dl1(const ArrayEvent& event, bool write_image)
         root_dl1.params.intensity = camera->image_parameters.intensity;
         if(camera->image_parameters.extra.has_value())
         {
-            root_dl1.miss = camera->image_parameters.extra->miss;
-            root_dl1.disp = camera->image_parameters.extra->disp;
+            root_dl1.params.extra = camera->image_parameters.extra.value();
         }
         dl1_tree->Fill();
     }

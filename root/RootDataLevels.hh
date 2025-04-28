@@ -201,10 +201,6 @@ class RootDL1Event : public RootDataLevels
        // Image parameters (complete structure)
        ImageParameters params;
     
-       // Extra parameters
-       double miss = 0;
-       double disp = 0;
-       
        virtual TTree* initialize() override;
        TTree* initialize(bool have_image);
        virtual void initialize(TTree* tree) override;
@@ -262,6 +258,7 @@ class RootDL2Event : public RootDataLevels
        int tel_id;
        std::vector<std::string> reconstructor_name;
        double estimate_energy = 0;
+       double estimate_disp = 0;
        // Impact parameters structure
        std::vector<double> distance;
        std::vector<double> distance_error;

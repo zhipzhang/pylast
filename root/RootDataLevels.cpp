@@ -161,8 +161,9 @@ TTree* RootDL1Event::initialize()
     tree->Branch("intensity_std", &params.intensity.intensity_std);
 
     // Extra parameters
-    tree->Branch("extra_miss", &miss);
-    tree->Branch("extra_disp", &disp);
+    tree->Branch("extra_miss", &params.extra->miss);
+    tree->Branch("extra_disp", &params.extra->disp);
+    tree->Branch("extra_theta", &params.extra->theta);
     return tree;
 }
 TTree* RootDL1Event::initialize(bool have_image)
@@ -235,8 +236,9 @@ void RootDL1Event::initialize(TTree* tree)
     tree->SetBranchAddress("intensity_std", &params.intensity.intensity_std);
 
     // Extra parameters
-    tree->SetBranchAddress("extra_miss", &miss);
-    tree->SetBranchAddress("extra_disp", &disp);
+    tree->SetBranchAddress("extra_miss", &params.extra->miss);
+    tree->SetBranchAddress("extra_disp", &params.extra->disp);
+    tree->SetBranchAddress("extra_theta", &params.extra->theta);
 }
 
 //------------------------------------------------------------------------------
@@ -312,6 +314,7 @@ TTree* RootSimulationShower::initialize()
     tree->Branch("core_y", &shower.core_y);
     tree->Branch("h_first_int", &shower.h_first_int);
     tree->Branch("x_max", &shower.x_max);
+    tree->Branch("h_max", &shower.h_max);
     tree->Branch("starting_grammage", &shower.starting_grammage);
     tree->Branch("shower_primary_id", &shower.shower_primary_id);
     return tree;
@@ -328,6 +331,7 @@ void RootSimulationShower::initialize(TTree* tree)
     tree->SetBranchAddress("core_y", &shower.core_y);
     tree->SetBranchAddress("h_first_int", &shower.h_first_int);
     tree->SetBranchAddress("x_max", &shower.x_max);
+    tree->SetBranchAddress("h_max", &shower.h_max);
     tree->SetBranchAddress("starting_grammage", &shower.starting_grammage);
     tree->SetBranchAddress("shower_primary_id", &shower.shower_primary_id);
 }
@@ -405,6 +409,7 @@ TTree* RootDL2Event::initialize()
     tree->Branch("distance", &distance);
     tree->Branch("distance_error", &distance_error);
     tree->Branch("estimate_energy", &estimate_energy);
+    tree->Branch("estimate_disp", &estimate_disp);
     return tree;
 }
 
@@ -420,6 +425,7 @@ void RootDL2Event::initialize(TTree* tree)
     tree->SetBranchAddress("distance", &distance_ptr);
     tree->SetBranchAddress("distance_error", &distance_error_ptr);
     tree->SetBranchAddress("estimate_energy", &estimate_energy);
+    tree->SetBranchAddress("estimate_disp", &estimate_disp);
 }
 
 

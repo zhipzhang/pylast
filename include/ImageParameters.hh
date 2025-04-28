@@ -78,6 +78,7 @@ class ExtraParameters
     ~ExtraParameters() = default;
     double miss;
     double disp;
+    double theta;
 };
 class ImageParameters {
 public:
