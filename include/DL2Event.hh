@@ -97,4 +97,11 @@ class DL2Event
         {
             tels[tel_id].disp = disp;
         }
+        void set_tel_estimate_disp(std::vector<int> tel_ids, std::vector<double> disps)
+        {
+            for(size_t i = 0; i < tel_ids.size(); i++)
+            {
+                tels[tel_ids[i]].disp = disps[i];
+            }
+        }
 };

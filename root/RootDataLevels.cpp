@@ -33,6 +33,27 @@ void RootEventIndex::initialize(TTree* tree)
     tree->SetBranchAddress("telescopes", &telescopes_ptr);
 }
 
+TTree* RootSimulatedCamera::initialize()
+{
+    auto tree = new TTree("tels", "Simulated camera data for all telescopes");
+    tree->Branch("event_id", &event_id);
+    tree->Branch("tel_id", &tel_id);
+    tree->Branch("true_impact_parameter", &true_impact_parameter);
+    return tree;
+}
+
+void RootSimulatedCamera::initialize(TTree* tree)
+{
+    data_tree = tree;
+    true_image_ptr = &true_image;
+    tree->SetBranchAddress("event_id", &event_id);
+    tree->SetBranchAddress("tel_id", &tel_id);
+    tree->SetBranchAddress("true_impact_parameter", &true_impact_parameter);
+    if(tree->GetBranch("true_image"))
+    {
+        tree->SetBranchAddress("true_image", &true_image_ptr);
+    }
+}
 //------------------------------------------------------------------------------
 // RootR0Event implementation
 //------------------------------------------------------------------------------
@@ -161,9 +182,12 @@ TTree* RootDL1Event::initialize()
     tree->Branch("intensity_std", &params.intensity.intensity_std);
 
     // Extra parameters
-    tree->Branch("extra_miss", &params.extra->miss);
-    tree->Branch("extra_disp", &params.extra->disp);
-    tree->Branch("extra_theta", &params.extra->theta);
+    tree->Branch("extra_miss", &params.extra.miss);
+    tree->Branch("extra_disp", &params.extra.disp);
+    tree->Branch("extra_theta", &params.extra.theta);
+    tree->Branch("extra_true_psi", &params.extra.true_psi);
+    tree->Branch("extra_cog_err", &params.extra.cog_err);
+    tree->Branch("extra_beta_err", &params.extra.beta_err);
     return tree;
 }
 TTree* RootDL1Event::initialize(bool have_image)
@@ -236,9 +260,12 @@ void RootDL1Event::initialize(TTree* tree)
     tree->SetBranchAddress("intensity_std", &params.intensity.intensity_std);
 
     // Extra parameters
-    tree->SetBranchAddress("extra_miss", &params.extra->miss);
-    tree->SetBranchAddress("extra_disp", &params.extra->disp);
-    tree->SetBranchAddress("extra_theta", &params.extra->theta);
+    tree->SetBranchAddress("extra_miss", &params.extra.miss);
+    tree->SetBranchAddress("extra_disp", &params.extra.disp);
+    tree->SetBranchAddress("extra_theta", &params.extra.theta);
+    tree->SetBranchAddress("extra_true_psi", &params.extra.true_psi);
+    tree->SetBranchAddress("extra_cog_err", &params.extra.cog_err);
+    tree->SetBranchAddress("extra_beta_err", &params.extra.beta_err);
 }
 
 //------------------------------------------------------------------------------
@@ -436,9 +463,9 @@ int RootArrayEvent::test_entries()
     int event_index_entries = 0;
     
     // Get entries for each data level if available
-    if(simulation.has_value())
+    if(simulation_shower.has_value())
     {
-        simulation_entries = simulation->GetEntries().value();
+        simulation_entries = simulation_shower->GetEntries().value();
     }
     if(event_index.has_value())
     {
@@ -475,9 +502,9 @@ void RootArrayEvent::load_next_event()
 {
     if(has_event())
     {
-        if(simulation.has_value())
+        if(simulation_shower.has_value())
         {
-            if(!simulation->get_entry(current_entry))
+            if(!simulation_shower->get_entry(current_entry))
             {
                 spdlog::error("Failed to load next event for simulation");
             }
@@ -486,6 +513,11 @@ void RootArrayEvent::load_next_event()
         {
             event_index->get_entry(current_entry);
         }
+        if(pointing.has_value())
+        {
+            pointing->get_entry(current_entry);
+        }
+        fill_tel_entries<RootSimulatedCamera>(simulation_camera, event_index, sim_tel_entries);
         fill_tel_entries<RootR0Event>(r0, event_index, r0_tel_entries);
         fill_tel_entries<RootR1Event>(r1, event_index, r1_tel_entries);
         fill_tel_entries<RootDL0Event>(dl0, event_index, dl0_tel_entries);

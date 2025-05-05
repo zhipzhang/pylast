@@ -32,6 +32,7 @@ public:
     static ConcentrationParameter concentration_parameter(const CameraGeometry& camera_geometry, const Eigen::VectorXd& masked_image, const HillasParameter& hillas_parameter);
     static MorphologyParameter morphology_parameter(const CameraGeometry& camera_geometry, const Eigen::Vector<bool, -1>& image_mask);
     static IntensityParameter intensity_parameter(const Eigen::VectorXd& masked_image);
+    static void dilate_image(const CameraGeometry& camera_geometry, Eigen::Vector<bool, -1>& image_mask);
 private:
     const SubarrayDescription& subarray;
     std::string image_cleaner_type;

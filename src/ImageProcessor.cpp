@@ -224,6 +224,12 @@ IntensityParameter ImageProcessor::intensity_parameter(const Eigen::VectorXd& ma
     return IntensityParameter{intensity_max, intensity_mean, intensity_std};
 }
 
+void ImageProcessor::dilate_image(const CameraGeometry& camera_geometry, Eigen::Vector<bool, -1>& image_mask)
+{
+    Eigen::SparseMatrix<int, Eigen::RowMajor> dilated_matrix = camera_geometry.neigh_matrix;
+    image_mask = (dilated_matrix * image_mask.cast<int>().matrix()).cast<bool>() || image_mask;
+}
+
 json ImageProcessor::get_default_config()
 {
     std::string default_config = R"(

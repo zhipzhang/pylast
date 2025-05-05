@@ -34,7 +34,7 @@
         void fill_nominal_hillas_dicts(const std::unordered_map<int, HillasParameter>& hillas_dicts);
         std::tuple<double, double, double, double> reconstruction_nominal_intersection();
         std::tuple<double, double, double, double> reconstruction_tilted_intersection();
-        double reconstruction_hmax(double altitude);
+        double reconstruction_hmax(double fov_x, double fov_y,double altitude);
         std::vector<std::pair<int, int>> get_tel_pairs();
         std::unordered_map<int, Point2D> get_tiled_tel_position();
         std::unique_ptr<TiltedGroundFrame> tilted_frame;

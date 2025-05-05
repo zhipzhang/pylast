@@ -318,6 +318,47 @@ void RootWriter::write_simulation_config()
     tree->Write();
 }
 
+void RootWriter::write_simulated_camera(const ArrayEvent& event, bool write_image)
+{
+    if(!file)
+    {
+        throw std::runtime_error("file not open");
+    }
+    if(!event.simulation.has_value())
+    {
+        return;
+    }
+    auto sim_tree = get_tree("sim");
+    if(!sim_tree)
+    {
+        array_event.simulation_camera = RootSimulatedCamera();
+        TDirectory* dir = get_or_create_directory("/events/simulation");
+        sim_tree = array_event.simulation_camera->initialize();
+        dir->cd();
+        if(write_image)
+        {
+            sim_tree->Branch("true_image", &array_event.simulation_camera->true_image);
+        }
+        trees["sim"] = sim_tree;
+        directories["sim"] = dir;
+        build_index["sim"] = true;
+    }
+    auto& root_sim = array_event.simulation_camera.value();
+    const auto& sim = event.simulation.value();
+    root_sim.event_id = event.event_id;
+    for(const auto& [tel_id, _] : event.dl0->tels)
+    {
+        auto& camera = sim.tels.at(tel_id);
+        root_sim.tel_id = tel_id;
+        root_sim.true_impact_parameter = camera->impact.distance;
+        if(write_image)
+        {
+            root_sim.true_image = std::move(RVecI(camera->true_image.data(), camera->true_image.size()));
+        }
+        sim_tree->Fill();
+    }
+    
+}
 
 void RootWriter::write_event_index(const ArrayEvent& event)
 {
@@ -397,14 +438,14 @@ void RootWriter::write_simulation_shower(const ArrayEvent& event)
     auto sim_tree = get_tree("shower");
     if(!sim_tree)
     {
-        array_event.simulation = RootSimulationShower();
+        array_event.simulation_shower = RootSimulationShower();
         TDirectory* dir = get_or_create_directory("/events/simulation");
         dir->cd();
-        sim_tree = array_event.simulation->initialize();
+        sim_tree = array_event.simulation_shower->initialize();
         directories["shower"] = dir;
         trees["shower"] = sim_tree;
     }
-    auto& root_shower = array_event.simulation.value();
+    auto& root_shower = array_event.simulation_shower.value();
     const auto& sim = event.simulation.value();
     root_shower.event_id = event.event_id;
     root_shower.shower = sim.shower;
@@ -533,9 +574,9 @@ void RootWriter::write_dl1(const ArrayEvent& event, bool write_image)
         dl1_tree = get_tree("dl1");
         if(write_image)
         {
-            dl1_tree->Branch("image", &array_event.dl1->image, 256000, 0);
-            dl1_tree->Branch("peak_time", &array_event.dl1->peak_time, 256000, 0);
-            dl1_tree->Branch("mask", &array_event.dl1->mask, 256000, 0);
+            dl1_tree->Branch("image", &array_event.dl1->image);
+            dl1_tree->Branch("peak_time", &array_event.dl1->peak_time);
+            dl1_tree->Branch("mask", &array_event.dl1->mask);
         }
     }
     
@@ -550,17 +591,14 @@ void RootWriter::write_dl1(const ArrayEvent& event, bool write_image)
             root_dl1.n_pixels = camera->image.size();
             root_dl1.image = std::move(RVecF(camera->image.data(), root_dl1.n_pixels));
             root_dl1.peak_time = std::move(RVecF(camera->peak_time.data(), root_dl1.n_pixels));
-            root_dl1.mask = std::move(RVec<bool>(camera->mask.data(), root_dl1.n_pixels));
+            root_dl1.mask = std::move(RVecB(camera->mask.data(), root_dl1.n_pixels));
         }
         root_dl1.params.hillas = camera->image_parameters.hillas;
         root_dl1.params.leakage = camera->image_parameters.leakage;
         root_dl1.params.concentration = camera->image_parameters.concentration;
         root_dl1.params.morphology = camera->image_parameters.morphology;
         root_dl1.params.intensity = camera->image_parameters.intensity;
-        if(camera->image_parameters.extra.has_value())
-        {
-            root_dl1.params.extra = camera->image_parameters.extra.value();
-        }
+        root_dl1.params.extra = camera->image_parameters.extra;
         dl1_tree->Fill();
     }
 }

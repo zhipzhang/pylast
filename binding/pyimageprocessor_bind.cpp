@@ -6,6 +6,7 @@
 #include "nanobind/make_iterator.h"
 #include "nanobind/stl/optional.h"
 #include "ImageProcessor.hh"
+#include "nanobind/eigen/dense.h"
 
 namespace nb = nanobind;
 
@@ -22,6 +23,9 @@ void bind_imageprocessor(nb::module_ &m)
         })
         .def("__repr__", [](ImageProcessor& self) {
             return "ImageProcessor:\n  Config: " + self.get_config_str();
+        })
+        .def_static("dilate_image", [](const CameraGeometry& camera_geometry, Eigen::Vector<bool, -1>& image_mask) {
+            ImageProcessor::dilate_image(camera_geometry, image_mask);
         });
 }
 

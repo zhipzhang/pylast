@@ -1,5 +1,6 @@
 #include "RootEventSource.hh"
 #include "EventMonitor.hh"
+#include "ImageParameters.hh"
 #include "RootDataLevels.hh"
 #include "SubarrayDescription.hh"
 #include "TDirectory.h"
@@ -194,16 +195,18 @@ void RootEventSource::initialize_array_event()
         }
         else
         {
-            array_event.simulation = RootSimulationShower();
-            array_event.simulation->initialize(sim_tree);
+            array_event.simulation_shower = RootSimulationShower();
+            array_event.simulation_shower->initialize(sim_tree);
         }
         // TODO: Add simulated_camera tree handling here
+        
     }
 
 
     
     initialize_event_index();
     // Initialize R0 data level
+    initialize_data_level<RootSimulatedCamera>("simulation", array_event.simulation_camera);
     initialize_data_level<RootR0Event>("r0", array_event.r0);
     initialize_data_level<RootR1Event>("r1", array_event.r1);
     initialize_data_level<RootDL0Event>("dl0", array_event.dl0);
@@ -318,15 +321,28 @@ ArrayEvent RootEventSource::get_event()
     }
     ArrayEvent event;
     array_event.load_next_event();
-    if(array_event.simulation.has_value())
+    if(array_event.simulation_shower.has_value())
     {
         event.simulation = SimulatedEvent();
-        event.simulation->shower = array_event.simulation->shower;
-        event.event_id = array_event.simulation->event_id;
+        event.simulation->shower = array_event.simulation_shower->shower;
+        event.event_id = array_event.simulation_shower->event_id;
     }
     else
     {
         event.event_id = 0;
+    }
+    if(array_event.simulation_camera.has_value())
+    {
+        if(event.simulation.has_value())
+        {
+            for(auto ientry: array_event.sim_tel_entries)
+            {
+                array_event.simulation_camera->get_entry(ientry);
+                int tel_id = array_event.simulation_camera->tel_id;
+                int n_pixels = array_event.simulation_camera->true_image.size();
+                event.simulation->add_simulated_image(tel_id, n_pixels, array_event.simulation_camera->true_image.data(), array_event.simulation_camera->true_impact_parameter);
+            }
+        }
     }
     if(array_event.r0.has_value())
     {

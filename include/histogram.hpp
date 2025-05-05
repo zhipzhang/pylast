@@ -717,7 +717,7 @@ Profile1D<Precision> make_profile(std::unique_ptr<Axis<Precision>> axis) {
 
 
 // Convenience functions for common histogram types
-template<typename Precision = double>
+template<typename Precision = float>
 Histogram1D<Precision> make_regular_histogram(Precision min, Precision max, int bins) {
     return make_histogram<Precision>(make_regular_axis<Precision>(min, max, bins));
 }

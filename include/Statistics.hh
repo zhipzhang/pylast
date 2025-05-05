@@ -12,7 +12,7 @@
  #pragma once
 
  #include "histogram.hpp"
- #include <unordered_map>
+ #include <map>
  #include <variant>
  #include <memory>
 
@@ -23,7 +23,7 @@
         Statistics() = default;
         ~Statistics() = default;
 
-        std::unordered_map<std::string, std::shared_ptr<Histogram<float>>> histograms;
+        std::map<std::string, std::shared_ptr<Histogram<float>>> histograms;
         
         Statistics& operator+=(const Statistics& other) {
             if (histograms.empty())

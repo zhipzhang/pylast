@@ -15,14 +15,15 @@ NB_MODULE(_pystatistic, m){
         .def(nb::init<>())
         .def_ro("histograms", &Statistics::histograms)
         .def("add_histogram", [](Statistics& self, const std::string& name, nb::object hist_obj) {
-            if (nb::isinstance<Histogram1D<float>>(hist_obj)) {
+            // Check for Profile1D first since it's a subclass of Histogram1D
+            if (nb::isinstance<Profile1D<float>>(hist_obj)) {
+                auto hist = nb::cast<Profile1D<float>>(hist_obj);
+                self.add_histogram(name, hist);
+            } else if (nb::isinstance<Histogram1D<float>>(hist_obj)) {
                 auto hist = nb::cast<Histogram1D<float>>(hist_obj);
                 self.add_histogram(name, hist);
             } else if (nb::isinstance<Histogram2D<float>>(hist_obj)) {
                 auto hist = nb::cast<Histogram2D<float>>(hist_obj);
-                self.add_histogram(name, hist);
-            } else if (nb::isinstance<Profile1D<float>>(hist_obj)) {
-                auto hist = nb::cast<Profile1D<float>>(hist_obj);
                 self.add_histogram(name, hist);
             } else {
                 throw std::runtime_error("Unsupported histogram type");

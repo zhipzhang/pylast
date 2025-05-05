@@ -200,6 +200,7 @@ void SimtelEventSource::load_all_simulated_showers()
             shower.x_max = temp_file_handler->hsdata->mc_shower.xmax;
             shower.starting_grammage = temp_file_handler->hsdata->mc_shower.depth_start;
             shower.shower_primary_id = temp_file_handler->hsdata->mc_shower.primary_id;
+            shower.h_max = temp_file_handler->hsdata->mc_shower.hmax;
             temp_shower_array.push_back(shower);
         }
         
@@ -233,6 +234,7 @@ ArrayEvent SimtelEventSource::get_event()
     event.simulation->shower.h_first_int = simtel_file_handler->hsdata->mc_shower.h_first_int;
     event.simulation->shower.x_max = simtel_file_handler->hsdata->mc_shower.xmax;
     event.simulation->shower.starting_grammage = simtel_file_handler->hsdata->mc_shower.depth_start;
+    event.simulation->shower.h_max = simtel_file_handler->hsdata->mc_shower.hmax;
     if(simtel_file_handler->have_true_image)
     {
         read_true_image(event);

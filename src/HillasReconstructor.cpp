@@ -98,7 +98,7 @@ bool HillasReconstructor::reconstruct(const std::unordered_map<int, HillasParame
     geometry.alt_uncertainty = sigma_x;
     geometry.az_uncertainty = sigma_y;
 
-    geometry.hmax = reconstruction_hmax(rec_alt);
+    geometry.hmax = reconstruction_hmax(fov_x, fov_y,rec_alt);
     geometry.core_x = core_x;
     geometry.core_y = core_y;
     geometry.tilted_core_x = tilted_x;
@@ -193,7 +193,7 @@ double HillasReconstructor::knonrad_weight(double reduced_amplitude, double delt
     return reduced_amplitude * delta_1 * delta_2 * pow(sin_part, 2);
 }
 
-double HillasReconstructor::reconstruction_hmax(double altitude)
+double HillasReconstructor::reconstruction_hmax(double fov_x, double fov_y,double altitude)
 {
     
     Eigen::VectorXd hmax_v = Eigen::VectorXd::Zero(telescopes.size());
@@ -201,9 +201,9 @@ double HillasReconstructor::reconstruction_hmax(double altitude)
     for(int i = 0; i < telescopes.size(); i++)
     {
         int tel_id = telescopes[i];
-        auto hillas_r = nominal_hillas_dicts[tel_id].r;
+        double r = sqrt(pow(fov_x - hillas_dicts[tel_id].x, 2) + pow(fov_y - hillas_dicts[tel_id].y, 2));
         auto impact_parameter = impact_parameters[tel_id];
-        auto hmax_estimate = impact_parameter/hillas_r;
+        auto hmax_estimate = impact_parameter/r;
         hmax_v(i) = hmax_estimate;
         weights(i) = nominal_hillas_dicts[tel_id].intensity;
     }

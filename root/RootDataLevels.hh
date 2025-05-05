@@ -111,6 +111,26 @@ class RootEventIndex
 };
 
 /**
+ * @brief Structure for simulated camera data
+ */
+class RootSimulatedCamera : public RootDataLevels
+{
+   public:
+       RootSimulatedCamera() = default;
+       virtual ~RootSimulatedCamera() = default;
+       int event_id;
+       int tel_id;
+
+       double true_impact_parameter;
+
+       RVecI true_image;
+       virtual TTree* initialize() override;
+       virtual void initialize(TTree* tree) override;
+    private:
+       RVecI* true_image_ptr = nullptr;
+};
+       
+/**
  * @brief Structure for R0 (raw waveform) data
  */
 class RootR0Event : public RootDataLevels
@@ -196,11 +216,11 @@ class RootDL1Event : public RootDataLevels
        int n_pixels;
        RVecF image;
        RVecF peak_time;
-       RVec<bool> mask;
+       RVecB mask;
        
        // Image parameters (complete structure)
        ImageParameters params;
-    
+
        virtual TTree* initialize() override;
        TTree* initialize(bool have_image);
        virtual void initialize(TTree* tree) override;
@@ -364,7 +384,8 @@ class RootArrayEvent
         RootArrayEvent() = default;
         virtual ~RootArrayEvent() = default;
         void initialize_writer();
-        std::optional<RootSimulationShower> simulation;
+        std::optional<RootSimulationShower> simulation_shower;
+        std::optional<RootSimulatedCamera> simulation_camera;
         std::optional<RootR0Event> r0;
         std::optional<RootR1Event> r1;
         std::optional<RootDL0Event> dl0;
@@ -388,6 +409,7 @@ class RootArrayEvent
             }
             current_entry = index;
         }
+        RVecI sim_tel_entries;
         RVecI r0_tel_entries;
         RVecI r1_tel_entries;
         RVecI dl0_tel_entries;

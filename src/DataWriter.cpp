@@ -8,7 +8,8 @@ json DataWriter::get_default_config()
         "eos_url": "root://eos01.ihep.ac.cn/",
         "overwrite": true,
         "write_simulation_shower": true,
-        "write_simulated_camera": false,
+        "write_simulated_camera": true,
+        "write_simulated_camera_image": false,
         "write_r0": true,
         "write_r1": true,
         "write_dl0": true,
@@ -18,7 +19,7 @@ json DataWriter::get_default_config()
         "write_monitor": true,
         "write_pointing": true,
         "write_simulation_config": true,
-        "write_atmosphere_model": true,
+        "write_atmosphere_model": false,
         "write_subarray": true,
         "write_metaparam": true
     }
@@ -52,6 +53,7 @@ void DataWriter::configure(const json& config)
     // Store configuration for selective component writing
     write_simulation_shower_enabled = config.value("write_simulation_shower", true);
     write_simulated_camera_enabled = config.value("write_simulated_camera", false);
+    write_simulated_camera_image_enabled = config.value("write_simulated_camera_image", false);
     write_r0_enabled = config.value("write_r0", false);
     write_r1_enabled = config.value("write_r1", false);
     write_dl0_enabled = config.value("write_dl0", false);
@@ -75,7 +77,7 @@ void DataWriter::operator()(const ArrayEvent& event)
     }
     if(write_simulated_camera_enabled && event.simulation->tels.size() > 0)
     {
-        file_writer->write_simulated_camera(event);
+        file_writer->write_simulated_camera(event, write_simulated_camera_image_enabled);
     }
     if(write_r0_enabled && event.r0.has_value())
     {

@@ -33,6 +33,8 @@ public:
     double h_first_int;
     /** @brief Simulated shower maximum (Xmax) in g/cm^2 */
     double x_max;
+    /** @brief Maximum height of shower in m */
+    double h_max;
     /** @brief Atmospheric depth where primary particle was injected in g/cm^2 */
     double starting_grammage;
     /** @brief Primary particle ID number */

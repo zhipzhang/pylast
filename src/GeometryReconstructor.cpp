@@ -50,6 +50,11 @@ std::pair<double, double> GeometryReconstructor::convert_to_sky(double fov_x, do
     return std::make_pair(rec_direction->azimuth, rec_direction->altitude);
 }
 
+std::pair<double, double> GeometryReconstructor::convert_to_fov(double alt, double az)
+{
+    auto camera_position = SkyDirection(AltAzFrame(), az, alt).transform_to(*nominal_frame);
+    return std::make_pair(camera_position->x(), camera_position->y());
+}
 double GeometryReconstructor::compute_angle_separation(double az1, double alt1, double az2, double alt2)
 {
     auto direction1 = SkyDirection(AltAzFrame(), az1, alt1);
