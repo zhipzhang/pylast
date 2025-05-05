@@ -17,6 +17,7 @@ void MLReconstructor::configure(const json& config)
 
 void MLReconstructor::operator()(ArrayEvent& event)
 {
+    array_pointing_direction = SphericalRepresentation(event.pointing->array_azimuth, event.pointing->array_altitude);
     telescopes.clear();
     if(!event.dl1.has_value())
     {

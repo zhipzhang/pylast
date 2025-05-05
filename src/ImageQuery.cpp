@@ -4,6 +4,7 @@ void ImageQuery::init_variables()
 {
     init_hillas_parameter();
     init_leakage_parameter();
+    init_morphology_parameter();
 }
 
 void ImageQuery::init_hillas_parameter()
@@ -21,6 +22,10 @@ void ImageQuery::init_leakage_parameter()
     parser_.DefineVar("leakage_pixels_width_2", &leakage_parameter_.pixels_width_2);
     parser_.DefineVar("leakage_intensity_width_1", &leakage_parameter_.intensity_width_1);
     parser_.DefineVar("leakage_intensity_width_2", &leakage_parameter_.intensity_width_2);
+}
+void ImageQuery::init_morphology_parameter()
+{
+    parser_.DefineVar("morphology_n_pixels", &morphology_n_pixels_);
 }
 
 void ImageQuery::configure(const json& config)
@@ -41,6 +46,7 @@ bool ImageQuery::operator()(const ImageParameters &image_parameter)
 {
     hillas_parameter_ = image_parameter.hillas;
     leakage_parameter_ = image_parameter.leakage;
+    morphology_n_pixels_ = image_parameter.morphology.n_pixels;
     try {
         return parser_.Eval();
     }

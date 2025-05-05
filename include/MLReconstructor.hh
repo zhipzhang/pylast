@@ -13,6 +13,7 @@
 #include "Configurable.hh"
 #include "ImageQuery.hh"
 #include "ArrayEvent.hh"
+#include "Coordinates.hh"
 
 class MLReconstructor: public Configurable
 {
@@ -27,6 +28,7 @@ class MLReconstructor: public Configurable
         void configure(const json& config) override;
         void operator()(ArrayEvent& event);
         std::vector<int> telescopes; // Telescopes Pass the Image Query
+        SphericalRepresentation array_pointing_direction;
     protected:
         std::unique_ptr<ImageQuery> query_;
 };
