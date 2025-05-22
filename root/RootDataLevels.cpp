@@ -363,6 +363,22 @@ void RootSimulationShower::initialize(TTree* tree)
     tree->SetBranchAddress("shower_primary_id", &shower.shower_primary_id);
 }
 
+TTree* RootDL2Particle::initialize()
+{
+    TTree* tree = new TTree(reconstructor_name.c_str(), "DL2 particle reconstruction");
+    tree->Branch("event_id", &event_id);
+    tree->Branch("is_valid", &particle.is_valid);
+    tree->Branch("hadroness", &particle.hadroness);
+
+    return tree;
+}
+void RootDL2Particle::initialize(TTree* tree)
+{
+    data_tree = tree;
+    tree->SetBranchAddress("event_id", &event_id);
+    tree->SetBranchAddress("is_valid", &particle.is_valid);
+    tree->SetBranchAddress("hadroness", &particle.hadroness);
+}
 TTree* RootDL2Energy::initialize()
 {
     TTree* tree = new TTree(reconstructor_name.c_str(), "DL2 energy reconstruction");
@@ -437,6 +453,7 @@ TTree* RootDL2Event::initialize()
     tree->Branch("distance_error", &distance_error);
     tree->Branch("estimate_energy", &estimate_energy);
     tree->Branch("estimate_disp", &estimate_disp);
+    tree->Branch("estimate_hadroness", &estimate_hadroness);
     return tree;
 }
 
@@ -453,6 +470,7 @@ void RootDL2Event::initialize(TTree* tree)
     tree->SetBranchAddress("distance_error", &distance_error_ptr);
     tree->SetBranchAddress("estimate_energy", &estimate_energy);
     tree->SetBranchAddress("estimate_disp", &estimate_disp);
+    tree->SetBranchAddress("estimate_hadroness", &estimate_hadroness);
 }
 
 
@@ -532,6 +550,10 @@ void RootArrayEvent::load_next_event()
         for(auto [name, energy]: dl2_energy_map)
         {
             energy->get_entry(current_entry);
+        }
+        for(auto [name, particle]: dl2_particle_map)
+        {
+            particle->get_entry(current_entry);
         }
         current_entry++;
     }

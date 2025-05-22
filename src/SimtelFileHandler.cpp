@@ -41,7 +41,6 @@ SimtelFileHandler::SimtelFileHandler(const std::string& filename) : filename(fil
     open_file(filename);
     SPDLOG_TRACE("End read simtel file");
 }
-
 void SimtelFileHandler::initilize_block_handler() {
     block_handler[BlockType::History] = [this](){handle_history();};
     block_handler[BlockType::MetaParam] = [this](){handle_metadata();};
@@ -604,6 +603,9 @@ SimtelFileHandler::~SimtelFileHandler() {
     if(hsdata != NULL) {
         clear_memory();
     }
+    #ifdef HAVE_EVENTIO_EXTENSION
+    EventIOHandler_finalize();
+    #endif
 }
 void SimtelFileHandler::clear_memory() {
     if(hsdata != NULL) {

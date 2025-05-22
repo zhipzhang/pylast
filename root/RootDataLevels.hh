@@ -265,6 +265,20 @@ class RootDL2Energy : public RootDataLevels
     private:
         std::string* reconstructor_name_ptr = nullptr;
 };
+
+class RootDL2Particle : public RootDataLevels
+{
+   public:
+       RootDL2Particle(const std::string& reconstructor_name) : reconstructor_name(reconstructor_name) {}
+       virtual ~RootDL2Particle() = default;
+       std::string reconstructor_name;
+       int event_id;
+       ReconstructedParticle particle;
+       virtual TTree* initialize() override;
+       virtual void initialize(TTree* tree) override;
+    private:
+        std::string* reconstructor_name_ptr = nullptr;
+};
 /**
  * @brief Structure for DL2 telescope impact parameters, events/dl2/
  */
@@ -279,6 +293,7 @@ class RootDL2Event : public RootDataLevels
        std::vector<std::string> reconstructor_name;
        double estimate_energy = 0;
        double estimate_disp = 0;
+       double estimate_hadroness = 0;
        // Impact parameters structure
        std::vector<double> distance;
        std::vector<double> distance_error;
@@ -396,6 +411,7 @@ class RootArrayEvent
         std::optional<RootEventIndex> event_index;
         std::unordered_map<std::string, std::optional<RootDL2Geometry>> dl2_geometry_map;
         std::unordered_map<std::string, std::optional<RootDL2Energy>> dl2_energy_map;
+        std::unordered_map<std::string, std::optional<RootDL2Particle>> dl2_particle_map;
         std::optional<RootDL2Event> dl2;
         int test_entries();
         bool has_event() {return current_entry < entries;}

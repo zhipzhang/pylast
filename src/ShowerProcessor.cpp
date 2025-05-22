@@ -79,9 +79,18 @@ void ShowerProcessor::operator()(ArrayEvent& event)
                 double cog_err = true_line_direction.distance(cog_point);
 
                 dl1->image_parameters.extra.true_psi = true_psi;
-                dl1->image_parameters.extra.beta_err = true_psi - dl1->image_parameters.hillas.psi;
+                double beta_err = true_psi - dl1->image_parameters.hillas.psi;
+                // Normalize beta_err to be within [-PI/2, PI/2] to keep it close to 0
+                while(beta_err > M_PI/2)
+                {
+                    beta_err -= M_PI;
+                }
+                while(beta_err < -M_PI/2)
+                {
+                    beta_err += M_PI;
+                }
                 dl1->image_parameters.extra.cog_err = cog_err;
-
+                dl1->image_parameters.extra.beta_err = std::abs(beta_err);
                 
 
                 // Miss is the distance between the hillas ellipse center and the true direction

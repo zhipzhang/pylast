@@ -31,10 +31,13 @@ struct EventData
     double hillas_rec_core_y;
     double hillas_direction_error;
     double rec_energy;
+    double hadroness;
     double disp_stereo_rec_alt;
     double disp_stereo_rec_az;
     double disp_direction_error;
     double hillas_hmax;
+    double pointing_alt;
+    double pointing_az;
 };
 void initialize_telescope_tree(TTree *tree,  TelescopeData &data);
 
@@ -87,8 +90,12 @@ void initialize_telescope_tree(TTree* tree,  TelescopeData& data)
     tree->Branch("intensity_std", &data.params.intensity.intensity_std);
     tree->Branch("average_intensity", &data.average_intensity);
     // Extra parameters
-    tree->Branch("extra_miss", &data.params.extra->miss);
-    tree->Branch("extra_disp", &data.params.extra->disp);
+    tree->Branch("extra_miss", &data.params.extra.miss);
+    tree->Branch("extra_disp", &data.params.extra.disp);
+    tree->Branch("extra_theta", &data.params.extra.theta);
+    tree->Branch("extra_true_psi", &data.params.extra.true_psi);
+    tree->Branch("extra_cog_err", &data.params.extra.cog_err);
+    tree->Branch("extra_beta_err", &data.params.extra.beta_err);
 }
 
 void initialize_event_tree(TTree* tree,  EventData& data)
@@ -109,9 +116,13 @@ void initialize_event_tree(TTree* tree,  EventData& data)
     tree->Branch("shower_primary_id", &data.shower.shower_primary_id);
     tree->Branch("h_first_int", &data.shower.h_first_int);
     tree->Branch("x_max", &data.shower.x_max);
+    tree->Branch("h_max", &data.shower.h_max);
     tree->Branch("starting_grammage", &data.shower.starting_grammage);
     tree->Branch("rec_energy", &data.rec_energy);
     tree->Branch("disp_stereo_rec_alt", &data.disp_stereo_rec_alt);
     tree->Branch("disp_stereo_rec_az", &data.disp_stereo_rec_az);
     tree->Branch("disp_direction_error", &data.disp_direction_error);
+    tree->Branch("hadroness", &data.hadroness);
+    tree->Branch("pointing_alt", &data.pointing_alt);
+    tree->Branch("pointing_az", &data.pointing_az);
 }

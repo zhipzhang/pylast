@@ -31,7 +31,12 @@
  {
     public:
         DECLARE_CONFIGURABLE_DEFINITIONS(const SubarrayDescription& , subarray, ShowerProcessor);
-
+        // Contain the unique_ptr, so we have to delete the copy-constructor
+        ~ShowerProcessor() = default;
+        ShowerProcessor(const ShowerProcessor&) = delete;
+        ShowerProcessor(ShowerProcessor&&) = default;
+        ShowerProcessor& operator=(const ShowerProcessor&) = delete;
+        ShowerProcessor& operator=(ShowerProcessor&&) = delete;
         void operator()(ArrayEvent& event);
         void configure(const json& config) override;
         json default_config() const override {return get_default_config();}

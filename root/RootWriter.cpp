@@ -655,6 +655,25 @@ void RootWriter::write_dl2(const ArrayEvent& event)
         root_energy.energy = energy;
         energy_tree->Fill();
     }
+    for(const auto& [name, particle] : dl2.particle)
+    {
+        auto particle_tree = get_tree(name);
+        if(!particle_tree)
+        {
+            TDirectory* dir = get_or_create_directory("/events/dl2/particle");
+            dir->cd();
+            array_event.dl2_particle_map[name] = RootDL2Particle(name);
+            particle_tree = array_event.dl2_particle_map[name]->initialize();
+            trees[name] = particle_tree;
+            directories[name] = dir;
+        }
+        auto& root_particle = array_event.dl2_particle_map[name].value();
+        root_particle.event_id = event.event_id;
+        root_particle.reconstructor_name = name;
+        root_particle.particle = particle;
+        particle_tree->Fill();
+    }
+    
     auto dl2_tree = get_tree("dl2");
     if(!dl2_tree)
     {
@@ -672,6 +691,7 @@ void RootWriter::write_dl2(const ArrayEvent& event)
         root_dl2.tel_id = tid;
         root_dl2.estimate_energy = dl2_tel.estimate_energy;
         root_dl2.estimate_disp = dl2_tel.disp;
+        root_dl2.estimate_hadroness = dl2_tel.estimate_hadroness;
         for(const auto& [name, impact] : dl2_tel.impact_parameters)
         {
             root_dl2.reconstructor_name.push_back(name);

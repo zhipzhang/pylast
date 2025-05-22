@@ -81,7 +81,7 @@ int main(int argc, const char* argv[])
             // Rest of your processing code remains the same
             for (const auto& event: *source)
             {
-                if(!event.dl2->geometry.at("HillasReconstructor").is_valid )
+                if(!event.dl2->geometry.at("HillasReconstructor").is_valid  && !(event.dl2->particle.at("MLParticleClassifier").is_valid))
                 {
                     continue;
                 }
@@ -94,11 +94,14 @@ int main(int argc, const char* argv[])
                 event_data.hillas_direction_error = event.dl2->geometry.at("HillasReconstructor").direction_error;
                 event_data.shower = event.simulation->shower;
                 event_data.hillas_hmax = event.dl2->geometry.at("HillasReconstructor").hmax;
-                if(event.dl2->geometry.find("DispStereoReconstructor") != event.dl2->geometry.end())
+                event_data.hadroness = event.dl2->particle.at("MLParticleClassifier").hadroness;
+                event_data.pointing_alt = event.pointing->array_altitude;
+                event_data.pointing_az = event.pointing->array_azimuth;
+                if(event.dl2->geometry.find("HillasWeightedReconstructor") != event.dl2->geometry.end())
                 {
-                    event_data.disp_stereo_rec_alt = event.dl2->geometry.at("DispStereoReconstructor").alt;
-                    event_data.disp_stereo_rec_az = event.dl2->geometry.at("DispStereoReconstructor").az;
-                    event_data.disp_direction_error = event.dl2->geometry.at("DispStereoReconstructor").direction_error;
+                    event_data.disp_stereo_rec_alt = event.dl2->geometry.at("HillasWeightedReconstructor").alt;
+                    event_data.disp_stereo_rec_az = event.dl2->geometry.at("HillasWeightedReconstructor").az;
+                    event_data.disp_direction_error = event.dl2->geometry.at("HillasWeightedReconstructor").direction_error;
                 }
                 if(!event.dl2->energy.empty())
                 {
@@ -110,11 +113,12 @@ int main(int argc, const char* argv[])
                 }
                 eventtree->Fill();
                 double average_intensity_sum = 0;
-                for (const auto& [tel_id, dl1]: event.dl1->tels)
+                for (const auto& [tel_id, dl2]: event.dl2->tels)
                 {
+                    const auto& dl1 = event.dl1->tels.at(tel_id);
                     average_intensity_sum += dl1->image_parameters.hillas.intensity;
                 }
-                double average_intensity = average_intensity_sum / event.dl1->tels.size();
+                double average_intensity = average_intensity_sum / event.dl2->tels.size();
                 for(const auto& [tel_id, rec_impact]: event.dl2->tels)
                 {
                     auto tel_coord = subarray->tel_positions.at(tel_id);
@@ -133,6 +137,7 @@ int main(int argc, const char* argv[])
                     data.rec_alt = event.dl2->geometry.at("HillasReconstructor").alt;
                     data.rec_az = event.dl2->geometry.at("HillasReconstructor").az;
                     data.average_intensity = average_intensity;
+                    data.hillas_hmax = event.dl2->geometry.at("HillasReconstructor").hmax;
                     if(!event.dl2->energy.empty())
                     {
                         data.rec_energy = event.dl2->energy.at("MLEnergyReconstructor").estimate_energy;

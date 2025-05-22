@@ -33,34 +33,46 @@ def default_config():
     # Image cleaning defaults
     config["image_processor"]["image_cleaner_type"] = "Tailcuts_cleaner"
     config["image_processor"]["TailcutsCleaner"] = {}
-    config["image_processor"]["TailcutsCleaner"]["picture_thresh"] = 10.0
-    config["image_processor"]["TailcutsCleaner"]["boundary_thresh"] = 5.0
+    config["image_processor"]["TailcutsCleaner"]["picture_thresh"] = 15.0
+    config["image_processor"]["TailcutsCleaner"]["boundary_thresh"] = 7.5
     config["image_processor"]["TailcutsCleaner"]["keep_isolated_pixels"] = False
     config["image_processor"]["TailcutsCleaner"]["min_number_picture_neighbors"] = 2
     
     # Shower reconstruction defaults
     config["shower_processor"]["GeometryReconstructionTypes"] = ["HillasReconstructor"]
+    config["shower_processor"]["EnergyReconstructionTypes"] = ["MLEnergyReconstructor"]
+    config["shower_processor"]["ParticleClassificationTypes"] = ["MLParticleClassifier"]
+
+    # Image Cuts
+    config["shower_processor"]["MLParticleClassifier"] = {}
+    config["shower_processor"]["MLParticleClassifier"]["ImageQuery"] = "hillas_intensity > 100 && leakage_intensity_width_2 < 0.3 && hillas_width > 0 && morphology_n_pixels >= 5"
     config["shower_processor"]["HillasReconstructor"] = {}
-    config["shower_processor"]["HillasReconstructor"]["ImageQuery"] = "hillas_intensity > 100 && leakage_intensity_width_2 < 0.3"
+    config["shower_processor"]["HillasWeightedReconstructor"] = {}
+    config["shower_processor"]["HillasReconstructor"]["ImageQuery"] = "hillas_intensity > 100 && leakage_intensity_width_2 < 0.3 && hillas_width > 0 && morphology_n_pixels >= 5"
+    config["shower_processor"]["HillasWeightedReconstructor"]["ImageQuery"] = "hillas_intensity > 100 && leakage_intensity_width_2 < 0.3 && hillas_width > 0 && morphology_n_pixels >= 5"
+    config["shower_processor"]["MLEnergyReconstructor"] = {}
+    config["shower_processor"]["MLEnergyReconstructor"]["ImageQuery"] = "hillas_intensity > 100 && leakage_intensity_width_2 < 0.3 && hillas_width > 0 && morphology_n_pixels >= 5"
+
     # Convert the dictionary to a JSON-formatted string
 
     config["data_writer"]["output_type"] = "root"
     config["data_writer"]["eos_url"] = "root://eos01.ihep.ac.cn/"
     config["data_writer"]["overwrite"] = True
     config["data_writer"]["write_simulation_shower"] = True
-    config["data_writer"]["write_simulated_camera"] = False
+    config["data_writer"]["write_simulated_camera"] = True
+    config["data_writer"]["write_simulated_camera_image"] = False
     config["data_writer"]["write_r0"] = False
     config["data_writer"]["write_r1"] = False
     config["data_writer"]["write_dl0"] = False
     config["data_writer"]["write_dl1"] = True
-    config["data_writer"]["write_dl1_image"] = True
+    config["data_writer"]["write_dl1_image"] = False
     config["data_writer"]["write_dl2"] = True
     config["data_writer"]["write_monitor"] = False
     config["data_writer"]["write_pointing"] = True
-    config["data_writer"]["write_simulation_config"] = True
-    config["data_writer"]["write_atmosphere_model"] = True
+    config["data_writer"]["write_simulation_config"] = False
+    config["data_writer"]["write_atmosphere_model"] = False
     config["data_writer"]["write_subarray"] = True
-    config["data_writer"]["write_metaparam"] = True
+    config["data_writer"]["write_metaparam"] = False
     
     return config
 
@@ -72,6 +84,8 @@ def hillas_reco():
                         help="Output file path (can be used multiple times)")
     parser.add_argument("--config", "-c", required=False,
                         help="Config file path(If not provided, default config will be used)")
+    parser.add_argument("--max-leakage2", "-l", required=False,
+                        help="Max leakage2 for hillas reconstruction")
     args = parser.parse_args()
     
     # Verify that input and output lists have the same length
@@ -82,6 +96,8 @@ def hillas_reco():
     else:
         with open(args.config, "r") as f:
             config = json.load(f)
+    if(args.max_leakage2 is not None):
+        config["shower_processor"]["HillasReconstructor"]["ImageQuery"] = f"leakage_intensity_width_2 < {args.max_leakage2} && hillas_intensity > 100"
     
     # Process each input-output pair
     for input_file, output_file in tqdm.tqdm(zip(args.input, args.output)):

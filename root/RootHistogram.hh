@@ -17,23 +17,34 @@ public:
 
     // Write histograms from Statistics to ROOT file
     static void write_statistics(const Statistics& stats, const std::string& filename) {
-        TFile file(filename.c_str(), "RECREATE");
+        auto file = TFile::Open(filename.c_str(), "RECREATE");
         
+        int ihist = -1;
         for (const auto& [name, hist] : stats.histograms) {
+            ihist++;
             // Try to convert to different histogram types
-            if (auto hist1d = std::dynamic_pointer_cast<Histogram1D<float>>(hist)) {
-                write_histogram1d(name, *hist1d);
+            if(hist->get_dimension() == 1)
+            {
+                if (auto hist1d = std::dynamic_pointer_cast<Histogram1D<float>>(hist)) {
+                    write_histogram1d(name, *hist1d, ihist);
+                }
             }
-            else if (auto hist2d = std::dynamic_pointer_cast<Histogram2D<float>>(hist)) {
-                write_histogram2d(name, *hist2d);
+            else if(hist->get_dimension() == 2)
+            {
+                if (auto hist2d = std::dynamic_pointer_cast<Histogram2D<float>>(hist)) {
+                    write_histogram2d(name, *hist2d, ihist);
+                }
             }
-            else if (auto profile = std::dynamic_pointer_cast<Profile1D<float>>(hist)) {
-                write_profile(name, *profile);
+            else if(hist->get_dimension() == 0)
+            {
+                if (auto profile = std::dynamic_pointer_cast<Profile1D<float>>(hist)) {
+                    write_profile(name, *profile, ihist);
+                }
             }
         }
         
-        file.Write();
-        file.Close();
+        file->Write();
+        file->Close();
     }
 
     // Load histograms from ROOT file into Statistics
@@ -68,12 +79,12 @@ public:
 
 private:
     // Helper methods for writing histograms
-    static void write_histogram1d(const std::string& name, const Histogram1D<float>& hist) {
+    static void write_histogram1d(const std::string& name, const Histogram1D<float>& hist, int ihist) {
         int bins = hist.bins();
         float min = hist.get_low_edge();
         float max = hist.get_high_edge();
         
-        TH1D* th1d = new TH1D(name.c_str(), name.c_str(), bins, min, max);
+        TH1D* th1d = new TH1D( ("h" + std::to_string(ihist)).c_str(), name.c_str(), bins, min, max);
         
         // Fill the ROOT histogram
         for (int i = 0; i < bins; ++i) {
@@ -84,7 +95,7 @@ private:
         delete th1d;
     }
 
-    static void write_histogram2d(const std::string& name, const Histogram2D<float>& hist) {
+    static void write_histogram2d(const std::string& name, const Histogram2D<float>& hist, int ihist) {
         int x_bins = hist.x_bins();
         int y_bins = hist.y_bins();
         float x_min = hist.get_x_low_edge();
@@ -92,7 +103,7 @@ private:
         float y_min = hist.get_y_low_edge();
         float y_max = hist.get_y_high_edge();
         
-        TH2D* th2d = new TH2D(name.c_str(), name.c_str(), 
+        TH2D* th2d = new TH2D( ("h" + std::to_string(ihist)).c_str(), name.c_str(), 
                              x_bins, x_min, x_max,
                              y_bins, y_min, y_max);
         
@@ -107,16 +118,23 @@ private:
         delete th2d;
     }
 
-    static void write_profile(const std::string& name, const Profile1D<float>& profile) {
+    static void write_profile(const std::string& name, const Profile1D<float>& profile, int ihist) {
         int bins = profile.bins();
         float min = profile.get_low_edge();
         float max = profile.get_high_edge();
         
-        TProfile* tprofile = new TProfile(name.c_str(), name.c_str(), bins, min, max);
+        TProfile* tprofile = new TProfile(("h" + std::to_string(ihist)).c_str(), name.c_str(), bins, min, max);
         
-        // Fill the ROOT profile
+        // Fill the ROOT profile with known values
         for (int i = 0; i < bins; ++i) {
-            tprofile->Fill(profile.center(i), profile.mean(i), profile.at(i));
+            if(profile.mean(i) != 0)
+            {
+                // Set bin content and error directly
+                tprofile->SetBinEntries(i + 1, 1);
+                tprofile->SetBinContent(i + 1, profile.mean(i));
+                tprofile->SetBinError(i + 1, profile.error(i));
+                // Set bin entries to a non-zero value to make the profile valid
+            }
         }
         
         tprofile->Write();

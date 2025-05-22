@@ -39,6 +39,8 @@
         void initialize_array_event();
         template<typename T>
         void initialize_data_level(const std::string& level_name, std::optional<T>& data_level);
+        template<typename T>
+        void initialize_dl2_trees(const std::string& subdir, std::unordered_map<std::string, std::optional<T>>& tree_map);
         void initialize_event_index();
         bool read_next_event();
         RootArrayEvent array_event;

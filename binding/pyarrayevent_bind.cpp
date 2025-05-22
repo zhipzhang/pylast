@@ -25,10 +25,12 @@ void bind_dl2_event(nb::module_ &m) {
         .def_ro("tels", &DL2Event::tels, nb::rv_policy::reference_internal)
         .def("add_geometry", &DL2Event::add_geometry)
         .def("add_energy", &DL2Event::add_energy)
+        .def("add_particle", &DL2Event::add_particle)
         .def("set_tel_estimate_energy", &DL2Event::set_tel_estimate_energy)
         .def("set_tel_estimate_disp", &DL2Event::set_tel_estimate_disp)
         .def("set_tel_disp", &DL2Event::set_tel_disp)
-        .def_rw("hadroness", &DL2Event::hadroness)
+        .def("set_tel_estimate_hadroness", &DL2Event::set_tel_estimate_hadroness)
+        .def_rw("particle", &DL2Event::particle)
         .def("__repr__", [](DL2Event& self) {
             std::string repr = "DL2Event:\n";
             
@@ -65,6 +67,13 @@ void bind_dl2_event(nb::module_ &m) {
         .def_rw("energy_valid", &ReconstructedEnergy::energy_valid)
         .def("__repr__", [](ReconstructedEnergy& self) {
             return fmt::format("ReconstructedEnergy:\n  estimate_energy: {}\n  energy_valid: {}", self.estimate_energy, self.energy_valid);
+        });
+    nb::class_<ReconstructedParticle>(m, "ReconstructedParticle")
+        .def(nb::init<>())
+        .def_rw("hadroness", &ReconstructedParticle::hadroness)
+        .def_rw("is_valid", &ReconstructedParticle::is_valid)
+        .def("__repr__", [](ReconstructedParticle& self) {
+            return fmt::format("ReconstructedParticle:\n  hadroness: {}\n  is_valid: {}", self.hadroness, self.is_valid);
         });
     nb::class_<ReconstructedGeometry>(m, "ReconstructedGeometry")
         .def_rw("is_valid", &ReconstructedGeometry::is_valid)
