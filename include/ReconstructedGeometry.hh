@@ -15,7 +15,6 @@ class ReconstructedGeometry
 {
     public:
         ReconstructedGeometry() = default;
-        ~ReconstructedGeometry() = default;
         bool is_valid;
         double alt;
         double alt_uncertainty;
@@ -38,7 +37,14 @@ class ReconstructedEnergy
 {
     public:
         ReconstructedEnergy() = default;
-        ~ReconstructedEnergy() = default;
         double estimate_energy = 0;
         bool energy_valid = false;
+};
+
+class ReconstructedParticle
+{
+    public:
+        ReconstructedParticle() = default;
+        double hadroness = 0;
+        bool is_valid = false;
 };

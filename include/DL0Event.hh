@@ -21,10 +21,6 @@ class DL0Camera
         image(std::move(image)),
         peak_time(std::move(peak_time))
     {}
-    DL0Camera(const DL0Camera& other) = delete;
-    DL0Camera& operator=(const DL0Camera& other) = delete;
-    DL0Camera(DL0Camera&& other) noexcept = default;
-    DL0Camera& operator=(DL0Camera&& other) noexcept = default;
 
     Eigen::VectorXd image;
     Eigen::VectorXd peak_time;
@@ -34,10 +30,4 @@ class DL0Event: public BaseTelContainer<DL0Camera>
 {
     public:
     DL0Event() = default;
-    ~DL0Event() = default;
-
-    DL0Event(const DL0Event& other) = delete;
-    DL0Event& operator=(const DL0Event& other) = delete;
-    DL0Event(DL0Event&& other) noexcept = default;
-    DL0Event& operator=(DL0Event&& other) noexcept = default;
 };
