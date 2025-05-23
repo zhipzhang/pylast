@@ -1,4 +1,5 @@
 #include "SimtelEventSource.hh"
+#include "ArrayEvent.hh"
 #include "CameraDescription.hh"
 #include "CameraGeometry.hh"
 #include "LACT_hessioxxx/include/io_basic.h"
@@ -212,34 +213,22 @@ void SimtelEventSource::load_all_simulated_showers()
     std::thread loader_thread(load_showers);
     loader_thread.join();
 }
-bool SimtelEventSource::_load_next_events()
+bool SimtelEventSource::_load_next_event()
 {
     return simtel_file_handler->load_next_event();
 }
 ArrayEvent SimtelEventSource::get_event()
 {
-    if (!_load_next_events()) {
+    if (!_load_next_event()) {
         return ArrayEvent(); // If no more events, return an empty event
     }
     ArrayEvent event;
-    event.simulation  = SimulatedEvent();
-    event.run_id = simtel_file_handler->hsdata->run_header.run;
-    event.event_id = simtel_file_handler->hsdata->mc_event.event;
-    event.simulation->shower.shower_primary_id = simtel_file_handler->hsdata->mc_shower.primary_id;
-    event.simulation->shower.energy = simtel_file_handler->hsdata->mc_shower.energy;
-    event.simulation->shower.alt = simtel_file_handler->hsdata->mc_shower.altitude;
-    event.simulation->shower.az = simtel_file_handler->hsdata->mc_shower.azimuth;
-    event.simulation->shower.core_x = simtel_file_handler->hsdata->mc_event.xcore;
-    event.simulation->shower.core_y = simtel_file_handler->hsdata->mc_event.ycore;
-    event.simulation->shower.h_first_int = simtel_file_handler->hsdata->mc_shower.h_first_int;
-    event.simulation->shower.x_max = simtel_file_handler->hsdata->mc_shower.xmax;
-    event.simulation->shower.starting_grammage = simtel_file_handler->hsdata->mc_shower.depth_start;
-    event.simulation->shower.h_max = simtel_file_handler->hsdata->mc_shower.hmax;
+    read_simulated_showers(event);
     if(simtel_file_handler->have_true_image)
     {
         read_true_image(event);
     }
-    read_event_monitor(event);
+    read_monitor(event);
     read_pointing(event);
     read_adc_samples(event);
     apply_simtel_calibration(event);
@@ -328,7 +317,7 @@ void SimtelEventSource::apply_simtel_calibration(ArrayEvent& event)
         event.r1->add_tel(tel_id, n_pixels, n_samples, std::move(r1_waveform), std::move(gain_selection));
     }
 }
-void SimtelEventSource::read_event_monitor(ArrayEvent& event)
+void SimtelEventSource::read_monitor(ArrayEvent& event)
 {
     if(!event.monitor) {
         event.monitor = EventMonitor();
@@ -401,6 +390,24 @@ void SimtelEventSource::read_true_image(ArrayEvent& event)
             double impact_parameter = Utils::point_line_distance(tel_position, shower_core, line_direction);
             event.simulation->add_simulated_image(tel_id, simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].pixels,simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].pe_count, impact_parameter);
         }
+}
+void SimtelEventSource::read_simulated_showers(ArrayEvent& event)
+{
+    if(!event.simulation) {
+        event.simulation = SimulatedEvent();
+    }
+    event.run_id = simtel_file_handler->hsdata->run_header.run;
+    event.event_id = simtel_file_handler->hsdata->mc_event.event;
+    event.simulation->shower.shower_primary_id = simtel_file_handler->hsdata->mc_shower.primary_id;
+    event.simulation->shower.energy = simtel_file_handler->hsdata->mc_shower.energy;
+    event.simulation->shower.alt = simtel_file_handler->hsdata->mc_shower.altitude;
+    event.simulation->shower.az = simtel_file_handler->hsdata->mc_shower.azimuth;
+    event.simulation->shower.core_x = simtel_file_handler->hsdata->mc_event.xcore;
+    event.simulation->shower.core_y = simtel_file_handler->hsdata->mc_event.ycore;
+    event.simulation->shower.h_first_int = simtel_file_handler->hsdata->mc_shower.h_first_int;
+    event.simulation->shower.x_max = simtel_file_handler->hsdata->mc_shower.xmax;
+    event.simulation->shower.starting_grammage = simtel_file_handler->hsdata->mc_shower.depth_start;
+    event.simulation->shower.h_max = simtel_file_handler->hsdata->mc_shower.hmax;
 }
 const std::string SimtelEventSource::print() const
 {

@@ -16,6 +16,10 @@
 #include <unordered_map>
 #include <memory>
 #include "SimtelFileHandler.hh"
+/**
+ * @brief SimtelEventSource can automatically read the simtel files and fill the DataLevel R0 and R1 and SimulatedEvent
+ * 
+ */
 class SimtelEventSource: public EventSource 
 {
 public:
@@ -24,20 +28,31 @@ public:
 
     virtual ~SimtelEventSource() = default;
     const std::string print() const;
+    /**
+     * @brief This can be called directory or set the load_simulated_showers to true in the constructor
+     *        After calling this function, the simulated showers will be loaded into the shower_array
+     * 
+     */
     virtual void load_all_simulated_showers() override;
 private:
+    /**
+     * @brief Initialize the `SimtelFileHandler` and read util events
+     * 
+     */
     virtual void open_file() override;
     virtual void init_simulation_config() override;
     virtual void init_atmosphere_model() override;
     virtual void init_metaparam() override;
     virtual void init_subarray() override;
-    virtual bool _load_next_events() ;
+    virtual bool _load_next_event() ;
     virtual bool is_finished()  override {return simtel_file_handler->no_more_blocks;}
     void set_simulation_config();
     void set_telescope_settings(int tel_id);
+    void set_metaparam();
+    void read_simulated_showers(ArrayEvent& event);
     void read_true_image(ArrayEvent& event);
     void read_adc_samples(ArrayEvent& event);
-    void read_event_monitor(ArrayEvent& event);
+    void read_monitor(ArrayEvent& event);
     void read_pointing(ArrayEvent& event);
     void apply_simtel_calibration(ArrayEvent& event);
     ArrayEvent get_event() override;
@@ -45,7 +60,6 @@ private:
     CameraReadout get_telescope_camera_readout(int tel_index);
     OpticsDescription get_telescope_optics(int tel_index);
     std::array<double, 3> get_telescope_position(int tel_index);
-    void set_metaparam();
     std::unique_ptr<SimtelFileHandler> simtel_file_handler;
     std::string camera_name;
     std::string optics_name;

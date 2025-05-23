@@ -20,9 +20,6 @@ using telescope_id = int;
 class SimulatedEvent: public BaseTelContainer<SimulatedCamera>{
 public:
     SimulatedEvent() = default;
-    ~SimulatedEvent() = default;
-    SimulatedEvent(SimulatedEvent&&) = default;
-    SimulatedEvent& operator=(SimulatedEvent&&) noexcept = default;
     SimulatedShower shower;
     void add_simulated_image(telescope_id tel_id, int n_pixels, int* pe_count, double impact_parameter) 
     {

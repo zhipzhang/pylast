@@ -2,9 +2,12 @@
  * @file ArrayEvent.hh
  * @author Zach Peng (zhipzhang@mail.ustc.edu.cn)
  * @brief core class to describe an array event
- * @version 0.1
+ * @version 0.2
  * @date 2024-12-07
  * 
+ * @changelog
+ * - v0.2: Follow the rule of zero, clear up the code.
+ *
  * @copyright Copyright (c) 2024
  * 
  */
@@ -18,15 +21,13 @@
 #include "DL1Event.hh"
 #include "DL2Event.hh"
 #include "Pointing.hh"
- class ArrayEvent {
+/**
+ * @brief Main class to describe an array event
+ * 
+ */
+class ArrayEvent {
 public:
     ArrayEvent() = default;
-    ~ArrayEvent() = default;
-    ArrayEvent(const ArrayEvent& other) = delete;
-    ArrayEvent& operator=(const ArrayEvent& other) = delete;
-
-    ArrayEvent(ArrayEvent&& other) noexcept = default;
-    ArrayEvent& operator=(ArrayEvent&& other) noexcept = default;
     std::optional<SimulatedEvent> simulation;
     std::optional<R0Event> r0;
     std::optional<R1Event> r1;
@@ -37,5 +38,4 @@ public:
     std::optional<DL2Event> dl2;
     int event_id;
     int run_id;
-    //std::optional<R1Event> r1_event;
 };

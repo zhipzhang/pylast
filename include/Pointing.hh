@@ -16,7 +16,6 @@
  {
     public:
         PointingTelescope(double azimuth, double altitude): azimuth(azimuth), altitude(altitude) {};
-        ~PointingTelescope() = default;
         double azimuth;
         double altitude;
  };
@@ -24,9 +23,6 @@
  {
     public:
         Pointing() = default;
-        ~Pointing() = default;
-        Pointing(Pointing&& other) noexcept = default;
-        Pointing& operator=(Pointing&& other) noexcept = default;
         double array_azimuth;
         double array_altitude;
         void set_array_pointing(double azimuth, double altitude)

@@ -27,21 +27,9 @@
 using History_Entry = std::pair<time_t, std::string>;
 using History_List = std::vector<History_Entry>;
 class SimtelFileHandler {
+    friend class SimtelEventSource;
+    friend class  SimtelFileHandlerTestSuite;
 public:
-    SimtelFileHandler(const std::string& filename);
-    SimtelFileHandler() = default;
-    ~SimtelFileHandler();
-    bool no_more_blocks = false;
-    bool have_true_image = false;
-    std::string filename = "none";
-    FILE* input_file = nullptr;
-    IO_BUFFER* iobuf = nullptr;
-    IO_ITEM_HEADER item_header;
-    AllHessData* hsdata = nullptr;
-    std::unordered_map<int, int> tel_id_to_index;
-    std::unordered_map<std::string, std::string> global_metadata;
-    std::unordered_map<int, std::unordered_map<std::string, std::string>> tel_metadata;
-    inline std::optional<int> get_tel_index(int tel_id) const;
     enum class BlockType {
         History = IO_TYPE_HISTORY,
         MetaParam = IO_TYPE_METAPARAM,
@@ -64,33 +52,74 @@ public:
         TrueImage = IO_TYPE_MC_TELARRAY,
         MC_PESUM  = IO_TYPE_SIMTEL_MC_PE_SUM ,
         SimtelEvent = IO_TYPE_SIMTEL_EVENT,
+        TEST_BLOCK = 777
     };
-    void open_file(const std::string& filename);
-    template<BlockType block_type>
-    void handle_block(std::string_view block_name, std::function<void()> handler = nullptr) {
-        [[unlikely]] if(item_header.type != static_cast<unsigned long>(block_type)) {
-            spdlog::warn("Skip block type: {}", block_name);
-            return;
-        }
-        if(handler) {
-            handler();
-        }
-    }
-    void initilize_block_handler();
-    //void load_next_event();
+
+    SimtelFileHandler(const std::string& filename);
+    SimtelFileHandler() = default;
+    ~SimtelFileHandler();
+#ifdef DEBUG
+public:
+#else
+private:
+#endif
+    bool no_more_blocks = false;
+    bool have_true_image = false;
+    std::string filename = "none";
+
+    // C-Style Pointer here for eventio hsdata
+    FILE* input_file = nullptr;
+    IO_BUFFER* iobuf = nullptr;
+    IO_ITEM_HEADER item_header;
+    AllHessData* hsdata = nullptr;
+    std::unordered_map<int, int> tel_id_to_index;
+    std::unordered_map<std::string, std::string> global_metadata;
+    std::unordered_map<int, std::unordered_map<std::string, std::string>> tel_metadata;
+
+    inline std::optional<int> get_tel_index(int tel_id) const;
+    inline void initilize_block_handler();
+
+    /**
+     * @brief Open the simtel file. Here we provide two ways:
+     *        1. open a file by the fileopen provided by hessioxxx
+     *        2. open a file by the EventIOWrapper provided by EventIOExtension
+     * 
+     * @param filename 
+     */
+    inline void open_file(const std::string& filename);
+    /**
+     * @brief Keep find_block until we meet the block type specified in block_type
+     *        Keep in mind that read_block must be called after this function.
+     *        There will be two ways to return from this function:
+     *        1. meet the block type specified in block_type
+     *        2. meet the end of file, in this case, no_more_blocks will be set to true.
+     * @param block_type 
+     */
     void read_until_block(BlockType block_type);
+    /**
+     * @brief Only read the blocks specified in the block_types, for other blocks, skip_block is called.
+     *        It should be noted that when we meet the first block type in the block_types, we will read it and return.
+     *        for example, if block_types = {BlockType::Mc_Event, BlockType::Mc_Shower},
+     *        when we meet the Mc_Event block, we will read it and return, and then we will not read the Mc_Shower block.
+     * @param block_types can contain multiple block types
+     */
     void only_read_blocks(std::vector<BlockType> block_types);
     bool only_read_mc_event();
+    /**
+     * @brief Read the simtel file until we meet the SimtelEvent block and read it.
+     * 
+     * @return true  still have events to read
+     * @return false end of file
+     */
     bool load_next_event();
     /**
-     * @brief read the file until the actual shower
+     * @brief read the sim_tel file until we meet the Actually MC_Shower
      * 
      */
     void read_until_event();
     AtmProf* atmprof;
     HistoryContainer history_container;
     MetaParamList metadata_list;
-private:
     void find_block();
     void skip_block();
     void read_block();
@@ -139,4 +168,16 @@ private:
     std::unordered_map<BlockType, std::function<void()>> block_handler;
     // In case of valgrind, let's clear the hsdata memory here
     void clear_memory();
+
+    template<BlockType block_type>
+    void handle_block(std::string_view block_name, std::function<void()> handler = nullptr) {
+        [[unlikely]] if(item_header.type != static_cast<unsigned long>(block_type)) {
+            spdlog::warn("Skip block type: {}", block_name);
+            return;
+        }
+        if(handler) {
+            handler();
+        }
+    }
+    
 };

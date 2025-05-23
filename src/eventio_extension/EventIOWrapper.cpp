@@ -3,8 +3,17 @@
 
 
 thread_local EventIOHandler* eventiohandler = nullptr;
-void EventIOHandler_init(const char* fname, const char mode, const char* url) {
-    eventiohandler = new EventIOHandler(fname, mode, url);
+int EventIOHandler_init(const char* fname, const char mode, const char* url) {
+    try
+    {   
+         eventiohandler = new EventIOHandler(fname, mode, url);
+    }
+    catch (const std::exception& e)
+    {
+        return -1;
+    }
+    return 0;
+
 }
 void EventIOHandler_finalize() {
     delete eventiohandler;

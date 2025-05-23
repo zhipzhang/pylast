@@ -2,7 +2,7 @@
 extern "C" {
 #include "stddef.h"
 #endif
-void EventIOHandler_init(const char* fname, const char mode, const char* url = "root://eos01.ihep.ac.cn");
+int EventIOHandler_init(const char* fname, const char mode, const char* url = "root://eos01.ihep.ac.cn");
 int userfunction1(unsigned char* buffer, long size);
 int userfunction2(unsigned char* buffer, long size);
 int userfunction3(unsigned char* buffer, long size);
