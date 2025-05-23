@@ -156,6 +156,15 @@ int EventIOHandler::user_function3(unsigned char* buffer, long size) {
 int EventIOHandler::user_function4(unsigned char* buffer, long size) {
     seek_current(static_cast<size_t>(size));
     if (fileHandler_->IsEnd()) {
+        if(compressionHandler_ != nullptr) {
+            if(compressionHandler_->have_leftover() || compressionHandler_->have_uncompressed()) {
+                return 0;
+            }
+            else
+            {
+                return -2;
+            }
+        }
         return -2;
     }
     return 0;
