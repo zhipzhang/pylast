@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*.*.*'
+  pull_request:
+    branches:
+      - main
+jobs:
+  cpp:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Update submodules
+        run: git submodule update --init --recursive
+      - name: Set up CMake
+        uses: jwlawson/actions-setup-cmake@v1
+        with:
+          cmake-version: '3.30.0'
+      - name: Build and test
+        run: |
+          cmake -S . -B build -DWITH_TEST=ON
+          cmake --build build
+          cmake --install build --prefix install
+          cd build && ctest --extra-verbose --output-on-failure
