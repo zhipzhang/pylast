@@ -14,7 +14,25 @@ endfunction()
 
 # Apply the definitions based on the current BuildConfig
 
-
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/bernlohr/LACT_hessioxxx/CMakeLists.txt")
+  message("CMakeLists.txt not found in bernlohr/LACT_hessioxxx, Try to use git submodule update --init --recursive")
+  find_package(Git QUIET)
+  if(Git_FOUND)
+    message(STATUS "Git found, trying to update submodules")
+    execute_process(
+      COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      RESULT_VARIABLE GIT_RESULT
+    )
+    if(GIT_RESULT EQUAL 0)
+      message(STATUS "Submodules updated successfully")
+    else()
+      message(FATAL_ERROR "Failed to update submodules, please check your git configuration")
+    endif()
+  else()
+    message(FATAL_ERROR "Git not found, please install git to manage submodules")
+  endif()
+endif()
 add_subdirectory(bernlohr/LACT_hessioxxx)
 add_subdirectory(muparser)
 
@@ -24,7 +42,6 @@ find_package(CompressionHandler QUIET)
 if(CompressionHandler_FOUND)
   message(STATUS "CompressionHandler found, Using eventio_extension")
   add_subdirectory(eventio_extension)
-  add_definitions(-DHAVE_EVENTIO_EXTENSION)
 else()
   message(STATUS "CompressionHandler not found")
 endif()
@@ -67,9 +84,11 @@ add_library(image_processor SHARED ${IMAGE_PROCESSOR_SOURCE_FILES})
 target_link_libraries(image_processor PUBLIC basic_event)
 
 add_library(simtel_event SHARED ${SIMTEL_SOURCE_FILES})
+
 target_link_libraries(simtel_event PUBLIC basic_event hessio)
 target_include_directories(simtel_event PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/bernlohr/)
 if(CompressionHandler_FOUND)
+  target_compile_definitions(simtel_event PRIVATE HAVE_EVENTIO_EXTENSION)
   target_link_libraries(simtel_event PUBLIC eventio_extension)
 endif()
 

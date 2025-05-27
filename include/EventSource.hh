@@ -78,7 +78,6 @@ public:
      */
     string input_filename;
 
-    bool load_simulated_showers;
     /**
      * @brief Whether it can support random access
      */
@@ -92,6 +91,8 @@ public:
      * @brief The current event index [0, max_events)
      */
     int current_event_index = 0;
+
+    bool load_simulated_showers;
     
     /**
      * @brief The simulation configuration, mainly the input card of corsika
