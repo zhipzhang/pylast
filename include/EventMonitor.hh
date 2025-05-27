@@ -19,8 +19,5 @@
  {
    public:
     EventMonitor() = default;
-    virtual ~EventMonitor() = default;
-    EventMonitor(EventMonitor&&) = default;
-    EventMonitor& operator=(EventMonitor&&) = default;
  };
 

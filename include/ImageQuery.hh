@@ -38,8 +38,10 @@
     private:
         void init_hillas_parameter();
         void init_leakage_parameter();
+        void init_morphology_parameter();
         HillasParameter hillas_parameter_;
         LeakageParameter leakage_parameter_;
+        double morphology_n_pixels_;
  };
     
     

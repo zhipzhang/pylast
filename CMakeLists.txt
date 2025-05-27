@@ -77,6 +77,8 @@ endif()
 add_subdirectory(src)
 
 if(WITH_TEST)
+    include(CTest)
+    enable_testing()
     add_subdirectory(test)
 endif()
 if(WITH_ROOT)

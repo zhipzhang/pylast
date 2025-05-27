@@ -33,6 +33,27 @@ void RootEventIndex::initialize(TTree* tree)
     tree->SetBranchAddress("telescopes", &telescopes_ptr);
 }
 
+TTree* RootSimulatedCamera::initialize()
+{
+    auto tree = new TTree("tels", "Simulated camera data for all telescopes");
+    tree->Branch("event_id", &event_id);
+    tree->Branch("tel_id", &tel_id);
+    tree->Branch("true_impact_parameter", &true_impact_parameter);
+    return tree;
+}
+
+void RootSimulatedCamera::initialize(TTree* tree)
+{
+    data_tree = tree;
+    true_image_ptr = &true_image;
+    tree->SetBranchAddress("event_id", &event_id);
+    tree->SetBranchAddress("tel_id", &tel_id);
+    tree->SetBranchAddress("true_impact_parameter", &true_impact_parameter);
+    if(tree->GetBranch("true_image"))
+    {
+        tree->SetBranchAddress("true_image", &true_image_ptr);
+    }
+}
 //------------------------------------------------------------------------------
 // RootR0Event implementation
 //------------------------------------------------------------------------------
@@ -161,8 +182,12 @@ TTree* RootDL1Event::initialize()
     tree->Branch("intensity_std", &params.intensity.intensity_std);
 
     // Extra parameters
-    tree->Branch("extra_miss", &miss);
-    tree->Branch("extra_disp", &disp);
+    tree->Branch("extra_miss", &params.extra.miss);
+    tree->Branch("extra_disp", &params.extra.disp);
+    tree->Branch("extra_theta", &params.extra.theta);
+    tree->Branch("extra_true_psi", &params.extra.true_psi);
+    tree->Branch("extra_cog_err", &params.extra.cog_err);
+    tree->Branch("extra_beta_err", &params.extra.beta_err);
     return tree;
 }
 TTree* RootDL1Event::initialize(bool have_image)
@@ -235,8 +260,12 @@ void RootDL1Event::initialize(TTree* tree)
     tree->SetBranchAddress("intensity_std", &params.intensity.intensity_std);
 
     // Extra parameters
-    tree->SetBranchAddress("extra_miss", &miss);
-    tree->SetBranchAddress("extra_disp", &disp);
+    tree->SetBranchAddress("extra_miss", &params.extra.miss);
+    tree->SetBranchAddress("extra_disp", &params.extra.disp);
+    tree->SetBranchAddress("extra_theta", &params.extra.theta);
+    tree->SetBranchAddress("extra_true_psi", &params.extra.true_psi);
+    tree->SetBranchAddress("extra_cog_err", &params.extra.cog_err);
+    tree->SetBranchAddress("extra_beta_err", &params.extra.beta_err);
 }
 
 //------------------------------------------------------------------------------
@@ -312,6 +341,7 @@ TTree* RootSimulationShower::initialize()
     tree->Branch("core_y", &shower.core_y);
     tree->Branch("h_first_int", &shower.h_first_int);
     tree->Branch("x_max", &shower.x_max);
+    tree->Branch("h_max", &shower.h_max);
     tree->Branch("starting_grammage", &shower.starting_grammage);
     tree->Branch("shower_primary_id", &shower.shower_primary_id);
     return tree;
@@ -328,10 +358,27 @@ void RootSimulationShower::initialize(TTree* tree)
     tree->SetBranchAddress("core_y", &shower.core_y);
     tree->SetBranchAddress("h_first_int", &shower.h_first_int);
     tree->SetBranchAddress("x_max", &shower.x_max);
+    tree->SetBranchAddress("h_max", &shower.h_max);
     tree->SetBranchAddress("starting_grammage", &shower.starting_grammage);
     tree->SetBranchAddress("shower_primary_id", &shower.shower_primary_id);
 }
 
+TTree* RootDL2Particle::initialize()
+{
+    TTree* tree = new TTree(reconstructor_name.c_str(), "DL2 particle reconstruction");
+    tree->Branch("event_id", &event_id);
+    tree->Branch("is_valid", &particle.is_valid);
+    tree->Branch("hadroness", &particle.hadroness);
+
+    return tree;
+}
+void RootDL2Particle::initialize(TTree* tree)
+{
+    data_tree = tree;
+    tree->SetBranchAddress("event_id", &event_id);
+    tree->SetBranchAddress("is_valid", &particle.is_valid);
+    tree->SetBranchAddress("hadroness", &particle.hadroness);
+}
 TTree* RootDL2Energy::initialize()
 {
     TTree* tree = new TTree(reconstructor_name.c_str(), "DL2 energy reconstruction");
@@ -405,6 +452,8 @@ TTree* RootDL2Event::initialize()
     tree->Branch("distance", &distance);
     tree->Branch("distance_error", &distance_error);
     tree->Branch("estimate_energy", &estimate_energy);
+    tree->Branch("estimate_disp", &estimate_disp);
+    tree->Branch("estimate_hadroness", &estimate_hadroness);
     return tree;
 }
 
@@ -420,6 +469,8 @@ void RootDL2Event::initialize(TTree* tree)
     tree->SetBranchAddress("distance", &distance_ptr);
     tree->SetBranchAddress("distance_error", &distance_error_ptr);
     tree->SetBranchAddress("estimate_energy", &estimate_energy);
+    tree->SetBranchAddress("estimate_disp", &estimate_disp);
+    tree->SetBranchAddress("estimate_hadroness", &estimate_hadroness);
 }
 
 
@@ -430,9 +481,9 @@ int RootArrayEvent::test_entries()
     int event_index_entries = 0;
     
     // Get entries for each data level if available
-    if(simulation.has_value())
+    if(simulation_shower.has_value())
     {
-        simulation_entries = simulation->GetEntries().value();
+        simulation_entries = simulation_shower->GetEntries().value();
     }
     if(event_index.has_value())
     {
@@ -469,9 +520,9 @@ void RootArrayEvent::load_next_event()
 {
     if(has_event())
     {
-        if(simulation.has_value())
+        if(simulation_shower.has_value())
         {
-            if(!simulation->get_entry(current_entry))
+            if(!simulation_shower->get_entry(current_entry))
             {
                 spdlog::error("Failed to load next event for simulation");
             }
@@ -480,6 +531,11 @@ void RootArrayEvent::load_next_event()
         {
             event_index->get_entry(current_entry);
         }
+        if(pointing.has_value())
+        {
+            pointing->get_entry(current_entry);
+        }
+        fill_tel_entries<RootSimulatedCamera>(simulation_camera, event_index, sim_tel_entries);
         fill_tel_entries<RootR0Event>(r0, event_index, r0_tel_entries);
         fill_tel_entries<RootR1Event>(r1, event_index, r1_tel_entries);
         fill_tel_entries<RootDL0Event>(dl0, event_index, dl0_tel_entries);
@@ -494,6 +550,10 @@ void RootArrayEvent::load_next_event()
         for(auto [name, energy]: dl2_energy_map)
         {
             energy->get_entry(current_entry);
+        }
+        for(auto [name, particle]: dl2_particle_map)
+        {
+            particle->get_entry(current_entry);
         }
         current_entry++;
     }

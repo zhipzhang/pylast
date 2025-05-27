@@ -27,15 +27,16 @@ class GeometryReconstructor: private Configurable
         json default_config() const override {return get_default_config();}
         static json get_default_config();
         void configure(const json& config) override;
+        std::vector<int> telescopes;
     protected:
         static double compute_angle_separation(double az1, double alt1, double az2, double alt2);
         std::pair<double, double> convert_to_sky(double fov_x, double fov_y);
+        std::pair<double, double> convert_to_fov(double alt, double az);
         std::unique_ptr<ImageQuery> query_;
         ReconstructedGeometry geometry;
         SphericalRepresentation array_pointing_direction;
         std::unique_ptr<TelescopeFrame> nominal_frame;
         std::unordered_map<int, SphericalRepresentation> telescope_pointing;
         const SubarrayDescription& subarray;
-        std::vector<int> telescopes;
         std::unordered_map<int, HillasParameter> hillas_dicts;
 };

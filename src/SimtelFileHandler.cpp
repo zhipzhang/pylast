@@ -1,4 +1,5 @@
 #include <optional>
+#include <string>
 #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
 #include "SimtelFileHandler.hh"
 #include "LACT_hessioxxx/include/io_hess.h"
@@ -41,7 +42,6 @@ SimtelFileHandler::SimtelFileHandler(const std::string& filename) : filename(fil
     open_file(filename);
     SPDLOG_TRACE("End read simtel file");
 }
-
 void SimtelFileHandler::initilize_block_handler() {
     block_handler[BlockType::History] = [this](){handle_history();};
     block_handler[BlockType::MetaParam] = [this](){handle_metadata();};
@@ -89,18 +89,23 @@ void SimtelFileHandler::open_file(const std::string& filename) {
     }
     iobuf->input_file = input_file;
 #else
+    int res;
     if (filename.substr(0, 4) == "/eos") {
         // If filename starts with "eos", prepend the IHEP URL
-        EventIOHandler_init(filename.c_str(), 'r', ihep_url.c_str());
-        iobuf->user_function = myuser_function;
-        iobuf->input_file = NULL;
+        res = EventIOHandler_init(filename.c_str(), 'r', ihep_url.c_str());
     }
     else
     {
-        EventIOHandler_init(filename.c_str(), 'r', "");
-        iobuf->input_file = NULL;
-        iobuf->user_function = myuser_function;
+        
+        res = EventIOHandler_init(filename.c_str(), 'r', "");
     }
+    if(res != 0)
+    {
+        spdlog::error("Failed to open file: {}", filename);
+        throw std::runtime_error(spdlog::fmt_lib::format("Failed to open local file: {}", filename));
+    }
+    iobuf->input_file = NULL;
+    iobuf->user_function = myuser_function;
 #endif
 }
 
@@ -122,22 +127,23 @@ void SimtelFileHandler::find_block() {
 }
 void SimtelFileHandler::skip_block() {
     if(no_more_blocks) return;
-    int rc = 0;
-    if((rc = skip_io_block(iobuf, &item_header)) != 0) {
-        if(rc == -2) {
+    int rc;
+    if( (rc = skip_io_block(iobuf, &item_header)) != 0) {
+        if(rc == -2) 
+        {
             no_more_blocks = true;
+            return;
         }
         else
         {
-            spdlog::error("Failed to skip block");
-            throw std::runtime_error("Failed to skip block");
+            throw std::runtime_error("Failed to skip block " + std::to_string(item_header.type));
         }
     }
 }
 void SimtelFileHandler::read_block() {
     if(no_more_blocks) return;
     if(read_io_block(iobuf, &item_header) != 0) {
-        throw std::runtime_error("Failed to read block");
+        throw std::runtime_error("Failed to read block" + std::to_string(item_header.type));
     }
 }
 /**
@@ -194,8 +200,8 @@ void SimtelFileHandler::read_until_event() {
 }
 bool SimtelFileHandler::load_next_event() {
     read_until_block(BlockType::SimtelEvent);
-    read_block();
     if(no_more_blocks) return false;
+    read_block();
     block_handler[BlockType::SimtelEvent](); // handle simtel event block after read_util
     return true;
 }
@@ -586,14 +592,7 @@ void SimtelFileHandler::handle_mc_pesum() {
 void SimtelFileHandler::handle_simtel_event() {
     handle_block<BlockType::SimtelEvent>("simtel_event",[this]() {_read_simtel_event();});
 }
-/*
-void SimtelFileHandler::load_next_event() {
-    read_mc_shower();
-    if(no_more_blocks) return;
-    read_mc_event();
-    read_true_image();
-}
-*/
+
 SimtelFileHandler::~SimtelFileHandler() {
     if(iobuf != NULL) {
         free_io_buffer(iobuf);
@@ -604,6 +603,9 @@ SimtelFileHandler::~SimtelFileHandler() {
     if(hsdata != NULL) {
         clear_memory();
     }
+    #ifdef HAVE_EVENTIO_EXTENSION
+    EventIOHandler_finalize();
+    #endif
 }
 void SimtelFileHandler::clear_memory() {
     if(hsdata != NULL) {

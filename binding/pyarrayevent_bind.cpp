@@ -9,6 +9,7 @@
 #include "nanobind/stl/array.h"
 #include "nanobind/stl/unique_ptr.h"
 #include "nanobind/stl/map.h"
+#include "nanobind/stl/vector.h"
 #include "TelMonitor.hh"
 #include "EventMonitor.hh"
 #include "DL0Event.hh"
@@ -20,8 +21,16 @@ namespace nb = nanobind;
 void bind_dl2_event(nb::module_ &m) {
     nb::class_<DL2Event>(m, "DL2Event")
         .def_ro("geometry", &DL2Event::geometry, nb::rv_policy::reference_internal)
-        .def_ro("tels", &DL2Event::tels)
+        .def_ro("energy", &DL2Event::energy, nb::rv_policy::reference_internal)
+        .def_ro("tels", &DL2Event::tels, nb::rv_policy::reference_internal)
         .def("add_geometry", &DL2Event::add_geometry)
+        .def("add_energy", &DL2Event::add_energy)
+        .def("add_particle", &DL2Event::add_particle)
+        .def("set_tel_estimate_energy", &DL2Event::set_tel_estimate_energy)
+        .def("set_tel_estimate_disp", &DL2Event::set_tel_estimate_disp)
+        .def("set_tel_disp", &DL2Event::set_tel_disp)
+        .def("set_tel_estimate_hadroness", &DL2Event::set_tel_estimate_hadroness)
+        .def_rw("particle", &DL2Event::particle)
         .def("__repr__", [](DL2Event& self) {
             std::string repr = "DL2Event:\n";
             
@@ -50,6 +59,21 @@ void bind_dl2_event(nb::module_ &m) {
             }
             
             return repr;
+        });
+    nb::class_<ReconstructedEnergy>(m, "ReconstructedEnergy")
+        .def(nb::init<>())
+        .def(nb::init<double, bool>())
+        .def_rw("estimate_energy", &ReconstructedEnergy::estimate_energy)
+        .def_rw("energy_valid", &ReconstructedEnergy::energy_valid)
+        .def("__repr__", [](ReconstructedEnergy& self) {
+            return fmt::format("ReconstructedEnergy:\n  estimate_energy: {}\n  energy_valid: {}", self.estimate_energy, self.energy_valid);
+        });
+    nb::class_<ReconstructedParticle>(m, "ReconstructedParticle")
+        .def(nb::init<>())
+        .def_rw("hadroness", &ReconstructedParticle::hadroness)
+        .def_rw("is_valid", &ReconstructedParticle::is_valid)
+        .def("__repr__", [](ReconstructedParticle& self) {
+            return fmt::format("ReconstructedParticle:\n  hadroness: {}\n  is_valid: {}", self.hadroness, self.is_valid);
         });
     nb::class_<ReconstructedGeometry>(m, "ReconstructedGeometry")
         .def_rw("is_valid", &ReconstructedGeometry::is_valid)
@@ -88,7 +112,8 @@ void bind_dl2_event(nb::module_ &m) {
         });
     nb::class_<TelReconstructedParameter>(m, "TelReconstructedParameter")
         .def_ro("impact_parameters", &TelReconstructedParameter::impact_parameters)
-        .def_rw("disp", &TelReconstructedParameter::disp)
+        .def_ro("disp", &TelReconstructedParameter::disp)
+        .def_ro("estimate_energy", &TelReconstructedParameter::estimate_energy)
         .def_prop_ro("impact", [](TelReconstructedParameter& self) -> nb::object {
             if(self.impact_parameters.size() == 1) {
                 return nb::cast(self.impact_parameters.begin()->second);
@@ -154,6 +179,7 @@ void bind_dl1_event(nb::module_ &m) {
         .def_ro("concentration", &ImageParameters::concentration)
         .def_ro("morphology", &ImageParameters::morphology)
         .def_ro("extra", &ImageParameters::extra)
+        .def_ro("intensity", &ImageParameters::intensity)
         .def("__repr__", [](ImageParameters& self) {
             return "ImageParameters: contains hillas, leakage, concentration, and morphology parameters";
         });
@@ -204,8 +230,16 @@ void bind_dl1_event(nb::module_ &m) {
     nb::class_<ExtraParameters>(m, "extra")
         .def_ro("miss", &ExtraParameters::miss)
         .def_ro("disp", &ExtraParameters::disp)
+        .def_ro("theta", &ExtraParameters::theta)
         .def("__repr__", [](ExtraParameters& self) {
-            return fmt::format("ExtraParameters:\n  miss: {}\n  disp: {}", self.miss, self.disp);
+            return fmt::format("ExtraParameters:\n  miss: {}\n  disp: {}\n  theta: {}", self.miss, self.disp, self.theta);
+        });
+    nb::class_<IntensityParameter>(m, "intensity")
+        .def_ro("intensity_max", &IntensityParameter::intensity_max)
+        .def_ro("intensity_mean", &IntensityParameter::intensity_mean)
+        .def_ro("intensity_std", &IntensityParameter::intensity_std)
+        .def("__repr__", [](IntensityParameter& self) {
+            return fmt::format("IntensityParameter:\n  intensity_max: {}\n  intensity_mean: {}\n  intensity_std: {}", self.intensity_max, self.intensity_mean, self.intensity_std);
         });
 }
 void bind_dl0_event(nb::module_ &m) {
@@ -328,8 +362,24 @@ void bind_simulated_event(nb::module_ &m) {
         .def_ro("shower_primary_id", &SimulatedShower::shower_primary_id)
         .def("__repr__", &SimulatedShower::print);
 }
-
 void bind_tel_monitor(nb::module_ &m) {
+    nb::class_<EventMonitor>(m, "EventMonitor")
+        .def_prop_ro("tels", &EventMonitor::get_tels)
+        .def("__repr__", [](EventMonitor& self) {
+            std::string repr = "EventMonitor:\n";
+            auto tels = self.get_tels();
+            if (!tels.empty()) {
+                repr += "  Telescope IDs: ";
+                bool first = true;
+                for (const auto& [tel_id, _] : tels) {
+                    if (!first) repr += ", ";
+                    repr += std::to_string(tel_id);
+                    first = false;
+                }
+                repr += "\n";
+            }
+            return repr;
+        });
     nb::class_<TelMonitor>(m, "TelMonitor")
         .def_ro("n_channels", &TelMonitor::n_channels)
         .def_ro("n_pixels", &TelMonitor::n_pixels)
@@ -338,6 +388,15 @@ void bind_tel_monitor(nb::module_ &m) {
         .def("__repr__", [](TelMonitor& self) {
             return fmt::format("TelMonitor:\n  n_channels: {}\n  n_pixels: {}", 
                               self.n_channels, self.n_pixels);
+        });
+}
+        
+void bind_pointing_event(nb::module_ &m) {
+    nb::class_<Pointing>(m, "Pointing")
+        .def_ro("array_azimuth", &Pointing::array_azimuth)
+        .def_ro("array_altitude", &Pointing::array_altitude)
+        .def("__repr__", [](Pointing& self) {
+            return fmt::format("Pointing:\n  array_azimuth: {}\n  array_altitude: {}", self.array_azimuth, self.array_altitude);
         });
 }
 void bind_array_event(nb::module_ &m) {
@@ -349,6 +408,7 @@ void bind_array_event(nb::module_ &m) {
         .def_ro("dl0", &ArrayEvent::dl0)
         .def_ro("dl1", &ArrayEvent::dl1)
         .def_ro("dl2", &ArrayEvent::dl2, nb::rv_policy::reference_internal)
+        .def_ro("pointing", &ArrayEvent::pointing)
         .def_ro("event_id", &ArrayEvent::event_id)
         .def_ro("run_id", &ArrayEvent::run_id)
         .def("__repr__", [](ArrayEvent& self) {
@@ -406,6 +466,7 @@ NB_MODULE(_pylast_arrayevent, m) {
     bind_dl1_event(m);
     bind_r0_event(m);
     bind_r1_event(m);
+    bind_pointing_event(m);
     bind_dl2_event(m);
     bind_simulated_event(m);
     bind_tel_monitor(m);

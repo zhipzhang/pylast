@@ -49,12 +49,17 @@ public:
             bool operator!=(const Iterator& other) const{
                 return !(*this==other);
             }
+            /**
+             * @brief If we have the next event and position_ not exceed max_events, we will read the next event
+             * 
+             * @return Iterator& 
+             */
             Iterator& operator++()
             {
                 ++position_;
                 source_->current_event_index = position_;
                 if(source_ && !source_->is_finished() && (source_->max_events == -1 || position_ < source_->max_events)){
-                    *source_->current_event = std::move(source_->get_event());
+                    *source_->current_event = source_->get_event();
                 }
                 return *this;
             }
@@ -66,40 +71,98 @@ public:
     EventSource(const string& filename) : input_filename(filename) {}
     EventSource(const string& filename, int64_t max_events , std::vector<int>& subarray , bool load_simulated_showers = false):input_filename(filename), max_events(max_events), allowed_tels(subarray), load_simulated_showers(load_simulated_showers) {}
     virtual ~EventSource() = default;
+    virtual void load_all_simulated_showers() = 0;
+
+    /**
+     * @brief The input filename
+     */
     string input_filename;
 
-    /** @brief Whether the file is a stream(e.g. eos file system) */
+    /**
+     * @brief Whether it can support random access
+     */
     bool is_stream = false;
-
-    std::optional<SimulationConfiguration> simulation_config;
-    std::optional<SubarrayDescription> subarray;
-    std::optional<Statistics> statistics;
     int64_t max_events;
+    /**
+     * @brief Can be used to select the telescope for later analysis
+     */
     std::vector<int> allowed_tels;
+    /**
+     * @brief The current event index [0, max_events)
+     */
+    int current_event_index = 0;
+
+    bool load_simulated_showers;
+    
+    /**
+     * @brief The simulation configuration, mainly the input card of corsika
+     */
+    std::optional<SimulationConfiguration> simulation_config;
+
+    /**
+     * @brief The subarray description, includes the camera/optics of each telescope
+     */
+    std::optional<SubarrayDescription> subarray;
+
+    std::optional<Statistics> statistics;
     std::optional<TableAtmosphereModel> atmosphere_model;
     std::optional<Metaparam> metaparam;
+
+    /**
+     * @brief load_simulated_showers is used to load the simulated showers into the shower_array
+     */
     std::optional<SimulatedShowerArray> shower_array;   
+    /**
+     * @brief The current read event
+     */
     std::optional<ArrayEvent> current_event;
-    int current_event_index = 0;
     Iterator begin(){
         if(!current_event){
-            current_event = ArrayEvent();
+            current_event.emplace();
         }
         auto it =  Iterator(this, current_event_index);
         return it;
     }
     Iterator end(){return Iterator(this, max_events);}
-    virtual void load_all_simulated_showers() = 0;
 protected:
+    /**
+     * @brief Check if we still have events to read
+     * 
+     * @return true 
+     * @return false 
+     */
     virtual bool is_finished() = 0;
+    /**
+     * @brief Read/Init the simulation configuration, mainly the input card of corsika
+     * 
+     */
     virtual void init_simulation_config() = 0;
+    /**
+     * @brief Read the next event
+     * 
+     * @return ArrayEvent 
+     */
     virtual ArrayEvent get_event() = 0;
+    /**
+     * @brief Read the atmosphere model
+     * 
+     */
     virtual void init_atmosphere_model() = 0;
+    /**
+     * @brief Read the metaparam
+     * 
+     */
     virtual void init_metaparam() = 0;
+    /**
+     * @brief Read the subarray description, includes the camera/optics of each telescope
+     * 
+     */
     virtual void init_subarray() = 0;
+
     bool is_subarray_selected(int tel_id) const;
-    bool load_simulated_showers;
     virtual void open_file() = 0;
+
+    
     void initialize() {
     try{
         open_file();
@@ -110,10 +173,11 @@ protected:
         if(load_simulated_showers){
             load_all_simulated_showers();
         }
-    } catch(const std::exception& e) {
-        throw std::runtime_error("Error initializing EventSource: " + std::string(e.what()));
-        }
+    } 
+    catch(const std::exception& e) {
+        throw std::runtime_error("Error initializing EventSource: " + std::string(e.what()) + " Open file: " + input_filename);
     }
+}
 
 };
 

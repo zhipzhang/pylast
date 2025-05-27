@@ -111,6 +111,26 @@ class RootEventIndex
 };
 
 /**
+ * @brief Structure for simulated camera data
+ */
+class RootSimulatedCamera : public RootDataLevels
+{
+   public:
+       RootSimulatedCamera() = default;
+       virtual ~RootSimulatedCamera() = default;
+       int event_id;
+       int tel_id;
+
+       double true_impact_parameter;
+
+       RVecI true_image;
+       virtual TTree* initialize() override;
+       virtual void initialize(TTree* tree) override;
+    private:
+       RVecI* true_image_ptr = nullptr;
+};
+       
+/**
  * @brief Structure for R0 (raw waveform) data
  */
 class RootR0Event : public RootDataLevels
@@ -196,15 +216,11 @@ class RootDL1Event : public RootDataLevels
        int n_pixels;
        RVecF image;
        RVecF peak_time;
-       RVec<bool> mask;
+       RVecB mask;
        
        // Image parameters (complete structure)
        ImageParameters params;
-    
-       // Extra parameters
-       double miss = 0;
-       double disp = 0;
-       
+
        virtual TTree* initialize() override;
        TTree* initialize(bool have_image);
        virtual void initialize(TTree* tree) override;
@@ -249,6 +265,20 @@ class RootDL2Energy : public RootDataLevels
     private:
         std::string* reconstructor_name_ptr = nullptr;
 };
+
+class RootDL2Particle : public RootDataLevels
+{
+   public:
+       RootDL2Particle(const std::string& reconstructor_name) : reconstructor_name(reconstructor_name) {}
+       virtual ~RootDL2Particle() = default;
+       std::string reconstructor_name;
+       int event_id;
+       ReconstructedParticle particle;
+       virtual TTree* initialize() override;
+       virtual void initialize(TTree* tree) override;
+    private:
+        std::string* reconstructor_name_ptr = nullptr;
+};
 /**
  * @brief Structure for DL2 telescope impact parameters, events/dl2/
  */
@@ -262,6 +292,8 @@ class RootDL2Event : public RootDataLevels
        int tel_id;
        std::vector<std::string> reconstructor_name;
        double estimate_energy = 0;
+       double estimate_disp = 0;
+       double estimate_hadroness = 0;
        // Impact parameters structure
        std::vector<double> distance;
        std::vector<double> distance_error;
@@ -367,7 +399,8 @@ class RootArrayEvent
         RootArrayEvent() = default;
         virtual ~RootArrayEvent() = default;
         void initialize_writer();
-        std::optional<RootSimulationShower> simulation;
+        std::optional<RootSimulationShower> simulation_shower;
+        std::optional<RootSimulatedCamera> simulation_camera;
         std::optional<RootR0Event> r0;
         std::optional<RootR1Event> r1;
         std::optional<RootDL0Event> dl0;
@@ -378,6 +411,7 @@ class RootArrayEvent
         std::optional<RootEventIndex> event_index;
         std::unordered_map<std::string, std::optional<RootDL2Geometry>> dl2_geometry_map;
         std::unordered_map<std::string, std::optional<RootDL2Energy>> dl2_energy_map;
+        std::unordered_map<std::string, std::optional<RootDL2Particle>> dl2_particle_map;
         std::optional<RootDL2Event> dl2;
         int test_entries();
         bool has_event() {return current_entry < entries;}
@@ -391,6 +425,7 @@ class RootArrayEvent
             }
             current_entry = index;
         }
+        RVecI sim_tel_entries;
         RVecI r0_tel_entries;
         RVecI r1_tel_entries;
         RVecI dl0_tel_entries;

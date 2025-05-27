@@ -76,8 +76,12 @@ class ExtraParameters
     public:
     ExtraParameters() = default;
     ~ExtraParameters() = default;
-    double miss;
-    double disp;
+    double miss = 0;
+    double disp = 0;
+    double theta = 0;
+    double true_psi = 0;
+    double cog_err = 0;
+    double beta_err = 0;
 };
 class ImageParameters {
 public:
@@ -89,5 +93,5 @@ public:
     ConcentrationParameter concentration;
     MorphologyParameter morphology;
     IntensityParameter intensity;
-    std::optional<ExtraParameters> extra;
+    ExtraParameters extra;
 };

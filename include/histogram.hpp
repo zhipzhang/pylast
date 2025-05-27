@@ -17,6 +17,9 @@ class Histogram1D;
 template<typename Precision = float>
 class Histogram2D;
 
+template<typename Precision = float>
+class Profile1D;
+
 // Axis types
 enum class AxisType {
     Regular,    // Regular binning with equal width
@@ -223,7 +226,7 @@ public:
 // 1D Histogram class
 template<typename Precision>
 class Histogram1D : public Histogram<Precision> {
-private:
+protected:
     std::unique_ptr<Axis<Precision>> axis_;
     Eigen::Matrix<Precision, Eigen::Dynamic, 1> bins_;
     Precision underflow_;
@@ -629,6 +632,72 @@ public:
     }
 };
 
+template<typename Precision>
+class Profile1D : public Histogram1D<Precision> {
+private:
+    Eigen::Matrix<Precision, Eigen::Dynamic, 1> sum_y_;
+    Eigen::Matrix<Precision, Eigen::Dynamic, 1> sum_y2_;
+
+public:
+    Profile1D(std::unique_ptr<Axis<Precision>> axis) 
+        : Histogram1D<Precision>(std::move(axis)) {
+        sum_y_ = Eigen::Matrix<Precision, Eigen::Dynamic, 1>::Zero(this->bins());
+        sum_y2_ = Eigen::Matrix<Precision, Eigen::Dynamic, 1>::Zero(this->bins());
+    }
+
+    // Let the profile get_dimension() return 0 to represent a 1D profile
+    int get_dimension() const override {
+        return 0;
+    }
+    // Fill profile with a point (x,y)
+    void fill(Precision x, Precision y, Precision weight = 1.0) {
+        int bin = this->axis_->index(x);
+        if (bin >= 0 && bin < this->bins()) {
+            this->bins_(bin) += weight;
+            sum_y_(bin) += y * weight;
+            sum_y2_(bin) += y * y * weight;
+        } else if (x < this->axis_->get_low_edge()) {
+            this->underflow_ += weight;
+        } else {
+            this->overflow_ += weight;
+        }
+    }
+
+    // Get mean value for a bin
+    Precision mean(int bin) const {
+        if (bin < 0 || bin >= this->bins() || this->bins_(bin) == 0) {
+            return 0;
+        }
+        return sum_y_(bin) / this->bins_(bin);
+    }
+
+    // Get error on mean for a bin
+    Precision error(int bin) const {
+        if (bin < 0 || bin >= this->bins() || this->bins_(bin) <= 1) {
+            return 0;
+        }
+        Precision mean_val = mean(bin);
+        Precision variance = (sum_y2_(bin) / this->bins_(bin)) - (mean_val * mean_val);
+        return std::sqrt(variance);
+    }
+
+
+    void reset() override {
+        Histogram1D<Precision>::reset();
+        sum_y_.setZero();
+        sum_y2_.setZero();
+    }
+
+    void print(std::ostream& os = std::cout) const override {
+        os << "1D Profile with " << this->bins() << " bins" << std::endl;
+        os << "Underflow: " << this->underflow_ << ", Overflow: " << this->overflow_ << std::endl;
+        os << "Bin\tCenter\tEntries\tMean\tError" << std::endl;
+        for (int i = 0; i < this->bins(); ++i) {
+            os << i << "\t" << this->axis_->bin_center(i) << "\t" 
+               << this->bins_(i) << "\t" << mean(i) << "\t" << error(i) << std::endl;
+        }
+    }
+};
 // Factory functions for creating histograms
 template<typename Precision = float>
 Histogram1D<Precision> make_histogram(std::unique_ptr<Axis<Precision>> axis) {
@@ -641,8 +710,14 @@ Histogram2D<Precision> make_histogram(std::unique_ptr<Axis<Precision>> x_axis,
     return Histogram2D<Precision>(std::move(x_axis), std::move(y_axis));
 }
 
+template<typename Precision = float>
+Profile1D<Precision> make_profile(std::unique_ptr<Axis<Precision>> axis) {
+    return Profile1D<Precision>(std::move(axis));
+}
+
+
 // Convenience functions for common histogram types
-template<typename Precision = double>
+template<typename Precision = float>
 Histogram1D<Precision> make_regular_histogram(Precision min, Precision max, int bins) {
     return make_histogram<Precision>(make_regular_axis<Precision>(min, max, bins));
 }
@@ -650,6 +725,11 @@ Histogram1D<Precision> make_regular_histogram(Precision min, Precision max, int 
 template<typename Precision = float>
 Histogram1D<Precision> make_log_histogram(Precision min, Precision max, int bins) {
     return make_histogram<Precision>(make_log_axis<Precision>(min, max, bins));
+}
+
+template<typename Precision = float>
+Profile1D<Precision> make_regular_profile(Precision min, Precision max, int bins) {
+    return make_profile<Precision>(make_regular_axis<Precision>(min, max, bins));
 }
 
 template<typename Precision = float>

@@ -32,3 +32,4 @@ sdist.include = ["model/*"]
 hillas_reco = "pylast.ulities.hillas_reco:hillas_reco"
 merge_root = "pylast.ulities.merge_root:merge_root"
 simplified_convert = "pylast.ulities.simplified_convert:simplified_convert"
+make_histogram = "pylast.ulities.make_histogram:make_histogram"

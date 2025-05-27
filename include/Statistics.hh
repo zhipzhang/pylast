@@ -12,7 +12,7 @@
  #pragma once
 
  #include "histogram.hpp"
- #include <unordered_map>
+ #include <map>
  #include <variant>
  #include <memory>
 
@@ -23,7 +23,7 @@
         Statistics() = default;
         ~Statistics() = default;
 
-        std::unordered_map<std::string, std::shared_ptr<Histogram<float>>> histograms;
+        std::map<std::string, std::shared_ptr<Histogram<float>>> histograms;
         
         Statistics& operator+=(const Statistics& other) {
             if (histograms.empty())
@@ -59,6 +59,13 @@
         template<typename T1, typename T2>
         void fill_2d(const std::string& name, T1 x_value, T2 y_value, float weight = 1.0f) {
             auto hist_ptr = std::dynamic_pointer_cast<Histogram2D<float>>(histograms.at(name));
+            if (hist_ptr) {
+                hist_ptr->fill(static_cast<float>(x_value), static_cast<float>(y_value), weight);
+            }
+        }
+        template<typename T1, typename T2>
+        void fill_profile(const std::string& name, T1 x_value, T2 y_value, float weight = 1.0f) {
+            auto hist_ptr = std::dynamic_pointer_cast<Profile1D<float>>(histograms.at(name));
             if (hist_ptr) {
                 hist_ptr->fill(static_cast<float>(x_value), static_cast<float>(y_value), weight);
             }

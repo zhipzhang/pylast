@@ -1,5 +1,6 @@
 #include "RootEventSource.hh"
 #include "EventMonitor.hh"
+#include "ImageParameters.hh"
 #include "RootDataLevels.hh"
 #include "SubarrayDescription.hh"
 #include "TDirectory.h"
@@ -177,6 +178,29 @@ void RootEventSource::load_all_simulated_showers()
     spdlog::debug("Not implemented");
 }
 
+template<typename T>
+void RootEventSource::initialize_dl2_trees(const std::string& subdir, std::unordered_map<std::string, std::optional<T>>& tree_map)
+{
+    TDirectory* dir = file->GetDirectory(("/events/dl2/" + subdir).c_str());
+    if(!dir) {
+        return;
+    }
+    
+    TList* keys = dir->GetListOfKeys();
+    for(int i = 0; i < keys->GetSize(); i++) {
+        TKey* key = static_cast<TKey*>(keys->At(i));
+        if(strcmp(key->GetClassName(), "TTree") == 0) {
+            std::string tree_name = key->GetName();
+            auto tree = static_cast<TTree*>(dir->Get(tree_name.c_str()));
+            if(tree) {
+                tree_map[tree_name] = T(tree_name);
+                tree_map[tree_name]->initialize(tree);
+                spdlog::debug("Found {} tree: {}", subdir, tree_name);
+            }
+        }
+    }
+}
+
 void RootEventSource::initialize_array_event()
 {
     // Test What we have in the root file
@@ -194,16 +218,14 @@ void RootEventSource::initialize_array_event()
         }
         else
         {
-            array_event.simulation = RootSimulationShower();
-            array_event.simulation->initialize(sim_tree);
+            array_event.simulation_shower = RootSimulationShower();
+            array_event.simulation_shower->initialize(sim_tree);
         }
-        // TODO: Add simulated_camera tree handling here
     }
 
-
-    
     initialize_event_index();
     // Initialize R0 data level
+    initialize_data_level<RootSimulatedCamera>("simulation", array_event.simulation_camera);
     initialize_data_level<RootR0Event>("r0", array_event.r0);
     initialize_data_level<RootR1Event>("r1", array_event.r1);
     initialize_data_level<RootDL0Event>("dl0", array_event.dl0);
@@ -231,38 +253,10 @@ void RootEventSource::initialize_array_event()
         }
     }
 
-    TDirectory* geometry_dir = file->GetDirectory("/events/dl2/geometry");
-    if(geometry_dir) {
-        TList* keys = geometry_dir->GetListOfKeys();
-        for(int i = 0; i < keys->GetSize(); i++) {
-            TKey* key = static_cast<TKey*>(keys->At(i));
-            if(strcmp(key->GetClassName(), "TTree") == 0) {
-                std::string tree_name = key->GetName();
-                auto tree = static_cast<TTree*>(geometry_dir->Get(tree_name.c_str()));
-                if(tree) {
-                    array_event.dl2_geometry_map[tree_name] = RootDL2Geometry(tree_name);
-                    array_event.dl2_geometry_map[tree_name]->initialize(tree);
-                    spdlog::debug("Found geometry tree: {}", tree_name);
-                }
-            }
-        }
-    }
-    TDirectory* energy_dir = file->GetDirectory("/events/dl2/energy");
-    if(energy_dir) {
-        TList* keys = energy_dir->GetListOfKeys();
-        for(int i = 0; i < keys->GetSize(); i++) {
-            TKey* key = static_cast<TKey*>(keys->At(i));
-            if(strcmp(key->GetClassName(), "TTree") == 0) {
-                std::string tree_name = key->GetName();
-                auto tree = static_cast<TTree*>(energy_dir->Get(tree_name.c_str()));
-                if(tree) {
-                    array_event.dl2_energy_map[tree_name] = RootDL2Energy(tree_name);
-                    array_event.dl2_energy_map[tree_name]->initialize(tree);
-                    spdlog::debug("Found energy tree: {}", tree_name);
-                }
-            }
-        }
-    }
+    // Initialize DL2 trees using the template function
+    initialize_dl2_trees("geometry", array_event.dl2_geometry_map);
+    initialize_dl2_trees("energy", array_event.dl2_energy_map);
+    initialize_dl2_trees("particle", array_event.dl2_particle_map);
     
     max_events = array_event.test_entries();
 }
@@ -318,15 +312,28 @@ ArrayEvent RootEventSource::get_event()
     }
     ArrayEvent event;
     array_event.load_next_event();
-    if(array_event.simulation.has_value())
+    if(array_event.simulation_shower.has_value())
     {
         event.simulation = SimulatedEvent();
-        event.simulation->shower = array_event.simulation->shower;
-        event.event_id = array_event.simulation->event_id;
+        event.simulation->shower = array_event.simulation_shower->shower;
+        event.event_id = array_event.simulation_shower->event_id;
     }
     else
     {
         event.event_id = 0;
+    }
+    if(array_event.simulation_camera.has_value())
+    {
+        if(event.simulation.has_value())
+        {
+            for(auto ientry: array_event.sim_tel_entries)
+            {
+                array_event.simulation_camera->get_entry(ientry);
+                int tel_id = array_event.simulation_camera->tel_id;
+                int n_pixels = array_event.simulation_camera->true_image.size();
+                event.simulation->add_simulated_image(tel_id, n_pixels, array_event.simulation_camera->true_image.data(), array_event.simulation_camera->true_impact_parameter);
+            }
+        }
     }
     if(array_event.r0.has_value())
     {
@@ -386,12 +393,6 @@ ArrayEvent RootEventSource::get_event()
             dl1_camera.peak_time = std::move(peak_time);
             dl1_camera.mask = std::move(mask);
             dl1_camera.image_parameters = array_event.dl1->params;
-            if(array_event.dl1->miss != 0 && array_event.dl1->disp != 0)
-            {
-                dl1_camera.image_parameters.extra = ExtraParameters();
-                dl1_camera.image_parameters.extra->miss = array_event.dl1->miss;
-                dl1_camera.image_parameters.extra->disp = array_event.dl1->disp;
-            }
             event.dl1->add_tel(tel_id, std::move(dl1_camera));
         }
     }
@@ -404,6 +405,7 @@ ArrayEvent RootEventSource::get_event()
             int tel_id = array_event.dl2->tel_id;
             event.dl2->add_tel_geometry(tel_id, array_event.dl2->distance, array_event.dl2->reconstructor_name);
             event.dl2->tels.at(tel_id).estimate_energy = array_event.dl2->estimate_energy;
+            event.dl2->tels.at(tel_id).disp = array_event.dl2->estimate_disp;
         }
     }
     for(auto [name, geometry]: array_event.dl2_geometry_map)
@@ -418,6 +420,13 @@ ArrayEvent RootEventSource::get_event()
         if(energy.has_value())
         {
             event.dl2->energy[name] = energy->energy;
+        }
+    }
+    for(auto [name, particle]: array_event.dl2_particle_map)
+    {
+        if(particle.has_value())
+        {
+            event.dl2->particle[name] = particle->particle;
         }
     }
     if(array_event.monitor.has_value())
@@ -532,7 +541,6 @@ void RootEventSource::initialize_statistics()
                     }
                 }
             }
-            
             statistics->add_histogram(name, hist);
         }
     }

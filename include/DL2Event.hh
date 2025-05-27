@@ -20,14 +20,10 @@ class TelReconstructedParameter
 {
     public:
         TelReconstructedParameter() = default;
-        ~TelReconstructedParameter() = default;
-        TelReconstructedParameter(const TelReconstructedParameter& other) = default;
-        TelReconstructedParameter& operator=(const TelReconstructedParameter& other) = default;
-        TelReconstructedParameter(TelReconstructedParameter&& other) noexcept = default;
-        TelReconstructedParameter& operator=(TelReconstructedParameter&& other) noexcept = default;
         
         std::unordered_map<std::string, TelImpactParameter> impact_parameters;
         double estimate_energy = 0;
+        double estimate_hadroness = 0;
         double disp = 0;
         
         // Returns the impact parameter value when there's only one entry
@@ -57,16 +53,21 @@ class DL2Event
 {
     public:
         DL2Event() = default;
-        ~DL2Event() = default;
-        DL2Event(const DL2Event& other) = delete;
-        DL2Event& operator=(const DL2Event& other) = delete;
-        DL2Event(DL2Event&& other) noexcept = default;
-        DL2Event& operator=(DL2Event&& other) noexcept = default;
         std::unordered_map<std::string, ReconstructedGeometry> geometry;
         std::unordered_map<int, TelReconstructedParameter> tels;
+        std::unordered_map<std::string, ReconstructedEnergy> energy;
+        std::unordered_map<std::string, ReconstructedParticle> particle;
+        void add_energy(std::string name, ReconstructedEnergy energy)
+        {
+            this->energy[name] = energy;
+        }
         void add_geometry(std::string name, ReconstructedGeometry geometry)
         {
             this->geometry[name] = geometry;
+        }
+        void add_particle(std::string name, ReconstructedParticle particle)
+        {
+            this->particle[name] = particle;
         }
         void add_tel_geometry(int tel_id, double impact_parameter, std::string geometry_reconstructor_name)
         {
@@ -83,8 +84,23 @@ class DL2Event
             }
             tels[tel_id] = tel_reconstructed_parameter;
         }
-        void set_estimate_energy(int tel_id, double energy)
+        void set_tel_estimate_energy(int tel_id, double energy)
         {
             tels[tel_id].estimate_energy = energy;
+        }
+        void set_tel_estimate_hadroness(int tel_id, double hadroness)
+        {
+            tels[tel_id].estimate_hadroness = hadroness;
+        }
+        void set_tel_disp(int tel_id, double disp)
+        {
+            tels[tel_id].disp = disp;
+        }
+        void set_tel_estimate_disp(std::vector<int> tel_ids, std::vector<double> disps)
+        {
+            for(size_t i = 0; i < tel_ids.size(); i++)
+            {
+                tels[tel_ids[i]].disp = disps[i];
+            }
         }
 };

@@ -33,7 +33,7 @@
         
         // Methods for writing specific parts of an ArrayEvent
         virtual void write_simulation_shower(const ArrayEvent& event) = 0;
-        virtual void write_simulated_camera(const ArrayEvent& event) = 0;
+        virtual void write_simulated_camera(const ArrayEvent& event, bool write_image = false) = 0;
         virtual void write_r0(const ArrayEvent& event) = 0;
         virtual void write_r1(const ArrayEvent& event) = 0;
         virtual void write_dl0(const ArrayEvent& event) = 0;
@@ -92,8 +92,8 @@
         
         // Flags to control which components to write
         bool write_simulation_shower_enabled = true;
-        bool write_simulated_camera_enabled = false;
-
+        bool write_simulated_camera_enabled = true;
+        bool write_simulated_camera_image_enabled = false;
         bool write_r0_enabled = false;
         bool write_r1_enabled = false;
         bool write_dl0_enabled = false;
