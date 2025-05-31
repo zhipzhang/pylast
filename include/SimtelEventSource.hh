@@ -44,10 +44,31 @@ private:
     virtual void init_atmosphere_model() override;
     virtual void init_metaparam() override;
     virtual void init_subarray() override;
-    virtual bool _load_next_event() ;
+
+    /**
+     * @brief Let the simtelfile_handler read the next event, SimtelEvent block
+     * 
+     * @return true 
+     * @return false 
+     */
+    bool _load_next_event() ;
     virtual bool is_finished()  override {return simtel_file_handler->no_more_blocks;}
+
+    /**
+     * @brief Actually implementation of init_simulation_config, set the simulation configuration from the simtel file
+     * 
+     */
     void set_simulation_config();
+    /**
+     * @brief Set the telescope settings for a specific telescope
+     * 
+     * @param tel_id The telescope ID
+     */
     void set_telescope_settings(int tel_id);
+    /**
+     * @brief Actually implementation of init_metaparam, set the metaparam from the simtel file
+     * 
+     */
     void set_metaparam();
     void read_simulated_showers(ArrayEvent& event);
     void read_true_image(ArrayEvent& event);

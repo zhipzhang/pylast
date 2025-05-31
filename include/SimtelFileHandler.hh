@@ -28,7 +28,6 @@ using History_Entry = std::pair<time_t, std::string>;
 using History_List = std::vector<History_Entry>;
 class SimtelFileHandler {
     friend class SimtelEventSource;
-    friend class  SimtelFileHandlerTestSuite;
 public:
     enum class BlockType {
         History = IO_TYPE_HISTORY,
@@ -58,11 +57,20 @@ public:
     SimtelFileHandler(const std::string& filename);
     SimtelFileHandler() = default;
     ~SimtelFileHandler();
+    SimtelFileHandler(const SimtelFileHandler&) = delete;
+    SimtelFileHandler& operator=(const SimtelFileHandler&) = delete;
+
+    // It's better to delete the move constructor and move assignment operator
+    // because this class contains C-style pointers and we don't want to accidentally move them.
+    SimtelFileHandler(SimtelFileHandler&& others) = delete;
+    SimtelFileHandler& operator=(SimtelFileHandler&& others) = delete;
+
 #ifdef DEBUG
 public:
 #else
 private:
 #endif
+
     bool no_more_blocks = false;
     bool have_true_image = false;
     std::string filename = "none";

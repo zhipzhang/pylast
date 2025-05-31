@@ -29,10 +29,5 @@ public:
     // Use pass by value and move constructor
     CameraDescription(string camera_name, CameraGeometry camera_geometry, CameraReadout camera_readout);
 
-    CameraDescription(CameraDescription&& other) noexcept = default;
-    CameraDescription(const CameraDescription& other) = default;
-    CameraDescription& operator=(CameraDescription&& other) noexcept = default;
-    CameraDescription& operator=(const CameraDescription& other) = default;
-    ~CameraDescription() = default;
     const string print() const;
 };

@@ -48,14 +48,26 @@ public:
     /** @brief Pixel width in the fov frame [rad] */
     Eigen::VectorXd pix_width_fov; 
     CameraGeometry() = default;
+    /**
+     * @brief Construct a new Camera Geometry object
+     * 
+     * @param camera_name name of the camera
+     * @param num_pixels number of pixels in the camera
+     * @param pix_x pix_x positions [m]
+     * @param pix_y pix_y positions [m]
+     * @param pix_area pixel areas [m^2]
+     * @param pix_type pixel types
+     * @param cam_rotation camera rotation [degree]
+     */
     CameraGeometry(std::string camera_name, int num_pixels, double* pix_x, double* pix_y, double* pix_area, int* pix_type, double cam_rotation);
 
-    CameraGeometry(CameraGeometry&& other) noexcept = default;
-    CameraGeometry(const CameraGeometry& other) = default;
-    CameraGeometry& operator=(CameraGeometry&& other) noexcept = default;
-    CameraGeometry& operator=(const CameraGeometry& other) = default;
-    ~CameraGeometry() = default;
     const string print() const;
+    /**
+     * @brief Get the border pixel within a certain width 
+     *        
+     * @param width 
+     * @return Eigen::Vector<bool, -1> 
+     */
     Eigen::Vector<bool, -1> get_border_pixel_mask(int width);
     Eigen::VectorXd get_pix_x_fov() const
     {
@@ -73,6 +85,5 @@ public:
         }
         return pix_y_fov;
     }
-private:
     void compute_neighbor_matrix(bool diagonal = false);
 };

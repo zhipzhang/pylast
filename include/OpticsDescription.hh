@@ -27,11 +27,6 @@ public:
     /** @brief Effective focal length of the telescope [m] */
     double effective_focal_length;
     OpticsDescription()=default;
-    OpticsDescription(const OpticsDescription& other)=default;
-    OpticsDescription(OpticsDescription&& other)=default;
-    OpticsDescription& operator=(const OpticsDescription& other)=default;
-    OpticsDescription& operator=(OpticsDescription&& other)=default;
     OpticsDescription(string optics_name, int num_mirrors, double mirror_area, double equivalent_focal_length, double effective_focal_length);
-    ~OpticsDescription()=default;
     const string print() const;
 };

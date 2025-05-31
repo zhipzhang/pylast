@@ -13,13 +13,3 @@ TableAtmosphereModel::TableAtmosphereModel(int n_alt, double* alt_km, double* rh
     this->refidx_m1 = Eigen::VectorXd(Eigen::Map<Eigen::VectorXd>(refidx_m1, n_alt));
 }
 
-TableAtmosphereModel& TableAtmosphereModel::operator=(TableAtmosphereModel&& other) noexcept
-{
-    this->n_alt = other.n_alt;
-    this->alt_km = std::move(other.alt_km);
-    this->rho = std::move(other.rho);
-    this->thick = std::move(other.thick);
-    this->refidx_m1 = std::move(other.refidx_m1);
-    this->input_filename = other.input_filename;
-    return *this;
-}

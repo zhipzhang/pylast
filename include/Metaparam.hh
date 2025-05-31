@@ -24,7 +24,6 @@ public:
     std::unordered_map<int, std::vector<std::pair<time_t, std::string>>> tel_history;
 
     Metaparam() = default;
-    ~Metaparam() = default;
     void add_global_metadata(const std::string& key, const std::string& value);
     void add_tel_metadata(int tel_id, const std::string& key, const std::string& value);
     void add_history(time_t time, const std::string& history_entry);
