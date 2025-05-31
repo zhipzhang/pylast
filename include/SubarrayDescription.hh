@@ -28,18 +28,12 @@ public:
 
     TelescopeDescription() = default;
     TelescopeDescription(CameraDescription camera_description, OpticsDescription optics_description);
-    TelescopeDescription(TelescopeDescription&& other) noexcept = default;
-    TelescopeDescription(const TelescopeDescription& other) = default;
-    TelescopeDescription& operator=(TelescopeDescription&& other) noexcept = default;
-    TelescopeDescription& operator=(const TelescopeDescription& other) = default;
-    ~TelescopeDescription() = default;
     const string print() const;
 };
 class SubarrayDescription
 {
 public:
     SubarrayDescription() = default;
-    ~SubarrayDescription() = default;
 
     /** @brief Descriptions of the telescopes */
     std::unordered_map<telescope_id_t, TelescopeDescription> tels;

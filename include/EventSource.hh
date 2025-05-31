@@ -115,7 +115,6 @@ public:
     /**
      * @brief The current read event
      */
-    std::optional<ArrayEvent> current_event;
     Iterator begin(){
         if(!current_event){
             current_event.emplace();
@@ -124,6 +123,24 @@ public:
         return it;
     }
     Iterator end(){return Iterator(this, max_events);}
+
+    /**
+     * @brief Get the event at the given index
+     *        if support random access, it will return the event at the given index
+     * 
+     * @param index 
+     * @return ArrayEvent 
+     */
+    ArrayEvent operator[](int index){
+        if(index < 0 || (max_events != -1 && index >= max_events)){
+            throw std::out_of_range("Index out of range");
+        }
+        if(is_stream)
+        {
+            throw std::runtime_error("Random access is not supported for stream event source");
+        }
+        return get_event(index);
+    }
 protected:
     /**
      * @brief Check if we still have events to read
@@ -143,6 +160,15 @@ protected:
      * @return ArrayEvent 
      */
     virtual ArrayEvent get_event() = 0;
+
+    /**
+     * @brief Read the event at the given index, only used for random access event source
+     * 
+     * @return ArrayEvent
+     */
+    virtual ArrayEvent get_event(int index) {
+        return ArrayEvent(); // Default implementation, should be overridden in derived classes
+    };
     /**
      * @brief Read the atmosphere model
      * 
@@ -178,6 +204,7 @@ protected:
         throw std::runtime_error("Error initializing EventSource: " + std::string(e.what()) + " Open file: " + input_filename);
     }
 }
+    std::optional<ArrayEvent> current_event;
 
 };
 

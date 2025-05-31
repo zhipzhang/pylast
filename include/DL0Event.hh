@@ -21,7 +21,7 @@ class DL0Camera
         image(std::move(image)),
         peak_time(std::move(peak_time))
     {}
-
+    
     Eigen::VectorXd image;
     Eigen::VectorXd peak_time;
 };
