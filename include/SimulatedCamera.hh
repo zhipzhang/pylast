@@ -18,14 +18,22 @@ class ImageParameters;
 class SimulatedCamera {
 public:
     SimulatedCamera() = default;
-    ~SimulatedCamera() = default;
-    SimulatedCamera(const SimulatedCamera&) = default;
-    SimulatedCamera(SimulatedCamera&&) = default;
-    SimulatedCamera& operator=(const SimulatedCamera&) noexcept = default;
-    SimulatedCamera& operator=(SimulatedCamera&&) noexcept = default;
     SimulatedCamera(int n_pixels, int* pe_count, double impact_parameter);
+
+    /**
+     * @brief Sum intensity of the true image [p.e.]
+     * 
+     */
     int true_image_sum;
+    /**
+     * @brief True image per pixel [p.e.]
+     * 
+     */
     Eigen::VectorXi true_image;
+    /**
+     * @brief True Impact Parameter object.
+     * 
+     */
     TelImpactParameter impact;
     //ImageParameters true_image;
     std::string print() const {
