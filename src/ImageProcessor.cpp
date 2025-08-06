@@ -1,10 +1,16 @@
 #include "ImageProcessor.hh"
+#include "ArrayEvent.hh"
 #include "CameraGeometry.hh"
 #include "Eigen/Dense"
+#include "Eigen/src/Core/Matrix.h"
 #include "ImageParameters.hh"
 #include "spdlog/spdlog.h"
 #include <queue>
 #include <iostream>
+#include <random>
+
+std::random_device rd;
+std::mt19937 gen(rd());
 
 Eigen::Vector<bool, -1> ImageProcessor::tailcuts_clean(const CameraGeometry& camera_geometry, const Eigen::VectorXd& image, double picture_thresh, double boundary_thresh, bool keep_isolated_pixels, int min_number_picture_neighbors)
 {
@@ -40,6 +46,14 @@ void ImageProcessor::configure(const json& config)
     {
         image_cleaner = std::make_unique<TailcutsCleaner>(config["Tailcuts_cleaner"]);
     }
+    if(config.contains("poisson_noise"))
+    {
+        poisson_noise = config["poisson_noise"];
+    }
+    else
+    {
+        poisson_noise = 0.0;
+    }
 }
 // First is clean the image , then extractor the parameter
 void ImageProcessor::operator()(ArrayEvent& event)
@@ -64,15 +78,22 @@ void ImageProcessor::operator()(ArrayEvent& event)
         MorphologyParameter morphology_parameter = ImageProcessor::morphology_parameter(subarray.tels.at(tel_id).camera_description.camera_geometry, image_mask);
         IntensityParameter intensity_parameter = ImageProcessor::intensity_parameter(masked_image);
         // Tempory image are copyed from dl0_camera
-        dl1_camera.image = dl0_camera->image.cast<float>();
-        dl1_camera.peak_time = dl0_camera->peak_time.cast<float>();
-        dl1_camera.mask = std::move(image_mask);  // Image mask is not used in the future
-        dl1_camera.image_parameters.hillas = hillas_parameter;
-        dl1_camera.image_parameters.leakage = leakage_parameter;
-        dl1_camera.image_parameters.concentration = concentration_parameter;
-        dl1_camera.image_parameters.morphology = morphology_parameter;
-        dl1_camera.image_parameters.intensity = intensity_parameter;
-        event.dl1->add_tel(tel_id, std::move(dl1_camera));
+        Eigen::VectorXf image = dl0_camera->image.cast<float>();
+        Eigen::VectorXf peak_time = dl0_camera->peak_time.cast<float>();
+        Eigen::Vector<bool, -1> mask = std::move(image_mask);
+        event.dl1->add_tel(tel_id, 
+            DL1Camera{ 
+             .image_parameters = ImageParameters{hillas_parameter, leakage_parameter, concentration_parameter, morphology_parameter, intensity_parameter}, 
+             .image = std::move(image), 
+             .peak_time = std::move(peak_time), 
+             .mask = std::move(mask)
+            }
+        );
+    }
+
+    if(poisson_noise > 0)
+    {
+        handle_simulation_level(event);
     }
 
 }
@@ -221,7 +242,26 @@ IntensityParameter ImageProcessor::intensity_parameter(const Eigen::VectorXd& ma
         }
     }
     intensity_std = std::sqrt(intensity_std/masked_image.count());
-    return IntensityParameter{intensity_max, intensity_mean, intensity_std};
+
+    double intensity_skewness = 0;
+    double intensity_kurtosis = 0;
+    if(masked_image.count() > 0)
+    {
+        double mean = intensity_mean;
+        double std_dev = intensity_std;
+        for(auto ipe: masked_image)
+        {
+            if(ipe > 0)
+            {
+                intensity_skewness += std::pow((ipe - mean) / std_dev, 3);
+                intensity_kurtosis += std::pow((ipe - mean) / std_dev, 4);
+            }
+        }
+        intensity_skewness /= masked_image.count();
+        intensity_kurtosis /= masked_image.count();
+        intensity_kurtosis -= 3; // Excess kurtosis
+    }
+    return IntensityParameter{intensity_max, intensity_mean, intensity_std, intensity_skewness, intensity_kurtosis};
 }
 
 void ImageProcessor::dilate_image(const CameraGeometry& camera_geometry, Eigen::Vector<bool, -1>& image_mask)
@@ -230,6 +270,83 @@ void ImageProcessor::dilate_image(const CameraGeometry& camera_geometry, Eigen::
     image_mask = (dilated_matrix * image_mask.cast<int>().matrix()).cast<bool>() || image_mask;
 }
 
+void ImageProcessor::handle_simulation_level(ArrayEvent& event)
+{
+    if(!event.simulation)
+    {
+        spdlog::warn("Simulation data is not available in the event");
+        return;
+    }
+    for(auto& [tel_id, simulated_camera]: event.simulation->tels)
+    {
+        if(simulated_camera->true_image_sum >= 10)
+        {
+            auto noise_image = adding_poisson_noise(simulated_camera->true_image, poisson_noise);
+            if(fake_trigger(subarray.tels.at(tel_id).camera_description.camera_geometry, noise_image, 5.0, 4))
+            {
+                event.simulation->triggered_tels.push_back(tel_id);
+            }
+            Eigen::VectorXd fake_image = noise_image.array() - poisson_noise;
+            fake_image = fake_image.array().min(8000);
+            event.simulation->tels.at(tel_id)->fake_image = std::move(fake_image);
+
+        }
+    }
+
+    for(const auto tel_id: event.simulation->triggered_tels)
+    {
+        auto& simulated_camera = event.simulation->tels.at(tel_id);
+        auto image_mask = (*image_cleaner)(subarray.tels.at(tel_id).camera_description.camera_geometry, simulated_camera->fake_image);
+        Eigen::VectorXd masked_image = image_mask.select(simulated_camera->fake_image, Eigen::VectorXd::Zero(simulated_camera->fake_image.size()));
+
+        if(masked_image.sum() < 50)
+        {
+            simulated_camera->fake_image_parameters = ImageParameters();
+            continue;
+        }
+        HillasParameter hillas_parameter = ImageProcessor::hillas_parameter(subarray.tels.at(tel_id).camera_description.camera_geometry, masked_image);
+        LeakageParameter leakage_parameter = ImageProcessor::leakage_parameter(const_cast<CameraGeometry&>(subarray.tels.at(tel_id).camera_description.camera_geometry), masked_image);
+        ConcentrationParameter concentration_parameter = ImageProcessor::concentration_parameter(subarray.tels.at(tel_id).camera_description.camera_geometry, masked_image, hillas_parameter);
+        MorphologyParameter morphology_parameter = ImageProcessor::morphology_parameter(subarray.tels.at(tel_id).camera_description.camera_geometry, image_mask);
+        IntensityParameter intensity_parameter = ImageProcessor::intensity_parameter(masked_image);
+
+        simulated_camera->fake_image_mask = image_mask;
+        simulated_camera->fake_image_parameters.hillas = hillas_parameter;
+        simulated_camera->fake_image_parameters.leakage = leakage_parameter;
+        simulated_camera->fake_image_parameters.concentration = concentration_parameter;
+        simulated_camera->fake_image_parameters.morphology = morphology_parameter;
+        simulated_camera->fake_image_parameters.intensity = intensity_parameter;
+    }
+}
+Eigen::VectorXd ImageProcessor::adding_poisson_noise(Eigen::VectorXi true_image, double poisson_noise)
+{
+    std::poisson_distribution<int> poisson_dist(poisson_noise);
+    Eigen::VectorXd noisy_image(true_image.size());
+    for(int i = 0; i < true_image.size(); ++i)
+    {
+        noisy_image[i] = poisson_dist(gen) + true_image[i];
+    }
+    return noisy_image;
+}
+
+bool ImageProcessor::fake_trigger(const CameraGeometry& camera_geometry, const Eigen::VectorXd& image, double threshold, int min_pixels_above_threshold)
+{
+    // Check if the image has enough pixels above the threshold
+    Eigen::Vector<bool, -1> above_threshold_pixels = image.array() > threshold;
+    int num_pixels_above_threshold = above_threshold_pixels.count();
+    if(num_pixels_above_threshold < 5)
+    {
+        return false; // Not enough pixels above the threshold
+    }
+    Eigen::VectorXi pixels_above_in_group = camera_geometry.neigh_matrix * above_threshold_pixels.cast<int>();
+    if(pixels_above_in_group.maxCoeff() < min_pixels_above_threshold)
+    {
+        return false; // Not enough pixels in the group above the threshold
+    }
+    return true;
+
+
+}
 json ImageProcessor::get_default_config()
 {
     std::string default_config = R"(
