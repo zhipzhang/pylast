@@ -4,6 +4,7 @@
 #include "CameraGeometry.hh"
 #include "LACT_hessioxxx/include/io_basic.h"
 #include "LACT_hessioxxx/include/io_hess.h"
+#include "R0Event.hh"
 #include "SimtelFileHandler.hh"
 #include "SimulatedShowerArray.hh"
 #include "spdlog/spdlog.h"
@@ -239,7 +240,7 @@ void SimtelEventSource::read_adc_samples(ArrayEvent& event)
     if(!event.r0) {
         event.r0 = R0Event();
     }
-    for(const auto& tel_id: allowed_tels) {
+    for(const  auto tel_id: allowed_tels) {
         auto tel_index = simtel_file_handler->tel_id_to_index[tel_id];
         if(!simtel_file_handler->hsdata->event.teldata[tel_index].known)
         {
@@ -247,10 +248,10 @@ void SimtelEventSource::read_adc_samples(ArrayEvent& event)
         }
         if(simtel_file_handler->hsdata->event.teldata[tel_index].raw->known)
         {
-            uint32_t* high_gain_waveform_sum = nullptr;
-            uint32_t* low_gain_waveform_sum = nullptr;
-            Eigen::Matrix<uint16_t, -1, -1, Eigen::RowMajor> high_gain_waveform;
-            Eigen::Matrix<uint16_t, -1, -1, Eigen::RowMajor> low_gain_waveform;
+            WaveformSumVector high_gain_waveform_sum;
+            WaveformSumVector low_gain_waveform_sum;
+            WaveformMatrix high_gain_waveform;
+            WaveformMatrix low_gain_waveform;
             // Read ADC samples
             if(simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_known[0][0] & (1L<<1))
             {
@@ -278,22 +279,29 @@ void SimtelEventSource::read_adc_samples(ArrayEvent& event)
             }
             if(simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_known[0][0] & (1L))
             {
+                high_gain_waveform_sum.resize(simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels);
                 spdlog::debug("ADC sums are available for tel_id: {} for first gain", tel_id);
-                high_gain_waveform_sum = &simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_sum[0][0];
+                for(int ipixel = 0;ipixel < simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels; ipixel++) {
+                    high_gain_waveform_sum(ipixel) = simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_sum[0][ipixel];
+                }
                 if(simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_known[1][0] & (1L))
                 {
                     spdlog::debug("ADC sums are available for tel_id: {} for second gain", tel_id);
-                    low_gain_waveform_sum = &simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_sum[1][0];
+                    low_gain_waveform_sum.resize(simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels);
+                    for(int ipixel = 0; ipixel < simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels; ipixel++) {
+                        low_gain_waveform_sum(ipixel) = simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_sum[1][ipixel];
+                    }
                 }
             }
             // If no adc_sums, it will be nullptr
-            event.r0->add_tel(tel_id, 
+            event.r0->add_tel(tel_id,
                     simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels,
                     simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_samples,
-                    std::move(high_gain_waveform),
-                    std::move(low_gain_waveform),
-                    std::move(high_gain_waveform_sum),
-                    std::move(low_gain_waveform_sum));
+                    std::array<WaveformMatrix, 2> {std::move(high_gain_waveform),
+                    std::move(low_gain_waveform)},
+                    std::array<WaveformSumVector, 2> {std::move(high_gain_waveform_sum),
+                    std::move(low_gain_waveform_sum)}
+                );
         }
     }
 }
@@ -306,7 +314,7 @@ void SimtelEventSource::apply_simtel_calibration(ArrayEvent& event)
         Eigen::Matrix<double, -1, -1, Eigen::RowMajor> r1_waveform;
         auto gain_selection = Utils::select_gain_channel_by_threshold<uint16_t>(r0_tel->waveform, gain_selector_threshold);
         int n_pixels = r0_tel->waveform[0].rows();
-        int n_samples = r0_tel->waveform[0].cols();
+        int n_samples = r0_tel->waveform[0].cols();         
         r1_waveform.resize(n_pixels, n_samples);
         for(int ipix = 0; ipix < n_pixels; ipix++) {
             int selected_gain_channel = gain_selection[ipix];
@@ -383,13 +391,36 @@ void SimtelEventSource::read_true_image(ArrayEvent& event)
             double cos_az = cos(event.simulation->shower.az);
             double sin_az = sin(event.simulation->shower.az);
             std::array<double, 3> line_direction{
-                cos_alt * sin_az,
                 cos_alt * cos_az,
+                -cos_alt * sin_az,
                 sin_alt
             };
             double impact_parameter = Utils::point_line_distance(tel_position, shower_core, line_direction);
+            int npe = simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].npe;
+            // Skip telescopes with very low npe.
+            if(npe <= 30)
+            {
+                continue;
+            }
             event.simulation->add_simulated_image(tel_id, simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].pixels,simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].pe_count, impact_parameter);
+            /*
+            event.simulation->tels.at(tel_id)->pe_amplitude = Eigen::VectorXd(Eigen::Map<Eigen::VectorXd>(simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].amplitudes, npe));
+            event.simulation->tels.at(tel_id)->pe_time = Eigen::VectorXd(Eigen::Map<Eigen::VectorXd>(simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].atimes, npe));
+
+            // Create sorted copy of pe_time
+            auto sorted_times = event.simulation->tels.at(tel_id)->pe_time;
+            std::sort(sorted_times.data(), sorted_times.data() + sorted_times.size());
+
+            // Calculate indices for 10% and 90% positions
+            int index_10 = static_cast<int>(0.1 * (npe - 1));
+            int index_90 = static_cast<int>(0.9 * (npe - 1));
+
+            // Store the time range in the simulation event
+            event.simulation->tels.at(tel_id)->time_range_10_90 = sorted_times[index_90] - sorted_times[index_10];
+            */
+
         }
+    
 }
 void SimtelEventSource::read_simulated_showers(ArrayEvent& event)
 {
