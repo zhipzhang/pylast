@@ -15,13 +15,10 @@
 class R1Camera
 {
     public:
-        R1Camera(int n_pixels, int n_samples, Eigen::Matrix<double, -1, -1, Eigen::RowMajor> waveform, Eigen::VectorXi gain_selection);
-        R1Camera() = default;
-        Eigen::Matrix<double, -1, -1, Eigen::RowMajor> waveform;
-        Eigen::VectorXi gain_selection;
-    private:
         int n_pixels;
         int n_samples;
+        Eigen::Matrix<double, -1, -1, Eigen::RowMajor> waveform;
+        Eigen::VectorXi gain_selection;
 };
 /**
  * @brief R1Event doing three steps:
