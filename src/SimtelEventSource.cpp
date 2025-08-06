@@ -5,6 +5,7 @@
 #include "LACT_hessioxxx/include/io_basic.h"
 #include "LACT_hessioxxx/include/io_hess.h"
 #include "R0Event.hh"
+#include "R1Event.hh"
 #include "SimtelFileHandler.hh"
 #include "SimulatedShowerArray.hh"
 #include "spdlog/spdlog.h"
@@ -295,12 +296,13 @@ void SimtelEventSource::read_adc_samples(ArrayEvent& event)
             }
             // If no adc_sums, it will be nullptr
             event.r0->add_tel(tel_id,
-                    simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels,
-                    simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_samples,
-                    std::array<WaveformMatrix, 2> {std::move(high_gain_waveform),
-                    std::move(low_gain_waveform)},
-                    std::array<WaveformSumVector, 2> {std::move(high_gain_waveform_sum),
-                    std::move(low_gain_waveform_sum)}
+                    R0Camera
+                    {
+                        .n_pixels = simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels,
+                        .n_samples = simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_samples,
+                        .waveform = std::array<WaveformMatrix, 2> {std::move(high_gain_waveform), std::move(low_gain_waveform)},
+                        .waveform_sum = std::array<WaveformSumVector, 2> {std::move(high_gain_waveform_sum), std::move(low_gain_waveform_sum)}
+                    }
                 );
         }
     }
@@ -322,7 +324,7 @@ void SimtelEventSource::apply_simtel_calibration(ArrayEvent& event)
                 r1_waveform(ipix, isample) = (r0_tel->waveform[selected_gain_channel](ipix, isample) - event.monitor->tels[tel_id]->pedestal_per_sample(selected_gain_channel, ipix)) * event.monitor->tels[tel_id]->dc_to_pe(selected_gain_channel, ipix);
             }
         }
-        event.r1->add_tel(tel_id, n_pixels, n_samples, std::move(r1_waveform), std::move(gain_selection));
+        event.r1->add_tel(tel_id, R1Camera{n_pixels, n_samples, std::move(r1_waveform), std::move(gain_selection)});
     }
 }
 void SimtelEventSource::read_monitor(ArrayEvent& event)

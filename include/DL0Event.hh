@@ -15,13 +15,6 @@
 class DL0Camera
 {
     public:
-    DL0Camera() = default;
-    ~DL0Camera() = default;
-    DL0Camera(Eigen::VectorXd image, Eigen::VectorXd peak_time):
-        image(std::move(image)),
-        peak_time(std::move(peak_time))
-    {}
-    
     Eigen::VectorXd image;
     Eigen::VectorXd peak_time;
 };

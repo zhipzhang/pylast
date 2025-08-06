@@ -15,8 +15,6 @@
 class HillasParameter
 {
     public:
-    HillasParameter() = default;
-    ~HillasParameter() = default;
     double length;   // [rad]  
     double width;    // [rad]
     double psi;      // [rad] orientation of the major axis
@@ -32,8 +30,6 @@ class HillasParameter
 class LeakageParameter
 {
     public:
-    LeakageParameter() = default;
-    ~LeakageParameter() = default;
     double pixels_width_1;
     double pixels_width_2;
     double intensity_width_1;
@@ -42,8 +38,6 @@ class LeakageParameter
 class ConcentrationParameter
 {
     public:
-    ConcentrationParameter() = default;
-    ~ConcentrationParameter() = default;
     double concentration_cog; // one pixel diameter from the cog
     double concentration_core; // all_pixels inside the hillas ellipse, transformed to the hillas ellipse
     double concentration_pixel; // brightest pixel
@@ -52,8 +46,6 @@ class ConcentrationParameter
 class MorphologyParameter
 {
     public:
-    MorphologyParameter() = default;
-    ~MorphologyParameter() = default;
     int n_pixels;
     int n_islands;
     int n_small_islands;
@@ -65,17 +57,15 @@ class MorphologyParameter
 class IntensityParameter
 {
     public:
-    IntensityParameter() = default;
-    ~IntensityParameter() = default;
     double intensity_max;
     double intensity_mean;
     double intensity_std;
+    double intensity_skewness;
+    double intensity_kurtosis;
 };
 class ExtraParameters
 {
     public:
-    ExtraParameters() = default;
-    ~ExtraParameters() = default;
     double miss = 0;
     double disp = 0;
     double theta = 0;
@@ -85,9 +75,6 @@ class ExtraParameters
 };
 class ImageParameters {
 public:
-    ImageParameters() = default;
-    ~ImageParameters() = default;
-    ImageParameters(const ImageParameters& other) = default;
     HillasParameter hillas;
     LeakageParameter leakage;
     ConcentrationParameter concentration;

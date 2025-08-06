@@ -15,8 +15,6 @@
 class DL1Camera
 {
     public:
-    DL1Camera() = default;
-
     /**
      * @brief Image Processor parameters
      * 
