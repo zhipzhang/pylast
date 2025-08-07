@@ -1,9 +1,5 @@
 #include "OpticsDescription.hh"
 #include "spdlog/fmt/fmt.h"
-OpticsDescription::OpticsDescription(string optics_name, int num_mirrors, double mirror_area, double equivalent_focal_length, double effective_focal_length):
-    optics_name(optics_name), num_mirrors(num_mirrors), mirror_area(mirror_area), equivalent_focal_length(equivalent_focal_length), effective_focal_length(effective_focal_length)
-{
-}
 const string OpticsDescription::print() const
 {
     return fmt::format(
