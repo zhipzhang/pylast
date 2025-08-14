@@ -17,6 +17,8 @@
 #include "TTree.h"
 #include "ROOT/RVec.hxx"
 #include "RootDataLevels.hh"
+#include <optional>
+
 
 class RootWriter: public FileWriter
 {
@@ -61,7 +63,10 @@ class RootWriter: public FileWriter
         //void write_simulation_config() override;
     private:
         std::unique_ptr<TFile> file;
-        RootArrayEvent array_event;
+        
+       // RootArrayEvent array_event;
+        RootEventHelper helper;
+        RootConfigHelper config_helper;
         void write_event_index(const ArrayEvent& event);
         
         template<typename T>

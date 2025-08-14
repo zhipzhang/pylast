@@ -1,4 +1,5 @@
 #include "RootWriter.hh"
+#include "RootDataLevels.hh"
 #include "SimulatedShower.hh"
 #include "SimulationConfiguration.hh"
 #include "TH2.h"
@@ -8,7 +9,7 @@
 #include "TH1F.h"
 #include "TH2F.h"
 #include "TProfile.h"
-
+#include <set>
 REGISTER_WRITER(root, [](EventSource& source, const std::string& filename) { return std::make_unique<RootWriter>(source, filename); });
 RootWriter::RootWriter(EventSource& source, const std::string& filename):
     FileWriter(source, filename)
@@ -149,30 +150,18 @@ void RootWriter::write_subarray()
     
     // Considering the optics description is quite simple, we can just write it to a tree
     std::unique_ptr<TTree> optics_tree = std::make_unique<TTree>("optics", "Telescope optics information");
-    double mirror_area = 0.0;
-    double equivalent_focal_length = 0.0;
-    double effective_focal_length = 0.0;
-    std::string mirror_name;
-    int num_mirrors = 0;
-    optics_tree->Branch("tel_id", &tel_id);
-    optics_tree->Branch("mirror_name", &mirror_name);
-    optics_tree->Branch("mirror_area", &mirror_area);
-    optics_tree->Branch("equivalent_focal_length", &equivalent_focal_length);
-    optics_tree->Branch("effective_focal_length", &effective_focal_length);
-    optics_tree->Branch("num_mirrors", &num_mirrors);
-    // Write optics information for each telescope
+    config_helper.root_optics_description = RootOpticsDescription();
+    config_helper.root_optics_description->initialize_write(optics_tree.get());
+    auto& root_optics_description = config_helper.root_optics_description.value();
+
     for(const auto& id : ordered_tel_ids)
     {
         if(!source.subarray->tels.count(id))
             continue;
             
         const auto& optics = source.subarray->tels.at(id).optics_description;
-        tel_id = id;
-        mirror_name = optics.optics_name;
-        mirror_area = optics.mirror_area;
-        equivalent_focal_length = optics.equivalent_focal_length;
-        effective_focal_length = optics.effective_focal_length;
-        num_mirrors = optics.num_mirrors;
+        root_optics_description.tel_id = id;
+        root_optics_description = optics;
         optics_tree->Fill();
     }
     optics_tree->Write();
@@ -181,36 +170,14 @@ void RootWriter::write_subarray()
     camera_directory->cd();
     // Create tree for camera geometry
     std::unique_ptr<TTree> camera_geometry_tree = std::make_unique<TTree>("geometry", "Camera geometry information");
-    RVecD pix_x;
-    RVecD pix_y;
-    RVecD pix_area;
-    RVecI pix_type;
-    camera_geometry_tree->Branch("tel_id", &tel_id);
-    camera_geometry_tree->Branch("pix_x", &pix_x);
-    camera_geometry_tree->Branch("pix_y", &pix_y);
-    camera_geometry_tree->Branch("pix_area", &pix_area);
-    camera_geometry_tree->Branch("pix_type", &pix_type);
-    
+    config_helper.root_camera_geometry = RootCameraGeometry();
+    config_helper.root_camera_geometry->initialize_write(camera_geometry_tree.get());
+    auto& root_camera_geometry = config_helper.root_camera_geometry.value();
     // Write camera geometry for each telescope
     std::unique_ptr<TTree> camera_readout_tree = std::make_unique<TTree>("readout", "Telescope camera readout information");
-    std::string camera_name;
-    double sampling_rate;
-    int n_channels;
-    int n_pixels;
-    int n_samples;
-    RVecD reference_pulse_shape;
-    int reference_pulse_shape_length;
-    double reference_pulse_sample_width;
-    camera_readout_tree->Branch("tel_id", &tel_id);
-    camera_readout_tree->Branch("camera_name", &camera_name);
-    camera_readout_tree->Branch("n_samples", &n_samples);
-    camera_readout_tree->Branch("sampling_rate", &sampling_rate);
-    camera_readout_tree->Branch("n_channels", &n_channels);
-    camera_readout_tree->Branch("n_pixels", &n_pixels);
-    camera_readout_tree->Branch("reference_pulse_shape", &reference_pulse_shape);
-    camera_readout_tree->Branch("reference_pulse_shape_length", &reference_pulse_shape_length);
-    camera_readout_tree->Branch("reference_pulse_sample_width", &reference_pulse_sample_width);
-    
+    config_helper.root_camera_readout = RootCameraReadout();
+    config_helper.root_camera_readout->initialize_write(camera_readout_tree.get());
+    auto& root_camera_readout = config_helper.root_camera_readout.value();
     for(const auto& id : ordered_tel_ids)
     {
         if(!source.subarray->tels.count(id))
@@ -218,23 +185,12 @@ void RootWriter::write_subarray()
             
         auto& camera_geom = source.subarray->tels.at(id).camera_description.camera_geometry;
         auto& camera_readout = source.subarray->tels.at(id).camera_description.camera_readout;
-        tel_id = id;
-        
-        // Convert Eigen vectors to RVecD
-        pix_x = std::move(RVecD(camera_geom.pix_x.data(), camera_geom.pix_x.size()));
-        pix_y = std::move(RVecD(camera_geom.pix_y.data(), camera_geom.pix_y.size()));
-        pix_area = std::move(RVecD(camera_geom.pix_area.data(), camera_geom.pix_area.size()));
-        pix_type = std::move(RVecI(camera_geom.pix_type.data(), camera_geom.pix_type.size()));
-        camera_geometry_tree->Fill();
 
-        camera_name = camera_readout.camera_name;
-        sampling_rate = camera_readout.sampling_rate;
-        n_channels = camera_readout.n_channels;
-        n_pixels = camera_readout.n_pixels;
-        n_samples = camera_readout.n_samples;
-        reference_pulse_shape_length = camera_readout.reference_pulse_shape.cols();
-        reference_pulse_shape = std::move(RVecD(camera_readout.reference_pulse_shape.data(), n_channels * reference_pulse_shape_length));
-        reference_pulse_sample_width = camera_readout.reference_pulse_sample_width;
+        root_camera_readout.tel_id = id;
+        root_camera_readout = std::move(camera_readout);
+        root_camera_geometry.tel_id = id;
+        root_camera_geometry = std::move(camera_geom);
+        camera_geometry_tree->Fill();
         camera_readout_tree->Fill();
     }
     camera_geometry_tree->Write();
@@ -306,6 +262,7 @@ void RootWriter::write_simulation_config()
     }
     if(!source.simulation_config.has_value())
     {
+        spdlog::warn("simulation configuration not set, skipping writing simulation configuration");
         return;
     }
     TDirectory* dir = get_or_create_directory("cfg/");
@@ -314,6 +271,8 @@ void RootWriter::write_simulation_config()
     SimulationConfiguration config;
     initialize_simulation_config_branches(*tree, config);
     config = source.simulation_config.value();
+    spdlog::warn("Writing simulation configuration: run_number = {}, corsika_high_E_detail = {}", 
+             config.run_number, config.corsika_high_E_detail);
     tree->Fill();
     tree->Write();
 }
@@ -328,33 +287,26 @@ void RootWriter::write_simulated_camera(const ArrayEvent& event, bool write_imag
     {
         return;
     }
-    auto sim_tree = get_tree("sim");
+    auto sim_tree = get_tree("simulation");
     if(!sim_tree)
     {
-        array_event.simulation_camera = RootSimulatedCamera();
-        TDirectory* dir = get_or_create_directory("/events/simulation");
-        sim_tree = array_event.simulation_camera->initialize();
-        dir->cd();
+        initialize_data_level("simulation", helper.root_simulation_camera);
+        sim_tree = get_tree("simulation");
         if(write_image)
         {
-            sim_tree->Branch("true_image", &array_event.simulation_camera->true_image);
+            sim_tree->Branch("true_image", &helper.root_simulation_camera->true_image);
+            sim_tree->Branch("fake_image", &helper.root_simulation_camera->fake_image);
+            sim_tree->Branch("fake_image_mask", &helper.root_simulation_camera->fake_image_mask);
         }
-        trees["sim"] = sim_tree;
-        directories["sim"] = dir;
-        build_index["sim"] = true;
+
     }
-    auto& root_sim = array_event.simulation_camera.value();
+    auto& root_simulated_camera = helper.root_simulation_camera.value();
     const auto& sim = event.simulation.value();
-    root_sim.event_id = event.event_id;
-    for(const auto& [tel_id, _] : event.dl0->tels)
+    root_simulated_camera.event_id = event.event_id;
+    for(const auto& [tel_id,camera] : event.simulation->tels)
     {
-        auto& camera = sim.tels.at(tel_id);
-        root_sim.tel_id = tel_id;
-        root_sim.true_impact_parameter = camera->impact.distance;
-        if(write_image)
-        {
-            root_sim.true_image = std::move(RVecI(camera->true_image.data(), camera->true_image.size()));
-        }
+        root_simulated_camera.tel_id = tel_id;
+        root_simulated_camera = std::move(*camera);
         sim_tree->Fill();
     }
     
@@ -381,39 +333,48 @@ void RootWriter::write_event_index(const ArrayEvent& event)
     {
         TDirectory* dir = get_or_create_directory("/events/");
         dir->cd();
-        TTree* tree = new TTree("event_index", "Event index");
-        array_event.event_index = RootEventIndex();
-        tree->Branch("event_id", &array_event.event_index->event_id);
-        tree->Branch("telescopes", &array_event.event_index->telescopes);
+        helper.root_event_index = RootEventIndex();
+        auto tree = helper.root_event_index->initialize_write("event_index", "Event index for all data levels");
         trees["event_index"] = tree;
         directories["event_index"] = dir;
         index_tree = tree;
     }
-    array_event.event_index->telescopes.clear();
-    array_event.event_index->event_id = event.event_id;
+    helper.root_event_index->telescopes.clear();
+    helper.root_event_index->event_id = event.event_id;
 
+    std::set<int> unique_telescopes;
     // Get telescopes from the first available data level
-    if(event.r0.has_value()) {
-        for(const auto& tel_id : event.r0->get_ordered_tels()) {
-            array_event.event_index->telescopes.push_back(tel_id);
-        }
-    } else if(event.r1.has_value()) {
-        for(const auto& tel_id : event.r1->get_ordered_tels()) {
-            array_event.event_index->telescopes.push_back(tel_id);
-        }
-    } else if(event.dl0.has_value()) {
-        for(const auto& tel_id : event.dl0->get_ordered_tels()) {
-            array_event.event_index->telescopes.push_back(tel_id);
-        }
-    } else if(event.dl1.has_value()) {
-        for(const auto& tel_id : event.dl1->get_ordered_tels()) {
-            array_event.event_index->telescopes.push_back(tel_id);
-        }
-    } else if(event.dl2.has_value()) {
-        for(const auto& [tel_id, _] : event.dl2->tels) {
-                array_event.event_index->telescopes.push_back(tel_id);
+    if(event.simulation.has_value()) {
+        for(const auto tel_id : event.simulation->get_ordered_tels()) {
+            unique_telescopes.insert(tel_id);
         }
     }
+    if(event.r0.has_value()) {
+        for(const auto tel_id : event.r0->get_ordered_tels()) {
+            unique_telescopes.insert(tel_id);
+        }
+    } 
+    if(event.r1.has_value()) {
+        for(const auto tel_id : event.r1->get_ordered_tels()) {
+            unique_telescopes.insert(tel_id);
+        }
+    } 
+    if(event.dl0.has_value()) {
+        for(const auto tel_id : event.dl0->get_ordered_tels()) {
+            unique_telescopes.insert(tel_id);
+        }
+    } 
+    if(event.dl1.has_value()) {
+        for(const auto tel_id : event.dl1->get_ordered_tels()) {
+            unique_telescopes.insert(tel_id);
+        }
+    }
+    if(event.dl2.has_value()) {
+        for(const auto& [tel_id, _] : event.dl2->tels) {
+            unique_telescopes.insert(tel_id);
+        }
+    }
+    helper.root_event_index->telescopes = RVecI(unique_telescopes.begin(), unique_telescopes.end());
     index_tree->Fill();
     
 }
@@ -429,27 +390,23 @@ void RootWriter::write_simulation_shower(const ArrayEvent& event)
         // Nothing to write
         return;
     }
-    
-    // Get directory
-    
-    // Get simulation data
-    
-    // Create simulation tree
-    auto sim_tree = get_tree("shower");
-    if(!sim_tree)
+    auto shower_tree = get_tree("shower");
+    if(!shower_tree)
     {
-        array_event.simulation_shower = RootSimulationShower();
+        helper.root_simulation_shower = RootSimulationShower();
         TDirectory* dir = get_or_create_directory("/events/simulation");
         dir->cd();
-        sim_tree = array_event.simulation_shower->initialize();
+        auto tree = new TTree("shower", "Simulation shower data");
+        shower_tree = tree;
+        helper.root_simulation_shower->initialize_write(shower_tree);
         directories["shower"] = dir;
-        trees["shower"] = sim_tree;
+        trees["shower"] = shower_tree;
     }
-    auto& root_shower = array_event.simulation_shower.value();
+    auto& root_simulation_shower = helper.root_simulation_shower.value();
     const auto& sim = event.simulation.value();
-    root_shower.event_id = event.event_id;
-    root_shower.shower = sim.shower;
-    sim_tree->Fill();
+    root_simulation_shower.event_id = event.event_id;
+    root_simulation_shower.shower = sim.shower;
+    shower_tree->Fill();
 }
 
 void RootWriter::write_r0(const ArrayEvent& event)
@@ -468,19 +425,16 @@ void RootWriter::write_r0(const ArrayEvent& event)
     if(!r0_tree)
     {
         spdlog::debug("initialize r0");
-        initialize_data_level<RootR0Event>("r0", array_event.r0);
+        initialize_data_level("r0", helper.root_r0_camera);
         r0_tree = get_tree("r0");
     }
-    auto& root_r0 = array_event.r0.value();
     const auto& r0 = event.r0.value();
-    root_r0.event_id = event.event_id;
+    auto& root_r0_camera = helper.root_r0_camera.value();
+    root_r0_camera.event_id = event.event_id;
     for(const auto& [tel_id, camera] : r0.get_tels())
     {
-        root_r0.tel_id = tel_id;
-        root_r0.n_pixels = camera->waveform[0].rows();
-        root_r0.n_samples = camera->waveform[0].cols();
-        root_r0.low_gain_waveform = std::move(RVec<uint16_t>(camera->waveform[0].data(), root_r0.n_pixels * root_r0.n_samples));
-        root_r0.high_gain_waveform = std::move(RVec<uint16_t>(camera->waveform[1].data(), root_r0.n_pixels * root_r0.n_samples));
+        root_r0_camera.tel_id = tel_id;
+        root_r0_camera = std::move(*camera);
         r0_tree->Fill();
     }
 }
@@ -502,19 +456,16 @@ void RootWriter::write_r1(const ArrayEvent& event)
     if(!r1_tree)
     {
         spdlog::debug("initialize r1");
-        initialize_data_level<RootR1Event>("r1", array_event.r1);
+        initialize_data_level("r1", helper.root_r1_camera);
         r1_tree = get_tree("r1");
     }
-    auto& root_r1 = array_event.r1.value();
+    auto& root_r1_camera = helper.root_r1_camera.value();
     const auto& r1 = event.r1.value();
-    root_r1.event_id = event.event_id;
+    root_r1_camera.event_id = event.event_id;
     for(const auto& [tel_id, camera] : r1.tels)
     {
-        root_r1.tel_id = tel_id;
-        root_r1.n_pixels = camera->waveform.rows();
-        root_r1.n_samples = camera->waveform.cols();
-        root_r1.waveform = std::move(RVecD(camera->waveform.data(), root_r1.n_pixels * root_r1.n_samples));
-        root_r1.gain_selection = std::move(RVecI(camera->gain_selection.data(), camera->gain_selection.size()));
+        root_r1_camera.tel_id = tel_id;
+        root_r1_camera = std::move(*camera);
         r1_tree->Fill();
     }
 }
@@ -536,18 +487,16 @@ void RootWriter::write_dl0(const ArrayEvent& event)
     if(!dl0_tree)
     {
         spdlog::debug("initialize dl0");
-        initialize_data_level<RootDL0Event>("dl0", array_event.dl0);
+        initialize_data_level("dl0", helper.root_dl0_camera);
         dl0_tree = get_tree("dl0");
     }
-    auto& root_dl0 = array_event.dl0.value();
+    auto& root_dl0_camera = helper.root_dl0_camera.value();
     const auto& dl0 = event.dl0.value();
-    root_dl0.event_id = event.event_id;
+    root_dl0_camera.event_id = event.event_id;
     for(const auto& [tel_id, camera] : dl0.tels)
     {
-        root_dl0.tel_id = tel_id;
-        root_dl0.n_pixels = camera->image.size();
-        root_dl0.image = std::move(RVecD(camera->image.data(), root_dl0.n_pixels));
-        root_dl0.peak_time = std::move(RVecD(camera->peak_time.data(), root_dl0.n_pixels));
+        root_dl0_camera.tel_id = tel_id;
+        root_dl0_camera = std::move(*camera);
         dl0_tree->Fill();
     }
 }
@@ -570,35 +519,29 @@ void RootWriter::write_dl1(const ArrayEvent& event, bool write_image)
     if(!dl1_tree)
     {
         spdlog::debug("initialize dl1");
-        initialize_data_level<RootDL1Event>("dl1", array_event.dl1);
+        initialize_data_level("dl1", helper.root_dl1_camera);
         dl1_tree = get_tree("dl1");
         if(write_image)
         {
-            dl1_tree->Branch("image", &array_event.dl1->image);
-            dl1_tree->Branch("peak_time", &array_event.dl1->peak_time);
-            dl1_tree->Branch("mask", &array_event.dl1->mask);
+            dl1_tree->Branch("image", &helper.root_dl1_camera->image);
+            dl1_tree->Branch("peak_time", &helper.root_dl1_camera->peak_time);
+            dl1_tree->Branch("mask", &helper.root_dl1_camera->mask);
         }
     }
     
     const auto& dl1 = event.dl1.value();
-    auto& root_dl1 = array_event.dl1.value();
-    root_dl1.event_id = event.event_id;
+    auto& root_dl1_camera = helper.root_dl1_camera.value();
+    root_dl1_camera.event_id = event.event_id;
     for(const auto& [tid, camera] : dl1.tels)
     {
-        root_dl1.tel_id = tid;
+        root_dl1_camera.tel_id = tid;
         if(write_image)
         {
-            root_dl1.n_pixels = camera->image.size();
-            root_dl1.image = std::move(RVecF(camera->image.data(), root_dl1.n_pixels));
-            root_dl1.peak_time = std::move(RVecF(camera->peak_time.data(), root_dl1.n_pixels));
-            root_dl1.mask = std::move(RVecB(camera->mask.data(), root_dl1.n_pixels));
+            root_dl1_camera.image = std::move(RVecF(camera->image.data(), camera->image.size()));
+            root_dl1_camera.peak_time = std::move(RVecF(camera->peak_time.data(), camera->peak_time.size()));
+            root_dl1_camera.mask = std::move(RVecB(camera->mask.data(), camera->mask.size()));
         }
-        root_dl1.params.hillas = camera->image_parameters.hillas;
-        root_dl1.params.leakage = camera->image_parameters.leakage;
-        root_dl1.params.concentration = camera->image_parameters.concentration;
-        root_dl1.params.morphology = camera->image_parameters.morphology;
-        root_dl1.params.intensity = camera->image_parameters.intensity;
-        root_dl1.params.extra = camera->image_parameters.extra;
+        root_dl1_camera.datalevels.image_parameters = camera->image_parameters;
         dl1_tree->Fill();
     }
 }
@@ -626,15 +569,16 @@ void RootWriter::write_dl2(const ArrayEvent& event)
         {
             TDirectory* dir = get_or_create_directory("/events/dl2/geometry");
             dir->cd();
-            array_event.dl2_geometry_map[name] = RootDL2Geometry(name);
-            geom_tree = array_event.dl2_geometry_map[name]->initialize();
+            auto tree =  new TTree(name.c_str(), "Reconstructed geometry parameters");
+            geom_tree = tree;
+            helper.root_dl2_rec_geometry_map[name] = RootDL2RecGeometry();
+            helper.root_dl2_rec_geometry_map[name]->initialize_write(geom_tree);
             trees[name] = geom_tree;
             directories[name] = dir;
         }
-        auto& root_geom = array_event.dl2_geometry_map[name].value();
-        root_geom.event_id = event.event_id;
-        root_geom.reconstructor_name = name;
-        root_geom.geometry = geom;
+        auto& root_dl2_rec_geom = helper.root_dl2_rec_geometry_map[name].value();
+        root_dl2_rec_geom.event_id = event.event_id;
+        root_dl2_rec_geom = geom;
         geom_tree->Fill();
     }
     for(const auto& [name, energy] : dl2.energy)
@@ -644,15 +588,15 @@ void RootWriter::write_dl2(const ArrayEvent& event)
         {
             TDirectory* dir = get_or_create_directory("/events/dl2/energy");
             dir->cd();
-            array_event.dl2_energy_map[name] = RootDL2Energy(name);
-            energy_tree = array_event.dl2_energy_map[name]->initialize();
+            auto energy_tree = new TTree(name.c_str(), "Reconstructed energy parameters");
+            helper.root_dl2_rec_energy_map[name] = RootDL2RecEnergy();
+            helper.root_dl2_rec_energy_map[name]->initialize_write(energy_tree);
             trees[name] = energy_tree;
             directories[name] = dir;
         }
-        auto& root_energy = array_event.dl2_energy_map[name].value();
-        root_energy.event_id = event.event_id;
-        root_energy.reconstructor_name = name;
-        root_energy.energy = energy;
+        auto& root_dl2_rec_energy = helper.root_dl2_rec_energy_map[name].value();
+        root_dl2_rec_energy.event_id = event.event_id;
+        root_dl2_rec_energy = energy;
         energy_tree->Fill();
     }
     for(const auto& [name, particle] : dl2.particle)
@@ -662,15 +606,15 @@ void RootWriter::write_dl2(const ArrayEvent& event)
         {
             TDirectory* dir = get_or_create_directory("/events/dl2/particle");
             dir->cd();
-            array_event.dl2_particle_map[name] = RootDL2Particle(name);
-            particle_tree = array_event.dl2_particle_map[name]->initialize();
+            auto particle_tree = new TTree(name.c_str(), "Reconstructed particle parameters");
+            helper.root_dl2_rec_particle_map[name] = RootDL2RecParticle();
+            helper.root_dl2_rec_particle_map[name]->initialize_write(particle_tree);
             trees[name] = particle_tree;
             directories[name] = dir;
         }
-        auto& root_particle = array_event.dl2_particle_map[name].value();
-        root_particle.event_id = event.event_id;
-        root_particle.reconstructor_name = name;
-        root_particle.particle = particle;
+        auto root_dl2_rec_particle = helper.root_dl2_rec_particle_map[name].value();
+        root_dl2_rec_particle.event_id = event.event_id;
+        root_dl2_rec_particle = particle;
         particle_tree->Fill();
     }
     
@@ -678,26 +622,15 @@ void RootWriter::write_dl2(const ArrayEvent& event)
     if(!dl2_tree)
     {
         spdlog::debug("initialize dl2");
-        initialize_data_level<RootDL2Event>("dl2", array_event.dl2);
+        initialize_data_level("dl2", helper.root_dl2_camera);
         dl2_tree = get_tree("dl2");
     }
-    auto& root_dl2 = array_event.dl2.value();
-    root_dl2.event_id = event.event_id;
-    for(const auto& [tid, dl2_tel] : dl2.tels)
+    auto& root_dl2_camera = helper.root_dl2_camera.value();
+    root_dl2_camera.event_id = event.event_id;
+    for(auto& [tid, dl2_tel] : dl2.tels)
     {
-        root_dl2.reconstructor_name.clear();
-        root_dl2.distance.clear();
-        root_dl2.distance_error.clear();
-        root_dl2.tel_id = tid;
-        root_dl2.estimate_energy = dl2_tel.estimate_energy;
-        root_dl2.estimate_disp = dl2_tel.disp;
-        root_dl2.estimate_hadroness = dl2_tel.estimate_hadroness;
-        for(const auto& [name, impact] : dl2_tel.impact_parameters)
-        {
-            root_dl2.reconstructor_name.push_back(name);
-            root_dl2.distance.push_back(impact.distance);
-            root_dl2.distance_error.push_back(impact.distance_error);
-        }
+        root_dl2_camera.tel_id = tid;
+        root_dl2_camera = dl2_tel;
         dl2_tree->Fill();
     }
 }
@@ -719,20 +652,17 @@ void RootWriter::write_monitor(const ArrayEvent& event)
     if(!monitor_tree)
     {
         spdlog::debug("initialize monitor");
-        initialize_data_level<RootMonitor>("monitor", array_event.monitor);
+        initialize_data_level("monitor", helper.root_tel_monitor);
         monitor_tree = get_tree("monitor");
     }
     
     const auto& monitor = event.monitor.value();
-    auto& root_monitor = array_event.monitor.value();
-    root_monitor.event_id = event.event_id;
+    auto& root_tel_monitor = helper.root_tel_monitor.value();
+    root_tel_monitor.event_id = event.event_id;
     for(const auto& [tid, tel_monitor] : monitor.tels)
     {
-        root_monitor.tel_id = tid;
-        root_monitor.n_channels = tel_monitor->n_channels;
-        root_monitor.n_pixels = tel_monitor->n_pixels;
-        root_monitor.dc_to_pe = std::move(RVecD(tel_monitor->dc_to_pe.data(), root_monitor.n_channels * root_monitor.n_pixels));
-        root_monitor.pedestals = std::move(RVecD(tel_monitor->pedestal_per_sample.data(), root_monitor.n_channels * root_monitor.n_pixels));
+        root_tel_monitor.tel_id = tid;
+        root_tel_monitor = std::move(*tel_monitor);
         monitor_tree->Fill();
     }
 }
@@ -754,27 +684,21 @@ void RootWriter::write_pointing(const ArrayEvent& event)
     auto pointing_tree = get_tree("pointing");
     if(!pointing_tree)
     {
-        array_event.pointing = RootPointing();
         TDirectory* dir = get_or_create_directory("/events/");
         dir->cd();
-        pointing_tree = array_event.pointing->initialize();
+        auto tree =  new TTree("pointing", "Array and telescope pointing information");
+        pointing_tree = tree;
+        helper.root_pointing = RootPointing();
+        helper.root_pointing->initialize_write(pointing_tree);
         trees["pointing"] = pointing_tree;
         directories["pointing"] = dir;
     }
     const auto& pointing = event.pointing.value();
-    auto& root_pointing = array_event.pointing.value();
+    auto& root_pointing = helper.root_pointing.value();
     // Variables for identification
     root_pointing.event_id = event.event_id;
-    root_pointing.array_alt = pointing.array_altitude;
-    root_pointing.array_az = pointing.array_azimuth;
-    for(const auto& [tid, point] : pointing.tels)
-    {
-        root_pointing.tel_id.push_back(tid);
-        root_pointing.tel_az.push_back(point->azimuth);
-        root_pointing.tel_alt.push_back(point->altitude);
-    }
+    root_pointing = pointing;
     pointing_tree->Fill();
-    root_pointing.clear();
 }
 
 void RootWriter::write_event(const ArrayEvent& event)
@@ -834,41 +758,7 @@ void RootWriter::write_event(const ArrayEvent& event)
 
 void RootWriter::initialize_simulation_config_branches(TTree& tree, SimulationConfiguration& config)
 {
-    tree.Branch("run_number", &config.run_number);
-    tree.Branch("corsika_version", &config.corsika_version);
-    tree.Branch("simtel_version", &config.simtel_version);
-    tree.Branch("energy_range_min", &config.energy_range_min);
-    tree.Branch("energy_range_max", &config.energy_range_max);
-    tree.Branch("prod_site_B_total", &config.prod_site_B_total);
-    tree.Branch("prod_site_B_declination", &config.prod_site_B_declination);
-    tree.Branch("prod_site_B_inclination", &config.prod_site_B_inclination);
-    tree.Branch("prod_site_alt", &config.prod_site_alt);
-    tree.Branch("spectral_index", &config.spectral_index);
-    tree.Branch("shower_prog_start", &config.shower_prog_start);
-    tree.Branch("shower_prog_id", &config.shower_prog_id);
-    tree.Branch("detector_prog_start", &config.detector_prog_start);
-    tree.Branch("detector_prog_id", &config.detector_prog_id);
-    tree.Branch("n_showers", &config.n_showers);
-    tree.Branch("shower_reuse", &config.shower_reuse);
-    tree.Branch("max_alt", &config.max_alt);
-    tree.Branch("min_alt", &config.min_alt);
-    tree.Branch("max_az", &config.max_az);
-    tree.Branch("min_az", &config.min_az);
-    tree.Branch("diffuse", &config.diffuse);
-    tree.Branch("max_viewcone_radius", &config.max_viewcone_radius);
-    tree.Branch("min_viewcone_radius", &config.min_viewcone_radius);
-    tree.Branch("max_scatter_range", &config.max_scatter_range);
-    tree.Branch("min_scatter_range", &config.min_scatter_range);
-    tree.Branch("core_pos_mode", &config.core_pos_mode);
-    tree.Branch("atmosphere", &config.atmosphere);
-    tree.Branch("corsika_iact_options", &config.corsika_iact_options);
-    tree.Branch("corsika_low_E_model", &config.corsika_low_E_model);
-    tree.Branch("corsika_high_E_model", &config.corsika_high_E_model);
-    tree.Branch("corsika_bunchsize", &config.corsika_bunchsize);
-    tree.Branch("corsika_wlen_min", &config.corsika_wlen_min);
-    tree.Branch("corsika_wlen_max", &config.corsika_wlen_max);
-    tree.Branch("corsika_low_E_detail", &config.corsika_low_E_detail);
-    tree.Branch("corsika_high_E_detail", &config.corsika_high_E_detail);
+    TTreeSerializer::branch(&tree, config);
 }
 
 
@@ -891,7 +781,8 @@ void RootWriter::initialize_data_level(const std::string& level_name, std::optio
     }
     dir->cd();
     data_level = T();
-    auto tree = data_level->initialize();
+    auto tree = new TTree("tels", ("Telescope data for " + level_name).c_str());
+    data_level->initialize_write(tree);
     trees[level_name] = tree;
     directories[level_name] = dir;
     build_index[level_name] = true;

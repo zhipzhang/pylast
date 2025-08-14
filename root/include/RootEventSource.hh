@@ -11,6 +11,7 @@
 
  #pragma once
 
+ #include "ArrayEvent.hh"
  #include "EventSource.hh"
  #include "RootDataLevels.hh"
  #include <memory>
@@ -31,8 +32,8 @@
         virtual void init_simulation_config() override;
         virtual void load_all_simulated_showers() override;
         virtual ArrayEvent get_event() override;
+        virtual ArrayEvent get_event(int index) override ;
         virtual bool is_finished()  override;
-        ArrayEvent operator[](int index);
 
 
     private:
@@ -41,9 +42,12 @@
         void initialize_data_level(const std::string& level_name, std::optional<T>& data_level);
         template<typename T>
         void initialize_dl2_trees(const std::string& subdir, std::unordered_map<std::string, std::optional<T>>& tree_map);
+        template<typename T>
+        void initialize_dir(const std::string& subdir, const std::string& tree_name, std::optional<T>& structure);
+
         void initialize_event_index();
-        bool read_next_event();
-        RootArrayEvent array_event;
+        RootEventHelper event_helper;
+        RootConfigHelper config_helper;
         void initialize_statistics();
         bool load_subarray_from_env;  // In case we can read subarray from environment variable
         std::unique_ptr<TFile> file;

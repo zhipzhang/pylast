@@ -71,60 +71,22 @@ void RootEventSource::init_subarray()
     tel_pos_tree->SetBranchAddress("tel_id", &tel_id);
     tel_pos_tree->SetBranchAddress("position", &tel_pos);
     auto optics_tree = static_cast<TTree*>(subarray_dir->Get("optics"));
+    config_helper.root_optics_description = RootOpticsDescription();
+    config_helper.root_optics_description->initialize_read(optics_tree);
     auto camera_dir = subarray_dir->GetDirectory("camera/");
     auto camera_geometry_tree = static_cast<TTree*>(camera_dir->Get("geometry"));
     auto camera_readout_tree = static_cast<TTree*>(camera_dir->Get("readout"));
+    config_helper.root_camera_geometry = RootCameraGeometry();
+    config_helper.root_camera_geometry->initialize_read(camera_geometry_tree);
+    config_helper.root_camera_readout = RootCameraReadout();
+    config_helper.root_camera_readout->initialize_read(camera_readout_tree);
     assert(optics_tree->GetEntries() == camera_geometry_tree->GetEntries());
     assert(optics_tree->GetEntries() == camera_readout_tree->GetEntries());
     assert(tel_pos_tree->GetEntries() == optics_tree->GetEntries());
-    std::string* mirror_name = nullptr;
-    int num_mirrors;
-    double mirror_area;
-    double equivalent_focal_length;
-    double effective_focal_length;
-    optics_tree->SetBranchAddress("mirror_name", &mirror_name);
-    optics_tree->SetBranchAddress("num_mirrors", &num_mirrors);
-    optics_tree->SetBranchAddress("mirror_area", &mirror_area);
-    optics_tree->SetBranchAddress("equivalent_focal_length", &equivalent_focal_length);
-    optics_tree->SetBranchAddress("effective_focal_length", &effective_focal_length);
-
-    RVecD* pix_x = nullptr;
-    RVecD* pix_y = nullptr;
-    RVecD* pix_area = nullptr;
-    RVecI* pix_type = nullptr;
-    camera_geometry_tree->SetBranchAddress("pix_x", &pix_x);
-    camera_geometry_tree->SetBranchAddress("pix_y", &pix_y);
-    camera_geometry_tree->SetBranchAddress("pix_area", &pix_area);
-    camera_geometry_tree->SetBranchAddress("pix_type", &pix_type);
-
-    std::string* camera_name = nullptr;
-    double sampling_rate;
-    int n_channels;
-    int n_pixels;
-    int n_samples;
-    RVecD* reference_pulse_shape = nullptr;
-    int reference_pulse_shape_length;
-    double reference_pulse_sample_width;
-    camera_readout_tree->SetBranchAddress("camera_name", &camera_name);
-    camera_readout_tree->SetBranchAddress("n_samples", &n_samples);
-    camera_readout_tree->SetBranchAddress("sampling_rate", &sampling_rate);
-    camera_readout_tree->SetBranchAddress("n_channels", &n_channels);
-    camera_readout_tree->SetBranchAddress("n_pixels", &n_pixels);
-    camera_readout_tree->SetBranchAddress("reference_pulse_shape", &reference_pulse_shape);
-    camera_readout_tree->SetBranchAddress("reference_pulse_shape_length", &reference_pulse_shape_length);
-    camera_readout_tree->SetBranchAddress("reference_pulse_sample_width", &reference_pulse_sample_width);
     for(int i = 0; i < optics_tree->GetEntries(); ++i)
     {
-        tel_pos_tree->GetEntry(i);
-        optics_tree->GetEntry(i);
-        camera_geometry_tree->GetEntry(i);
-        camera_readout_tree->GetEntry(i);
         std::array<double, 3> tel_position = {(*tel_pos)[0], (*tel_pos)[1], (*tel_pos)[2]};
-        OpticsDescription optics_description(*mirror_name, num_mirrors, mirror_area, equivalent_focal_length, effective_focal_length);
-        CameraGeometry camera_geometry(*camera_name, n_pixels, pix_x->data(), pix_y->data(), pix_area->data(), pix_type->data(), 0.0);
-        Eigen::MatrixXd reference_pulse_shape_matrix = Eigen::Map<Eigen::MatrixXd>(reference_pulse_shape->data(), n_channels, reference_pulse_shape_length);
-        CameraReadout camera_readout(*camera_name, sampling_rate, reference_pulse_sample_width, n_channels, n_pixels, n_samples, reference_pulse_shape_matrix);
-        auto telescope_description = TelescopeDescription(CameraDescription(*camera_name, std::move(camera_geometry), std::move(camera_readout)), (optics_description));
+        auto telescope_description = config_helper.get_telescope_description(i);
         subarray->add_telescope(tel_id, std::move(telescope_description), tel_position);
     }
 }
@@ -175,7 +137,7 @@ void RootEventSource::init_atmosphere_model()
 }
 void RootEventSource::load_all_simulated_showers()
 {
-    spdlog::debug("Not implemented");
+    spdlog::warn("Not implemented");
 }
 
 template<typename T>
@@ -193,8 +155,8 @@ void RootEventSource::initialize_dl2_trees(const std::string& subdir, std::unord
             std::string tree_name = key->GetName();
             auto tree = static_cast<TTree*>(dir->Get(tree_name.c_str()));
             if(tree) {
-                tree_map[tree_name] = T(tree_name);
-                tree_map[tree_name]->initialize(tree);
+                tree_map[tree_name] = T();
+                tree_map[tree_name]->initialize_read(tree);
                 spdlog::debug("Found {} tree: {}", subdir, tree_name);
             }
         }
@@ -204,83 +166,24 @@ void RootEventSource::initialize_dl2_trees(const std::string& subdir, std::unord
 void RootEventSource::initialize_array_event()
 {
     // Test What we have in the root file
-    TDirectory* simulation_dir = file->GetDirectory("/events/simulation");
-    if(!simulation_dir)
-    {
-        spdlog::warn("no simulation directory found");
-    }
-    else
-    {
-        auto sim_tree = static_cast<TTree*>(simulation_dir->Get("shower"));
-        if(!sim_tree)
-        {
-            spdlog::debug("no shower tree found in simulation directory");
-        }
-        else
-        {
-            array_event.simulation_shower = RootSimulationShower();
-            array_event.simulation_shower->initialize(sim_tree);
-        }
-    }
-
-    initialize_event_index();
+    initialize_dir("/events/simulation", "shower", event_helper.root_simulation_shower);
+    initialize_dir("/events", "event_index", event_helper.root_event_index);
     // Initialize R0 data level
-    initialize_data_level<RootSimulatedCamera>("simulation", array_event.simulation_camera);
-    initialize_data_level<RootR0Event>("r0", array_event.r0);
-    initialize_data_level<RootR1Event>("r1", array_event.r1);
-    initialize_data_level<RootDL0Event>("dl0", array_event.dl0);
-    initialize_data_level<RootDL1Event>("dl1", array_event.dl1);
-    initialize_data_level<RootDL2Event>("dl2", array_event.dl2);
-    initialize_data_level<RootMonitor>("monitor", array_event.monitor);
-    
-    // Pointing need special handling
-    TDirectory* pointing_dir = file->GetDirectory("/events/");
-    if(!pointing_dir)
-    {
-        spdlog::debug("no events directory found");
-    }
-    else
-    {
-        auto pointing_tree = static_cast<TTree*>(pointing_dir->Get("pointing"));
-        if(!pointing_tree)
-        {
-            spdlog::debug("no pointing tree found");
-        }
-        else
-        {
-            array_event.pointing = RootPointing();
-            array_event.pointing->initialize(pointing_tree);
-        }
-    }
+    initialize_data_level("simulation", event_helper.root_simulation_camera);
+    initialize_data_level("r0", event_helper.root_r0_camera);
+    initialize_data_level("r1", event_helper.root_r1_camera);
+    initialize_data_level("dl0", event_helper.root_dl0_camera);
+    initialize_data_level("dl1", event_helper.root_dl1_camera);
+    initialize_data_level("dl2", event_helper.root_dl2_camera);
+    initialize_data_level("monitor", event_helper.root_tel_monitor);
 
+    initialize_dir("/events", "pointing", event_helper.root_pointing);
     // Initialize DL2 trees using the template function
-    initialize_dl2_trees("geometry", array_event.dl2_geometry_map);
-    initialize_dl2_trees("energy", array_event.dl2_energy_map);
-    initialize_dl2_trees("particle", array_event.dl2_particle_map);
+    initialize_dl2_trees("geometry", event_helper.root_dl2_rec_geometry_map);
+    initialize_dl2_trees("energy", event_helper.root_dl2_rec_energy_map);
+    initialize_dl2_trees("particle", event_helper.root_dl2_rec_particle_map);
+    max_events = event_helper.root_event_index->index_tree->GetEntries();
     
-    max_events = array_event.test_entries();
-}
-
-void RootEventSource::initialize_event_index()
-{
-    TDirectory* event_index_dir = file->GetDirectory("/events/");
-    if(!event_index_dir)
-    {
-        spdlog::debug("no events directory found");
-    }
-    else
-    {
-        auto event_index_tree = static_cast<TTree*>(event_index_dir->Get("event_index"));
-        if(!event_index_tree)
-        {
-            spdlog::debug("no event_index tree found");
-        }
-        else
-        {
-            array_event.event_index = RootEventIndex();
-            array_event.event_index->initialize(event_index_tree);
-        }
-    }
 }
 
 template<typename T>
@@ -301,184 +204,49 @@ void RootEventSource::initialize_data_level(const std::string& level_name, std::
         }
         
         data_level = T();
-        data_level->initialize(tree);
+        data_level->initialize_read(tree);
     }
 
+template<typename T>
+void RootEventSource::initialize_dir(const std::string& subdir, const std::string& tree_name,  std::optional<T>& structure)
+{
+    TDirectory* dir = file->GetDirectory(subdir.c_str());
+    if(!dir)
+    {
+        spdlog::debug("no {} directory found", subdir);
+        return;
+    }
+    auto tree = static_cast<TTree*>(dir->Get(tree_name.c_str()));
+    if(!tree)
+    {
+        spdlog::debug("no {} tree found in {} directory", tree_name, subdir);
+        return;
+    }
+
+    structure = T();
+    structure->initialize_read(tree);
+};
 ArrayEvent RootEventSource::get_event()
 {
     if(is_finished())
     {
+        spdlog::warn("No more events to read");
         return ArrayEvent();
     }
-    ArrayEvent event;
-    array_event.load_next_event();
-    if(array_event.simulation_shower.has_value())
-    {
-        event.simulation = SimulatedEvent();
-        event.simulation->shower = array_event.simulation_shower->shower;
-        event.event_id = array_event.simulation_shower->event_id;
-    }
-    else
-    {
-        event.event_id = 0;
-    }
-    if(array_event.simulation_camera.has_value())
-    {
-        if(event.simulation.has_value())
-        {
-            for(auto ientry: array_event.sim_tel_entries)
-            {
-                array_event.simulation_camera->get_entry(ientry);
-                int tel_id = array_event.simulation_camera->tel_id;
-                int n_pixels = array_event.simulation_camera->true_image.size();
-                event.simulation->add_simulated_image(tel_id, n_pixels, array_event.simulation_camera->true_image.data(), array_event.simulation_camera->true_impact_parameter);
-            }
-        }
-    }
-    if(array_event.r0.has_value())
-    {
-        event.r0 = R0Event();
-        for(auto ientry: array_event.r0_tel_entries)
-        {
-            array_event.r0->get_entry(ientry);
-            int tel_id = array_event.r0->tel_id;
-            int n_pixels = array_event.r0->n_pixels;
-            int n_samples = array_event.r0->n_samples;
-            Eigen::Matrix<uint16_t, -1, -1, Eigen::RowMajor> high_gain_waveform = Eigen::Map<Eigen::Matrix<uint16_t, -1, -1, Eigen::RowMajor>>(array_event.r0->high_gain_waveform.data(), n_pixels, n_samples);
-            Eigen::Matrix<uint16_t, -1, -1, Eigen::RowMajor> low_gain_waveform = Eigen::Map<Eigen::Matrix<uint16_t, -1, -1, Eigen::RowMajor>>(array_event.r0->low_gain_waveform.data(), n_pixels, n_samples);
-            R0Camera r0_camera(n_pixels, n_samples, high_gain_waveform, low_gain_waveform);
-            event.r0->add_tel(tel_id, n_pixels, n_samples, std::move(high_gain_waveform), std::move(low_gain_waveform), nullptr, nullptr);
-        }
-    }
-    if(array_event.r1.has_value())
-    {
-        event.r1 = R1Event();
-        for(auto ientry: array_event.r1_tel_entries)
-        {
-            array_event.r1->get_entry(ientry);
-            int tel_id = array_event.r1->tel_id;
-            int n_pixels = array_event.r1->n_pixels;
-            int n_samples = array_event.r1->n_samples;
-            Eigen::Matrix<double, -1, -1, Eigen::RowMajor> waveform = Eigen::Map<Eigen::Matrix<double, -1, -1, Eigen::RowMajor>>(array_event.r1->waveform.data(), n_pixels, n_samples);
-            Eigen::VectorXi gain_selection = Eigen::Map<Eigen::VectorXi>(array_event.r1->gain_selection.data(), n_pixels);
-            event.r1->add_tel(tel_id, n_pixels, n_samples, std::move(waveform), std::move(gain_selection));
-        }
-    }
-    if(array_event.dl0.has_value())
-    {
-        event.dl0 = DL0Event();
-        for(auto ientry: array_event.dl0_tel_entries)
-        {
-            array_event.dl0->get_entry(ientry);
-            int tel_id = array_event.dl0->tel_id;
-            int n_pixels = array_event.dl0->n_pixels;
-            Eigen::VectorXd image = Eigen::Map<Eigen::VectorXd>(array_event.dl0->image.data(), n_pixels);
-            Eigen::VectorXd peak_time = Eigen::Map<Eigen::VectorXd>(array_event.dl0->peak_time.data(), n_pixels);
-            event.dl0->add_tel(tel_id, std::move(image), std::move(peak_time));
-        }
-    }
-    if(array_event.dl1.has_value())
-    {
-        event.dl1 = DL1Event();
-        for(auto ientry: array_event.dl1_tel_entries)
-        {
-            array_event.dl1->get_entry(ientry);
-            int tel_id = array_event.dl1->tel_id;
-            Eigen::VectorXf image = Eigen::Map<Eigen::VectorXf>(array_event.dl1->image.data(), array_event.dl1->image.size());
-            Eigen::VectorXf peak_time = Eigen::Map<Eigen::VectorXf>(array_event.dl1->peak_time.data(), array_event.dl1->peak_time.size());
-            Eigen::Vector<bool, -1> mask = Eigen::Map<Eigen::Vector<bool, -1>>(array_event.dl1->mask.data(), array_event.dl1->mask.size());
-
-            DL1Camera dl1_camera;
-            dl1_camera.image = std::move(image);
-            dl1_camera.peak_time = std::move(peak_time);
-            dl1_camera.mask = std::move(mask);
-            dl1_camera.image_parameters = array_event.dl1->params;
-            event.dl1->add_tel(tel_id, std::move(dl1_camera));
-        }
-    }
-    if(array_event.dl2.has_value())
-    {
-        event.dl2 = DL2Event();
-        for(auto ientry: array_event.dl2_tel_entries)
-        {
-            array_event.dl2->get_entry(ientry);
-            int tel_id = array_event.dl2->tel_id;
-            event.dl2->add_tel_geometry(tel_id, array_event.dl2->distance, array_event.dl2->reconstructor_name);
-            event.dl2->tels.at(tel_id).estimate_energy = array_event.dl2->estimate_energy;
-            event.dl2->tels.at(tel_id).disp = array_event.dl2->estimate_disp;
-        }
-    }
-    for(auto [name, geometry]: array_event.dl2_geometry_map)
-    {
-        if(geometry.has_value())
-        {
-            event.dl2->geometry[name] = geometry->geometry;
-        }
-    }
-    for(auto [name, energy]: array_event.dl2_energy_map)
-    {
-        if(energy.has_value())
-        {
-            event.dl2->energy[name] = energy->energy;
-        }
-    }
-    for(auto [name, particle]: array_event.dl2_particle_map)
-    {
-        if(particle.has_value())
-        {
-            event.dl2->particle[name] = particle->particle;
-        }
-    }
-    if(array_event.monitor.has_value())
-    {
-        event.monitor = EventMonitor();
-        for(auto ientry: array_event.monitor_tel_entries)
-        {
-            array_event.monitor->get_entry(ientry);
-            int tel_id = array_event.monitor->tel_id;
-            int n_channels = array_event.monitor->n_channels;
-            int n_pixels = array_event.monitor->n_pixels;
-            Eigen::Matrix<double, -1, -1, Eigen::RowMajor> dc_to_pe = Eigen::Map<Eigen::Matrix<double, -1, -1, Eigen::RowMajor>>(array_event.monitor->dc_to_pe.data(), n_channels, n_pixels);
-            Eigen::Matrix<double, -1, -1, Eigen::RowMajor> pedestals = Eigen::Map<Eigen::Matrix<double, -1, -1, Eigen::RowMajor>>(array_event.monitor->pedestals.data(), n_channels, n_pixels);
-            event.monitor->add_tel(tel_id, n_channels, n_pixels, std::move(pedestals), std::move(dc_to_pe));
-        }
-    }
-    if(array_event.pointing.has_value())
-    {
-        event.pointing = Pointing();
-        event.pointing->array_altitude = array_event.pointing->array_alt;
-        event.pointing->array_azimuth = array_event.pointing->array_az;
-        for(auto tel_id: array_event.pointing->tel_id)
-        {
-            double azimuth = array_event.pointing->tel_az[tel_id];
-            double altitude = array_event.pointing->tel_alt[tel_id];
-            event.pointing->add_tel(tel_id, azimuth, altitude);
-        }
-    }
-    if(event.event_id == 0)
-    {
-        // try to get event_id from dl1
-        if(array_event.dl1.has_value())
-        {
-            event.event_id = array_event.dl1->event_id;
-        }
-    }
-    return event;
+    return event_helper.get_event();
 }
 
+ArrayEvent RootEventSource::get_event(int index)
+{
+    if(index < 0 || index >= max_events)
+    {
+        throw std::out_of_range("Index out of range: " + std::to_string(index));
+    }
+    return event_helper.get_event(index);
+}
 bool RootEventSource::is_finished() 
 {
-    return !array_event.has_event();
-}
-
-ArrayEvent RootEventSource::operator[](int index)
-{
-    if(index >= max_events)
-    {
-        throw std::runtime_error("index out of range");
-    }
-    array_event.get_event(index);
-    return get_event();
+    return event_helper.current_entry >= max_events;
 }
 
 void RootEventSource::initialize_statistics()
