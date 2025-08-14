@@ -14,10 +14,6 @@
 #include "spdlog/fmt/fmt.h"
  class SimulatedShower {
 public:
-    /** @brief Default constructor */
-    SimulatedShower() = default;
-    /** @brief Default destructor */
-    ~SimulatedShower() = default;
 
     /** @brief Simulated primary particle energy in TeV */
     double energy;

@@ -25,9 +25,6 @@ public:
     /** @brief Readout of the camera */
     CameraReadout camera_readout;
     
-    CameraDescription() = default;
-    // Use pass by value and move constructor
-    CameraDescription(string camera_name, CameraGeometry camera_geometry, CameraReadout camera_readout);
 
     const string print() const;
 };

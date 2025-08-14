@@ -22,10 +22,8 @@
   class TelMonitor
  {
    public:
-    TelMonitor() = default;
-    TelMonitor(int n_channels, int n_pixels, Eigen::Matrix<double, -1, -1, Eigen::RowMajor> pedestal_per_sample, Eigen::Matrix<double, -1, -1, Eigen::RowMajor> dc_to_pe);
-    Eigen::Matrix<double, -1, -1, Eigen::RowMajor> pedestal_per_sample;
-    Eigen::Matrix<double, -1, -1, Eigen::RowMajor> dc_to_pe;
     int n_channels;
     int n_pixels;
+    Eigen::Matrix<double, -1, -1, Eigen::RowMajor> pedestal_per_sample;
+    Eigen::Matrix<double, -1, -1, Eigen::RowMajor> dc_to_pe;
  };

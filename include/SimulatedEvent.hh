@@ -25,9 +25,7 @@ public:
      * 
      */
     SimulatedShower shower;
-    void add_simulated_image(telescope_id tel_id, int n_pixels, int* pe_count, double impact_parameter) 
-    {
-        BaseTelContainer::add_tel(tel_id, n_pixels, pe_count, impact_parameter);
-    }
+
+    std::vector<int> triggered_tels;
 
 };

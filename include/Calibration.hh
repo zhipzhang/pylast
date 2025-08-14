@@ -11,7 +11,6 @@
 
 #pragma once
 
-#include "Eigen/Dense"
 #include "SubarrayDescription.hh"
 #include "ArrayEvent.hh"
 #include "ImageExtractor.hh"

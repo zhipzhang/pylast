@@ -20,8 +20,6 @@ using std::string;
  */
 class SimulationConfiguration {
 public:
-    SimulationConfiguration() = default;
-
     /// @brief Original sim_telarray run number
     int run_number = -1;
 

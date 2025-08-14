@@ -19,12 +19,10 @@
 class TelReconstructedParameter
 {
     public:
-        TelReconstructedParameter() = default;
-        
-        std::unordered_map<std::string, TelImpactParameter> impact_parameters;
         double estimate_energy = 0;
         double estimate_hadroness = 0;
-        double disp = 0;
+        double estimate_disp = 0;
+        std::unordered_map<std::string, TelImpactParameter> impact_parameters;
         
         // Returns the impact parameter value when there's only one entry
         TelImpactParameter& impact() {
@@ -57,6 +55,10 @@ class DL2Event
         std::unordered_map<int, TelReconstructedParameter> tels;
         std::unordered_map<std::string, ReconstructedEnergy> energy;
         std::unordered_map<std::string, ReconstructedParticle> particle;
+        void add_tel(int tel_id, TelReconstructedParameter tel_reconstructed_parameter)
+        {
+            tels[tel_id] = tel_reconstructed_parameter;
+        }
         void add_energy(std::string name, ReconstructedEnergy energy)
         {
             this->energy[name] = energy;
@@ -72,7 +74,7 @@ class DL2Event
         void add_tel_geometry(int tel_id, double impact_parameter, std::string geometry_reconstructor_name)
         {
             TelReconstructedParameter tel_reconstructed_parameter;
-            tel_reconstructed_parameter.impact_parameters[geometry_reconstructor_name] = TelImpactParameter(impact_parameter, 0);
+            tel_reconstructed_parameter.impact_parameters[geometry_reconstructor_name] = TelImpactParameter{impact_parameter, 0};
             tels[tel_id] = tel_reconstructed_parameter;
         }
         void add_tel_geometry(int tel_id, std::vector<double> impact_parameters, std::vector<std::string> reconstructor_names)
@@ -80,7 +82,7 @@ class DL2Event
             TelReconstructedParameter tel_reconstructed_parameter;
             for(size_t i = 0; i < impact_parameters.size(); i++)
             {
-                tel_reconstructed_parameter.impact_parameters[reconstructor_names[i]] = TelImpactParameter(impact_parameters[i], 0);
+                tel_reconstructed_parameter.impact_parameters[reconstructor_names[i]] = TelImpactParameter{impact_parameters[i], 0};
             }
             tels[tel_id] = tel_reconstructed_parameter;
         }
@@ -94,13 +96,13 @@ class DL2Event
         }
         void set_tel_disp(int tel_id, double disp)
         {
-            tels[tel_id].disp = disp;
+            tels[tel_id].estimate_disp = disp;
         }
         void set_tel_estimate_disp(std::vector<int> tel_ids, std::vector<double> disps)
         {
             for(size_t i = 0; i < tel_ids.size(); i++)
             {
-                tels[tel_ids[i]].disp = disps[i];
+                tels[tel_ids[i]].estimate_disp = disps[i];
             }
         }
 };

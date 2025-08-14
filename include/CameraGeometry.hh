@@ -12,6 +12,7 @@
 
 #include "Eigen/Dense"
 #include "Eigen/Sparse"
+#include "Eigen/src/Core/Matrix.h"
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using std::string;
@@ -60,6 +61,8 @@ public:
      * @param cam_rotation camera rotation [degree]
      */
     CameraGeometry(std::string camera_name, int num_pixels, double* pix_x, double* pix_y, double* pix_area, int* pix_type, double cam_rotation);
+    CameraGeometry(std::string camera_name, int num_pixels, Eigen::VectorXd pix_x, Eigen::VectorXd pix_y, Eigen::VectorXd pix_area, Eigen::VectorXi pix_type, double cam_rotation);
+
 
     const string print() const;
     /**

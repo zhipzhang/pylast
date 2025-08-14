@@ -13,9 +13,6 @@
 
 struct TelImpactParameter {
 public:
-    TelImpactParameter() = default;
-    TelImpactParameter(double distance, double distance_error):
-        distance(distance), distance_error(distance_error) {}
     double distance;
     double distance_error = 0.0;
 };
