@@ -20,7 +20,7 @@ class MLEnergyReconstructor(CMLReconstructor):
                 self.model = pickle.load(f)
         else:
             model_directory = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "model")
-            energy_regressor_path = os.path.join(model_directory, "energy_regressor_offset.pkl")
+            energy_regressor_path = os.path.join(model_directory, "energy_regressor.pkl")
             with open(energy_regressor_path, "rb") as f:
                 self.model = pickle.load(f)
         self.check_model()
@@ -29,30 +29,18 @@ class MLEnergyReconstructor(CMLReconstructor):
         if self.model is None:
             raise ValueError("model is not set")
         else:
-            self.energy_predictor = self.model
+            self.energy_predictor = self.model["energy_regressor"]
 
         
-    def predict(self, features, offset_angle):
-        # Determine which model to use based on offset angle
-        if offset_angle < 1.0:
-            offset_key = "0_1"
-        elif offset_angle < 2.0:
-            offset_key = "1_2"
-        elif offset_angle < 3.0:
-            offset_key = "2_3"
-        elif offset_angle < 4.0:
-            offset_key = "3_4"
-        else:
-            offset_key = "4_n"
-        
+    def predict(self, features):
         # Check if features is a batch or single sample
         if isinstance(features, list) or (isinstance(features, np.ndarray) and len(features.shape) > 1 and features.shape[0] > 1):
             # Batch prediction
-            predictions = self.energy_predictor[f"energy_regressor_{offset_key}"].predict(features)
+            predictions = self.energy_predictor.predict(features)
             return predictions
         else:
             # Single sample prediction
-            prediction = self.energy_predictor[f"energy_regressor_{offset_key}"].predict([features])
+            prediction = self.energy_predictor.predict([features])
             return prediction
 
     def __call__(self, event):
@@ -60,42 +48,40 @@ class MLEnergyReconstructor(CMLReconstructor):
         # Calculate average intensity in one pass
 
         if event.dl2.geometry["HillasReconstructor"].is_valid:
-            intensities = np.array([event.dl1.tels[tel_id].image_parameters.hillas.intensity for tel_id in event.dl2.tels])
+            intensities = np.array([self.tel_rec_params[tel_id].hillas.intensity for tel_id in self.telescopes])
             self.average_intensity = np.mean(intensities)
             # Pre-allocate arrays
             n_telescopes = len(self.telescopes)
             telescopes_energys = np.zeros(n_telescopes)
             weights = np.zeros(n_telescopes)
             
-            # Should be careful that we may not have pointing direction in the event!!
-            offset_angle = compute_angle_separation(event.dl2.geometry["HillasReconstructor"].alt, event.dl2.geometry["HillasReconstructor"].az, self.array_pointing_direction.altitude, self.array_pointing_direction.azimuth)
             # Prepare feature arrays for batch prediction if possible
             features_list = []
             for itel, tel_id in enumerate(self.telescopes):
                 features = self.get_features(event, tel_id)
                 features_list.append(features)
-            
+           
             # If the model supports batch prediction, use it
             try:
                 # Combine all features into a single batch
                 batch_features = np.vstack(features_list)
-                batch_energies = self.predict(batch_features, offset_angle)
+                batch_energies = self.predict(batch_features)
                 
 
                 for itel, tel_id in enumerate(self.telescopes):
                     energy = batch_energies[itel]
                     energy_value = pow(10, energy)
                     telescopes_energys[itel] = energy_value
-                    weights[itel] = event.dl1.tels[tel_id].image_parameters.hillas.intensity
+                    weights[itel] = self.tel_rec_params[tel_id].fake_image_parameters.hillas.intensity
                     event.dl2.set_tel_estimate_energy(tel_id, energy_value)
             except:
                 # Fall back to individual predictions if batch prediction fails
                 for itel, tel_id in enumerate(self.telescopes):
                     features = features_list[itel]
-                    energy = self.predict(features, offset_angle)[0]
+                    energy = self.predict(features)[0]
                     energy_value = pow(10, energy)
                     telescopes_energys[itel] = energy_value
-                    weights[itel] = event.dl1.tels[tel_id].image_parameters.hillas.intensity
+                    weights[itel] = self.tel_rec_params[tel_id].fake_image_parameters.hillas.intensity
                     event.dl2.set_tel_estimate_energy(tel_id, energy_value)
             
             self.energy.energy_valid = True
@@ -117,17 +103,17 @@ class MLEnergyReconstructor(CMLReconstructor):
             A numpy array of feature values in the required order
         """
         # Get DL1 data for this telescope
-        dl1_tel = event.dl1.tels[tel_id]
         
         # Get DL2 data for this telescope (for impact parameter)
         dl2_tel = event.dl2.tels[tel_id]
         
         # Extract all parameters at once to reduce attribute lookups
-        hillas = dl1_tel.image_parameters.hillas
-        leakage = dl1_tel.image_parameters.leakage
-        concentration = dl1_tel.image_parameters.concentration
-        morphology = dl1_tel.image_parameters.morphology
-        intensity = dl1_tel.image_parameters.intensity
+        image_parameters = self.tel_rec_params[tel_id]
+        hillas = image_parameters.hillas
+        leakage = image_parameters.leakage
+        concentration = image_parameters.concentration
+        morphology = image_parameters.morphology
+        intensity = image_parameters.intensity
         
         # Get impact parameter from DL2
         impact_parameter = dl2_tel.impact.distance
@@ -154,6 +140,8 @@ class MLEnergyReconstructor(CMLReconstructor):
             intensity.intensity_max,         # intensity_max
             intensity.intensity_mean,        # intensity_mean
             intensity.intensity_std,         # intensity_std
+            intensity.intensity_kurtosis,   # intensity_kurtosis
+            intensity.intensity_skewness,    # intensity_skewness
             self.average_intensity,          # average_intensity
             n_tel,                           # n_tel
         ]

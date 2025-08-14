@@ -59,6 +59,8 @@ void ShowerProcessor::operator()(ArrayEvent& event)
             }
         }
     }
+
+    //TODO Combine the DL1 and Simulation together.
     for(auto& [tel_id, dl1]: event.dl1->tels)
     {
 
@@ -102,5 +104,48 @@ void ShowerProcessor::operator()(ArrayEvent& event)
                 dl1->image_parameters.extra.miss = miss;
                 dl1->image_parameters.extra.disp = disp ;
                 dl1->image_parameters.extra.theta = std::asin(miss/disp);
+    }
+
+    for(auto& [tel_id, simulated_camera]: event.simulation->tels)
+    {
+        auto& image_parameter = simulated_camera->fake_image_parameters;
+        if(image_parameter.hillas.intensity < 40)
+        {
+            continue;
+        }
+        auto true_direction = SkyDirection(AltAzFrame(), event.simulation->shower.az, event.simulation->shower.alt);
+        auto telescope_frame = TelescopeFrame(SphericalRepresentation(event.pointing->tels[tel_id]->azimuth, event.pointing->tels[tel_id]->altitude));
+        auto fov_direction = true_direction.transform_to(telescope_frame);
+        auto core_pos = CartesianPoint(event.simulation->shower.core_x, event.simulation->shower.core_y, 0);
+        auto tel_pos = CartesianPoint(subarray.tel_positions.at(tel_id)[0], subarray.tel_positions.at(tel_id)[1], 0);
+        auto tilted_frame = TiltedGroundFrame(telescope_frame.pointing_direction);
+        auto tilted_core_pos = core_pos.transform_to_tilted(tilted_frame);
+        auto tilted_tel_pos = tel_pos.transform_to_tilted(tilted_frame);
+        double true_psi = std::atan2(tilted_core_pos.y() - tilted_tel_pos.y(), tilted_core_pos.x() - tilted_tel_pos.x());
+        auto cog_point = CameraPoint({image_parameter.hillas.x, image_parameter.hillas.y});
+        auto true_line_direction = Line2D({fov_direction->x(), fov_direction->y()}, {cos(true_psi), sin(true_psi)});
+        double cog_err = true_line_direction.distance(cog_point);
+        image_parameter.extra.true_psi = true_psi;
+        double beta_err = true_psi - image_parameter.hillas.psi;
+        // Normalize beta_err to be within [-PI/2, PI/2] to keep it close to 0
+        while(beta_err > M_PI/2)
+        {
+            beta_err -= M_PI;
+        }
+        while(beta_err < -M_PI/2)
+        {
+            beta_err += M_PI;
+        }
+        image_parameter.extra.cog_err = cog_err;
+        image_parameter.extra.beta_err = std::abs(beta_err);
+        // Miss is the distance between the hillas ellipse center and the true direction
+        double off_lon = fov_direction->x() - image_parameter.hillas.x;
+        double off_lat = fov_direction->y() - image_parameter.hillas.y;
+        double disp_projection = off_lon * cos(image_parameter.hillas.psi) + off_lat * sin(image_parameter.hillas.psi);
+        double disp = sqrt(off_lon * off_lon + off_lat * off_lat);
+        double miss = sqrt(pow(disp, 2) - pow(disp_projection, 2));
+        image_parameter.extra.miss = miss;
+        image_parameter.extra.disp = disp;
+        image_parameter.extra.theta = std::asin(miss/disp);
     }
 }

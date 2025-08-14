@@ -26,8 +26,6 @@ public:
     /** @brief Description of the optics */
     OpticsDescription optics_description;
 
-    TelescopeDescription() = default;
-    TelescopeDescription(CameraDescription camera_description, OpticsDescription optics_description);
     const string print() const;
 };
 class SubarrayDescription

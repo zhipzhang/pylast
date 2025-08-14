@@ -20,18 +20,20 @@
     ExprQuery() = default;
     virtual ~ExprQuery() = default;
     protected:
-        virtual void init_variables() = 0;
-        void add_expr(const std::string& expr)
-        {
-            if(expr_.empty())
-            {
-                expr_ = expr;
-            }
-            else 
-            {
-                expr_ += " && " + expr;    
-            }
+        /**
+         * @brief Append a new expression with AND logic
+         * @param expr The expression to append
+         * @details If current expression is empty, sets it directly.
+         *          Otherwise, appends the new expression with && operator.
+         */
+        void add_expr(const std::string& expr) {
+            expr_ = expr_.empty() ? expr : expr_ + " && " + expr;
         }
+        /**
+         * @brief Set the expr object, the string is like "var1 > 0 && var2 < 10"
+         * 
+         * @param expr 
+         */
         void set_expr(const std::string& expr)
         {
             expr_ = expr;

@@ -23,8 +23,6 @@ public:
     string camera_name;
     /** @brief Sampling rate of the waveform [Hz] */
     double sampling_rate;
-    /** @brief Expected pulse shape for a signal in the waveform. 2 dimensional, first dimension is gain channel */
-    Eigen::MatrixXd reference_pulse_shape;
     /** @brief The amount of time corresponding to each sample in reference_pulse_shape [ns] */
     double reference_pulse_sample_width;
     /** @brief Number of gain channels */
@@ -33,9 +31,9 @@ public:
     int n_pixels;
     /** @brief Number of waveform samples for normal events */
     int n_samples;
+    /** @brief Expected pulse shape for a signal in the waveform. 2 dimensional, first dimension is gain channel */
+    Eigen::MatrixXd reference_pulse_shape;
 
-    CameraReadout() = default;
-    CameraReadout(string camera_name, double sampling_rate, double reference_pulse_sample_width, int n_channels, int n_pixels, int n_samples, Eigen::MatrixXd reference_pulse_shape);
 
     const string print() const;
 };

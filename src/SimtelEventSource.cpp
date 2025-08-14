@@ -4,8 +4,14 @@
 #include "CameraGeometry.hh"
 #include "LACT_hessioxxx/include/io_basic.h"
 #include "LACT_hessioxxx/include/io_hess.h"
+#include "Pointing.hh"
+#include "R0Event.hh"
+#include "R1Event.hh"
 #include "SimtelFileHandler.hh"
+#include "SimulatedCamera.hh"
 #include "SimulatedShowerArray.hh"
+#include "TelImpactParameter.hh"
+#include "TelMonitor.hh"
 #include "spdlog/spdlog.h"
 #include "spdlog/fmt/fmt.h"
 #include <cassert>
@@ -135,8 +141,8 @@ void SimtelEventSource::set_telescope_settings(int tel_id)
         camera_geometry.pix_y_fov = camera_geometry.pix_y / optics.equivalent_focal_length;
         camera_geometry.pix_width_fov = camera_geometry.pix_width / optics.equivalent_focal_length;
     }
-    auto camera_description = CameraDescription(camera_name, std::move(camera_geometry), std::move(camera_readout));
-    auto telescope_description = TelescopeDescription(std::move(camera_description), std::move(optics));
+    auto camera_description = CameraDescription{camera_name, std::move(camera_geometry), std::move(camera_readout)};
+    auto telescope_description = TelescopeDescription{.camera_description = std::move(camera_description), .optics_description = std::move(optics)};
     auto telescope_position = get_telescope_position(itel);
     subarray->add_telescope(tel_id, std::move(telescope_description), telescope_position);
 }
@@ -166,7 +172,7 @@ CameraReadout SimtelEventSource::get_telescope_camera_readout(int tel_index)
             reference_pulse_shape(i, j) = simtel_file_handler->hsdata->pixel_set[tel_index].refshape[i][j];
         }
     }
-    return CameraReadout(camera_name, sampling_rate, reference_pulse_sample_width, n_channels, num_pixels, n_samples, std::move(reference_pulse_shape));
+    return CameraReadout{.camera_name = camera_name, .sampling_rate = sampling_rate, .reference_pulse_sample_width = reference_pulse_sample_width, .n_channels = n_channels, .n_pixels = num_pixels,.n_samples= n_samples, .reference_pulse_shape = std::move(reference_pulse_shape)};
 }
 OpticsDescription SimtelEventSource::get_telescope_optics(int tel_index)
 {
@@ -174,7 +180,7 @@ OpticsDescription SimtelEventSource::get_telescope_optics(int tel_index)
     double mirror_area = simtel_file_handler->hsdata->camera_set[tel_index].mirror_area;
     int num_mirrors = simtel_file_handler->hsdata->camera_set[tel_index].num_mirrors;
     double effective_focal_length = simtel_file_handler->hsdata->camera_set[tel_index].eff_flen;
-    return OpticsDescription(optics_name, num_mirrors, mirror_area, focal_length, effective_focal_length);
+    return OpticsDescription{.optics_name = optics_name, .num_mirrors = num_mirrors, .mirror_area = mirror_area, .equivalent_focal_length = focal_length, .effective_focal_length = effective_focal_length};
 }
 std::array<double, 3> SimtelEventSource::get_telescope_position(int tel_index)
 {
@@ -239,7 +245,7 @@ void SimtelEventSource::read_adc_samples(ArrayEvent& event)
     if(!event.r0) {
         event.r0 = R0Event();
     }
-    for(const auto& tel_id: allowed_tels) {
+    for(const  auto tel_id: allowed_tels) {
         auto tel_index = simtel_file_handler->tel_id_to_index[tel_id];
         if(!simtel_file_handler->hsdata->event.teldata[tel_index].known)
         {
@@ -247,10 +253,10 @@ void SimtelEventSource::read_adc_samples(ArrayEvent& event)
         }
         if(simtel_file_handler->hsdata->event.teldata[tel_index].raw->known)
         {
-            uint32_t* high_gain_waveform_sum = nullptr;
-            uint32_t* low_gain_waveform_sum = nullptr;
-            Eigen::Matrix<uint16_t, -1, -1, Eigen::RowMajor> high_gain_waveform;
-            Eigen::Matrix<uint16_t, -1, -1, Eigen::RowMajor> low_gain_waveform;
+            WaveformSumVector high_gain_waveform_sum;
+            WaveformSumVector low_gain_waveform_sum;
+            WaveformMatrix high_gain_waveform;
+            WaveformMatrix low_gain_waveform;
             // Read ADC samples
             if(simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_known[0][0] & (1L<<1))
             {
@@ -278,22 +284,30 @@ void SimtelEventSource::read_adc_samples(ArrayEvent& event)
             }
             if(simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_known[0][0] & (1L))
             {
+                high_gain_waveform_sum.resize(simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels);
                 spdlog::debug("ADC sums are available for tel_id: {} for first gain", tel_id);
-                high_gain_waveform_sum = &simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_sum[0][0];
+                for(int ipixel = 0;ipixel < simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels; ipixel++) {
+                    high_gain_waveform_sum(ipixel) = simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_sum[0][ipixel];
+                }
                 if(simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_known[1][0] & (1L))
                 {
                     spdlog::debug("ADC sums are available for tel_id: {} for second gain", tel_id);
-                    low_gain_waveform_sum = &simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_sum[1][0];
+                    low_gain_waveform_sum.resize(simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels);
+                    for(int ipixel = 0; ipixel < simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels; ipixel++) {
+                        low_gain_waveform_sum(ipixel) = simtel_file_handler->hsdata->event.teldata[tel_index].raw->adc_sum[1][ipixel];
+                    }
                 }
             }
             // If no adc_sums, it will be nullptr
-            event.r0->add_tel(tel_id, 
-                    simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels,
-                    simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_samples,
-                    std::move(high_gain_waveform),
-                    std::move(low_gain_waveform),
-                    std::move(high_gain_waveform_sum),
-                    std::move(low_gain_waveform_sum));
+            event.r0->add_tel(tel_id,
+                    R0Camera
+                    {
+                        .n_pixels = simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_pixels,
+                        .n_samples = simtel_file_handler->hsdata->event.teldata[tel_index].raw->num_samples,
+                        .waveform = std::array<WaveformMatrix, 2> {std::move(high_gain_waveform), std::move(low_gain_waveform)},
+                        .waveform_sum = std::array<WaveformSumVector, 2> {std::move(high_gain_waveform_sum), std::move(low_gain_waveform_sum)}
+                    }
+                );
         }
     }
 }
@@ -306,7 +320,7 @@ void SimtelEventSource::apply_simtel_calibration(ArrayEvent& event)
         Eigen::Matrix<double, -1, -1, Eigen::RowMajor> r1_waveform;
         auto gain_selection = Utils::select_gain_channel_by_threshold<uint16_t>(r0_tel->waveform, gain_selector_threshold);
         int n_pixels = r0_tel->waveform[0].rows();
-        int n_samples = r0_tel->waveform[0].cols();
+        int n_samples = r0_tel->waveform[0].cols();         
         r1_waveform.resize(n_pixels, n_samples);
         for(int ipix = 0; ipix < n_pixels; ipix++) {
             int selected_gain_channel = gain_selection[ipix];
@@ -314,7 +328,7 @@ void SimtelEventSource::apply_simtel_calibration(ArrayEvent& event)
                 r1_waveform(ipix, isample) = (r0_tel->waveform[selected_gain_channel](ipix, isample) - event.monitor->tels[tel_id]->pedestal_per_sample(selected_gain_channel, ipix)) * event.monitor->tels[tel_id]->dc_to_pe(selected_gain_channel, ipix);
             }
         }
-        event.r1->add_tel(tel_id, n_pixels, n_samples, std::move(r1_waveform), std::move(gain_selection));
+        event.r1->add_tel(tel_id, R1Camera{n_pixels, n_samples, std::move(r1_waveform), std::move(gain_selection)});
     }
 }
 void SimtelEventSource::read_monitor(ArrayEvent& event)
@@ -344,7 +358,7 @@ void SimtelEventSource::read_monitor(ArrayEvent& event)
                     dc_to_pe(ich, ipix) = simtel_file_handler->hsdata->tel_lascal[tel_index].calib[ich][ipix];
                 }
             }
-            event.monitor->add_tel(tel_id, n_channels, n_pixels, std::move(pedestal_per_sample), std::move(dc_to_pe));
+            event.monitor->add_tel(tel_id, TelMonitor{.n_channels = n_channels, .n_pixels = n_pixels, .pedestal_per_sample = std::move(pedestal_per_sample), .dc_to_pe = std::move(dc_to_pe)});
         }
     }
 }
@@ -367,7 +381,7 @@ void SimtelEventSource::read_pointing(ArrayEvent& event)
             // Have raw pointing information
             double azimuth = simtel_file_handler->hsdata->event.trackdata[tel_index].azimuth_raw;
             double altitude = simtel_file_handler->hsdata->event.trackdata[tel_index].altitude_raw;
-            event.pointing->add_tel(tel_id, azimuth, altitude);
+            event.pointing->add_tel(tel_id, PointingTelescope{.azimuth = azimuth, .altitude = altitude});
         }
     }
     event.pointing->set_array_pointing(simtel_file_handler->hsdata->run_header.direction[0], simtel_file_handler->hsdata->run_header.direction[1]);
@@ -383,13 +397,39 @@ void SimtelEventSource::read_true_image(ArrayEvent& event)
             double cos_az = cos(event.simulation->shower.az);
             double sin_az = sin(event.simulation->shower.az);
             std::array<double, 3> line_direction{
-                cos_alt * sin_az,
                 cos_alt * cos_az,
+                -cos_alt * sin_az,
                 sin_alt
             };
             double impact_parameter = Utils::point_line_distance(tel_position, shower_core, line_direction);
-            event.simulation->add_simulated_image(tel_id, simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].pixels,simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].pe_count, impact_parameter);
+            int npe = simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].npe;
+            int n_pixels = simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].pixels;
+            // Skip telescopes with very low npe.
+            if(npe <= 30)
+            {
+                continue;
+            }
+            Eigen::VectorXi true_image = Eigen::VectorXi{Eigen::Map<Eigen::VectorXi>(simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].pe_count, n_pixels)};
+            int image_sum = true_image.sum();
+            event.simulation->add_tel(tel_id, SimulatedCamera{.true_image_sum = image_sum, .true_image= std::move(true_image), .impact_parameter = impact_parameter}); 
+            /*
+            event.simulation->tels.at(tel_id)->pe_amplitude = Eigen::VectorXd(Eigen::Map<Eigen::VectorXd>(simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].amplitudes, npe));
+            event.simulation->tels.at(tel_id)->pe_time = Eigen::VectorXd(Eigen::Map<Eigen::VectorXd>(simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].atimes, npe));
+
+            // Create sorted copy of pe_time
+            auto sorted_times = event.simulation->tels.at(tel_id)->pe_time;
+            std::sort(sorted_times.data(), sorted_times.data() + sorted_times.size());
+
+            // Calculate indices for 10% and 90% positions
+            int index_10 = static_cast<int>(0.1 * (npe - 1));
+            int index_90 = static_cast<int>(0.9 * (npe - 1));
+
+            // Store the time range in the simulation event
+            event.simulation->tels.at(tel_id)->time_range_10_90 = sorted_times[index_90] - sorted_times[index_10];
+            */
+
         }
+    
 }
 void SimtelEventSource::read_simulated_showers(ArrayEvent& event)
 {
