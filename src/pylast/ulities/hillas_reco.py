@@ -31,6 +31,7 @@ def default_config():
     config["calibrator"]["LocalPeakExtractor"]["apply_correction"] = True
     
     # Image cleaning defaults
+    config["image_processor"]["poisson_noise"] = 5
     config["image_processor"]["image_cleaner_type"] = "Tailcuts_cleaner"
     config["image_processor"]["TailcutsCleaner"] = {}
     config["image_processor"]["TailcutsCleaner"]["picture_thresh"] = 15.0
@@ -40,8 +41,8 @@ def default_config():
     
     # Shower reconstruction defaults
     config["shower_processor"]["GeometryReconstructionTypes"] = ["HillasReconstructor"]
-    config["shower_processor"]["EnergyReconstructionTypes"] = ["MLEnergyReconstructor"]
-    config["shower_processor"]["ParticleClassificationTypes"] = ["MLParticleClassifier"]
+    #config["shower_processor"]["EnergyReconstructionTypes"] = ["MLEnergyReconstructor"]
+    #config["shower_processor"]["ParticleClassificationTypes"] = ["MLParticleClassifier"]
 
     # Image Cuts
     config["shower_processor"]["MLParticleClassifier"] = {}
@@ -49,6 +50,7 @@ def default_config():
     config["shower_processor"]["HillasReconstructor"] = {}
     config["shower_processor"]["HillasWeightedReconstructor"] = {}
     config["shower_processor"]["HillasReconstructor"]["ImageQuery"] = "hillas_intensity > 100 && leakage_intensity_width_2 < 0.3 && hillas_width > 0 && morphology_n_pixels >= 5"
+    config["shower_processor"]["HillasReconstructor"]["use_fake_hillas"] = True
     config["shower_processor"]["HillasWeightedReconstructor"]["ImageQuery"] = "hillas_intensity > 100 && leakage_intensity_width_2 < 0.3 && hillas_width > 0 && morphology_n_pixels >= 5"
     config["shower_processor"]["MLEnergyReconstructor"] = {}
     config["shower_processor"]["MLEnergyReconstructor"]["ImageQuery"] = "hillas_intensity > 100 && leakage_intensity_width_2 < 0.3 && hillas_width > 0 && morphology_n_pixels >= 5"
@@ -101,9 +103,9 @@ def hillas_reco():
     
     # Process each input-output pair
     for input_file, output_file in tqdm.tqdm(zip(args.input, args.output)):
-        statistics = Statistics()
         try:
             source = SimtelEventSource(input_file, load_simulated_showers=True)
+            statistics = Statistics()
             simulated_shower_hist = make_regular_histogram(min=-1, max=3, bins=60)
             simulated_shower_hist.fill(np.log10(source.shower_array.energy))
             angular_resolution_versus_energy_hist = make_regular_histogram2d(min_x=-1, max_x=3, bins_x=60, min_y=0, max_y=1, bins_y=1000)
@@ -124,6 +126,8 @@ def hillas_reco():
             statistics.add_histogram("Direction Error(deg) versus True Energy(TeV)", angular_resolution_versus_energy_hist)
             statistics.add_histogram("log10(True Energy(TeV))", simulated_shower_hist)
             data_writer.write_statistics(statistics)
+            data_writer.close()
+            del calibrator, image_processor, shower_processor, data_writer, source
         except Exception as e:
             print(f"Error processing {input_file}: {e}")
             # Continue with next file instead of stopping

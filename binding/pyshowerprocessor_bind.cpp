@@ -56,6 +56,7 @@ void bind_showerprocessor(nb::module_ &m) {
     nb::class_<MLReconstructor>(m, "MLReconstructor")
         .def(nb::init<const std::string&>(), nb::arg("config_str"))
         .def_ro("telescopes", &MLReconstructor::telescopes)
+        .def_ro("tel_rec_params", &MLReconstructor::tel_rec_params)
         .def_ro("array_pointing_direction", &MLReconstructor::array_pointing_direction)
         .def("__call__", [](MLReconstructor& self, ArrayEvent& event) {
             self(event);

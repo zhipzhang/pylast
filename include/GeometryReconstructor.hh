@@ -29,6 +29,7 @@ class GeometryReconstructor: private Configurable
         void configure(const json& config) override;
         std::vector<int> telescopes;
     protected:
+        bool use_fake_hillas = false; 
         static double compute_angle_separation(double az1, double alt1, double az2, double alt2);
         std::pair<double, double> convert_to_sky(double fov_x, double fov_y);
         std::pair<double, double> convert_to_fov(double alt, double az);

@@ -18,6 +18,7 @@ class ShowerProcessor:
         self.disp_stereo_reconstructor = None
         self.mle_reconstructor = None
         self.hillas_weighted_reconstructor = None
+        self.ml_particle_classifier = None
         if config_str:
             self._parse_config(config_str)
 
@@ -48,13 +49,13 @@ class ShowerProcessor:
                 self.py_reconstructor_configs[reconstruction_type] = config[reconstruction_type]
             else:
                 raise ValueError(f"Unknown reconstruction type: {reconstruction_type}")
-        if(config.get("EnergyReconstructionTypes", None)):
+        if(config.get("EnergyReconstructionTypes", None) != None):
             for energy_reconstruction_type in config["EnergyReconstructionTypes"]:
                 if energy_reconstruction_type in self.PY_RECONSTRUCTORS:
                     self.py_reconstructor_configs[energy_reconstruction_type] = config[energy_reconstruction_type]
                 else:
                     raise ValueError(f"Unknown energy reconstruction type: {energy_reconstruction_type}")
-        if(config.get("ParticleClassificationTypes", None)):
+        if(config.get("ParticleClassificationTypes", None) != None):
             for classifier in config["ParticleClassificationTypes"]:
                 self.py_reconstructor_configs[classifier] = config[classifier]
     def __call__(self, event):

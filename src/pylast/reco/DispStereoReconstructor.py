@@ -14,8 +14,9 @@ class DispStereoReconstructor(CGeometryReconstructor):
         else:
             self.config = json.loads(config_str)
         if("model_path" in self.config):
+            print("OK")
             with open(self.config["model_path"], "rb") as f:
-                self.model = pickle.load(f)
+                self.disp_model = pickle.load(f)
         else:
             model_directory = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "model")
             disp_model_path = os.path.join(model_directory, "disp_model.pkl")
@@ -29,27 +30,15 @@ class DispStereoReconstructor(CGeometryReconstructor):
         else:
             self.disp_predictor = self.disp_model
             
-    def predict(self, features, offset_angle):
-        # Determine which model to use based on offset angle
-        if offset_angle < 1.0:
-            offset_key = "0_1"
-        elif offset_angle < 2.0:
-            offset_key = "1_2"
-        elif offset_angle < 3.0:
-            offset_key = "2_3"
-        elif offset_angle < 4.0:
-            offset_key = "3_4"
-        else:
-            offset_key = "4_n"
-        
+    def predict(self, features):
         # Check if features is a batch or single sample
         if isinstance(features, list) or (isinstance(features, np.ndarray) and len(features.shape) > 1 and features.shape[0] > 1):
             # Batch prediction
-            predictions = self.disp_predictor[f"disp_predictor_{offset_key}"].predict(features)
+            predictions = self.disp_predictor[f"disp_predictor"].predict(features)
             return predictions
         else:
             # Single sample prediction
-            prediction = self.disp_predictor[f"disp_predictor_{offset_key}"].predict([features])
+            prediction = self.disp_predictor[f"disp_predictor"].predict([features])
             return prediction[0]
             
     def __call__(self, event):
@@ -70,13 +59,6 @@ class DispStereoReconstructor(CGeometryReconstructor):
         y_rec = np.zeros(len(tel_combinations))
         weights = np.zeros(len(tel_combinations))
         # Get offset angle for model selection
-        offset_angle = compute_angle_separation(
-            event.dl2.geometry["HillasReconstructor"].alt, 
-            event.dl2.geometry["HillasReconstructor"].az, 
-            self.array_pointing_direction.altitude,
-            self.array_pointing_direction.azimuth
-        )
-        
         # Prepare feature arrays for batch prediction if possible
         features_list = []
         for tel_id in self.telescopes:
@@ -86,7 +68,7 @@ class DispStereoReconstructor(CGeometryReconstructor):
         # Try batch prediction
         try:
             batch_features = np.vstack(features_list)
-            batch_disps = self.predict(batch_features, offset_angle)
+            batch_disps = self.predict(batch_features)
             #event.dl2.set_tel_estimate_disp(self.telescopes, batch_disps)
             for itel, tel_id in enumerate(self.telescopes):
                 event.dl2.set_tel_disp(tel_id, batch_disps[itel])
@@ -105,9 +87,9 @@ class DispStereoReconstructor(CGeometryReconstructor):
                 features1 = features_list[self.telescopes.index(tel1)]
                 features2 = features_list[self.telescopes.index(tel2)]
                 
-                disp1 = self.predict(features1, offset_angle)
-                disp2 = self.predict(features2, offset_angle)
-                
+                disp1 = self.predict(features1)
+                disp2 = self.predict(features2)
+
                 # Process the pair
                 x_rec[i], y_rec[i], weights[i] = self._process_tel_pair(tel1, tel2, disp1, disp2)
         
@@ -184,18 +166,19 @@ class DispStereoReconstructor(CGeometryReconstructor):
             A numpy array of feature values in the required order
         """
         # Get DL1 data for this telescope
-        dl1_tel = event.dl1.tels[tel_id]
-        
+        simulation_tel = event.simulation.tels[tel_id] 
+        image_parameters = simulation_tel.fake_image_parameters
         # Get DL2 data for this telescope (for impact parameter)
         dl2_tel = event.dl2.tels[tel_id] 
         
         # Extract all parameters at once to reduce attribute lookups
-        hillas = dl1_tel.image_parameters.hillas
-        leakage = dl1_tel.image_parameters.leakage
-        concentration = dl1_tel.image_parameters.concentration
-        morphology = dl1_tel.image_parameters.morphology
-        intensity = dl1_tel.image_parameters.intensity
+        hillas = image_parameters.hillas
+        leakage = image_parameters.leakage
+        concentration = image_parameters.concentration
+        morphology = image_parameters.morphology
+        intensity = image_parameters.intensity
         
+        hmax = event.dl2.geometry["HillasReconstructor"].hmax
         # Get impact parameter from DL2
         impact_parameter = dl2_tel.impact.distance
         
@@ -210,6 +193,7 @@ class DispStereoReconstructor(CGeometryReconstructor):
             tel_rec_energy,                  # tel_rec_energy
             hillas.length,                   # hillas_length
             hillas.width,                    # hillas_width
+            hmax,
             hillas.skewness,                 # hillas_skewness
             hillas.kurtosis,                 # hillas_kurtosis
             hillas.intensity,                # hillas_intensity

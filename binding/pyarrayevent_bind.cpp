@@ -112,7 +112,7 @@ void bind_dl2_event(nb::module_ &m) {
         });
     nb::class_<TelReconstructedParameter>(m, "TelReconstructedParameter")
         .def_ro("impact_parameters", &TelReconstructedParameter::impact_parameters)
-        .def_ro("disp", &TelReconstructedParameter::disp)
+        .def_ro("estimate_disp", &TelReconstructedParameter::estimate_disp)
         .def_ro("estimate_energy", &TelReconstructedParameter::estimate_energy)
         .def_prop_ro("impact", [](TelReconstructedParameter& self) -> nb::object {
             if(self.impact_parameters.size() == 1) {
@@ -238,8 +238,10 @@ void bind_dl1_event(nb::module_ &m) {
         .def_ro("intensity_max", &IntensityParameter::intensity_max)
         .def_ro("intensity_mean", &IntensityParameter::intensity_mean)
         .def_ro("intensity_std", &IntensityParameter::intensity_std)
+        .def_ro("intensity_skewness", &IntensityParameter::intensity_skewness)
+        .def_ro("intensity_kurtosis", &IntensityParameter::intensity_kurtosis)
         .def("__repr__", [](IntensityParameter& self) {
-            return fmt::format("IntensityParameter:\n  intensity_max: {}\n  intensity_mean: {}\n  intensity_std: {}", self.intensity_max, self.intensity_mean, self.intensity_std);
+            return fmt::format("IntensityParameter:\n  intensity_max: {}\n  intensity_mean: {}\n  intensity_std: {}\n  intensity_skewness: {}\n  intensity_kurtosis: {}", self.intensity_max, self.intensity_mean, self.intensity_std, self.intensity_skewness, self.intensity_kurtosis);
         });
 }
 void bind_dl0_event(nb::module_ &m) {
@@ -320,7 +322,7 @@ void bind_r0_event(nb::module_ &m) {
         .def("__repr__", [](R0Camera& self) {
             return fmt::format("R0Camera:\n  waveform shape: 2x{}x{}\n  waveform_sum shape:2x{}x{}", 
                               self.waveform[0].rows(), self.waveform[0].cols(),
-                              (*self.waveform_sum)[0].rows(), (*self.waveform_sum)[0].cols());
+                              (self.waveform_sum)[0].rows(), (self.waveform_sum)[0].cols());
         });
 }
 void bind_simulated_event(nb::module_ &m) {
@@ -345,8 +347,15 @@ void bind_simulated_event(nb::module_ &m) {
     nb::class_<SimulatedCamera>(m, "SimulatedCamera")
         .def_ro("true_image_sum", &SimulatedCamera::true_image_sum)
         .def_ro("true_image", &SimulatedCamera::true_image)
-        .def_ro("impact", &SimulatedCamera::impact)
-        .def("__repr__", &SimulatedCamera::print);
+        .def_ro("impact_parameter", &SimulatedCamera::impact_parameter)
+        .def("__repr__", &SimulatedCamera::print)
+        .def_ro("fake_image", &SimulatedCamera::fake_image)
+        .def_ro("fake_image_mask", &SimulatedCamera::fake_image_mask)
+        .def_ro("pe_amplitude", &SimulatedCamera::pe_amplitude)
+        .def_ro("pe_time", &SimulatedCamera::pe_time)
+        .def_ro("time_range_10_90", &SimulatedCamera::time_range_10_90)
+        .def_ro("fake_image_parameters", &SimulatedCamera::fake_image_parameters);
+
    // nb::class_<TelImpactParameter>(m, "TelImpactParameter")
    //     .def_ro("impact_distance", &TelImpactParameter::distance)
    //     .def_ro("impact_distance_error", &TelImpactParameter::distance_error);

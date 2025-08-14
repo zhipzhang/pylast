@@ -50,10 +50,7 @@ void ImageProcessor::configure(const json& config)
     {
         poisson_noise = config["poisson_noise"];
     }
-    else
-    {
-        poisson_noise = 0.0;
-    }
+
 }
 // First is clean the image , then extractor the parameter
 void ImageProcessor::operator()(ArrayEvent& event)
@@ -91,10 +88,7 @@ void ImageProcessor::operator()(ArrayEvent& event)
         );
     }
 
-    if(poisson_noise > 0)
-    {
-        handle_simulation_level(event);
-    }
+    handle_simulation_level(event);
 
 }
 // TODO: Add the unit test for the hillas parameter
@@ -281,14 +275,21 @@ void ImageProcessor::handle_simulation_level(ArrayEvent& event)
     {
         if(simulated_camera->true_image_sum >= 10)
         {
-            auto noise_image = adding_poisson_noise(simulated_camera->true_image, poisson_noise);
-            if(fake_trigger(subarray.tels.at(tel_id).camera_description.camera_geometry, noise_image, 5.0, 4))
+            if(poisson_noise > 0)
             {
-                event.simulation->triggered_tels.push_back(tel_id);
+                auto noise_image = adding_poisson_noise(simulated_camera->true_image, poisson_noise);
+                if(fake_trigger(subarray.tels.at(tel_id).camera_description.camera_geometry, noise_image, 5.0, 4))
+                {
+                    event.simulation->triggered_tels.push_back(tel_id);
+                }
+                Eigen::VectorXd fake_image = noise_image.array() - poisson_noise;
+                fake_image = fake_image.array().min(8000);
+                simulated_camera->fake_image = std::move(fake_image);
             }
-            Eigen::VectorXd fake_image = noise_image.array() - poisson_noise;
-            fake_image = fake_image.array().min(8000);
-            event.simulation->tels.at(tel_id)->fake_image = std::move(fake_image);
+            else
+            {
+                simulated_camera->fake_image = simulated_camera->true_image.cast<double>();
+            }
 
         }
     }

@@ -16,20 +16,33 @@
  #include "ExprQuery.hh"
  class ImageQuery : public ExprQuery, public Configurable{
     public:
-    ImageQuery(const std::string& expr):Configurable(expr, [this](const std::string& expr){
-        set_expr(expr);
-    })
+    /**
+     * @brief Construct a new Image Query object
+     *        There are two ways to construct the object: 1. using a string expression like "hillas_intensity > 100 && hillas_length > 0"
+     *                                                    2. using a json config like {"ImageQuery": {"size > 100pe.": "hillas_intensity > 100", "positive length": "hillas_length > 0"}}
+     * 
+     * @param expr 
+     */
+    ImageQuery(const std::string& expr):Configurable(expr, [this](const std::string& expr){set_expr(expr);})
     {
         if(!config.empty())
         {
             initialize();
         }
         init_variables();
-    }
-    ~ImageQuery() = default;
+    } 
+    /**
+     * @brief Evaluate the image query on the given image parameters
+     * 
+     * @param image_parameter 
+     * @return true 
+     * @return false 
+     */
     bool operator() (const ImageParameters& image_parameter);
+
+
     protected:
-        void init_variables() override;
+        void init_variables();
         void configure(const json& config) override;
         virtual json default_config() const override
         {

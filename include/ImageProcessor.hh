@@ -10,6 +10,7 @@
  */
 #pragma once
 #include "CameraGeometry.hh"
+#include "SimulatedCamera.hh"
 #include "SubarrayDescription.hh"
 #include "Eigen/Dense"
 #include "Configurable.hh"
@@ -37,6 +38,10 @@ private:
     const SubarrayDescription& subarray;
     std::string image_cleaner_type;
     std::unique_ptr<ImageCleaner> image_cleaner;
+    double poisson_noise = 0.0;
+    void handle_simulation_level(ArrayEvent& event);
+    bool fake_trigger(const CameraGeometry& camera_geometry, const Eigen::VectorXd& image, double threshold, int min_pixels_above_threshold = 4);
+    Eigen::VectorXd adding_poisson_noise(Eigen::VectorXi true_image, double poisson_noise);
 
 };
 
