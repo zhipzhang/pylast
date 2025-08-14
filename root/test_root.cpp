@@ -14,11 +14,13 @@ int main(int argc, char** argv) {
     std::unique_ptr<Calibrator> calibration = std::make_unique<Calibrator>(simtel_source->subarray.value());
     std::unique_ptr<ImageProcessor> image_processor = std::make_unique<ImageProcessor>(simtel_source->subarray.value());
     auto shower_processor = std::make_unique<ShowerProcessor>(simtel_source->subarray.value());
+    auto writer = DataWriter(*simtel_source, "test.root");
     for(auto& event : *simtel_source)
     {
         (*calibration)(event);
         (*image_processor)(event);
         (*shower_processor)(event);
+        (writer)(event);
     }
     delete simtel_source;
 }
