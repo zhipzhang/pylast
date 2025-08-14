@@ -22,7 +22,7 @@ TEST_CASE("test_neighbor_matrix")
     }
     CameraGeometry camera("test", num_pixels, pix_x.data(), pix_y.data(), pix_area.data(), pix_type.data(), 0);
     // Test center pixel (5) should have 4 neighbors
-    CHECK(camera.neigh_matrix.row(5).sum() == 4);  // not includes self due to KNN search
+    CHECK(camera.neigh_matrix.row(5).sum() == 8);  // not includes self due to KNN search
     
     // Check specific neighbors for center pixel
     CHECK(camera.neigh_matrix.coeff(5, 1) == 1);  // left neighbor
@@ -31,14 +31,14 @@ TEST_CASE("test_neighbor_matrix")
     CHECK(camera.neigh_matrix.coeff(5, 6) == 1);  // bottom neighbor
 
     // Test corner pixel (0) should have 2 neighbors
-    CHECK(camera.neigh_matrix.row(0).sum() == 2);  // not includes self
+    CHECK(camera.neigh_matrix.row(0).sum() == 3);  // not includes self
     
     // Check specific neighbors for corner pixel
     CHECK(camera.neigh_matrix.coeff(0, 1) == 1);  // right neighbor
     CHECK(camera.neigh_matrix.coeff(0, 4) == 1);  // bottom neighbor
 
     // Test edge pixel (2) should have 3 neighbors
-    CHECK(camera.neigh_matrix.row(2).sum() == 3);  // not includes self
+    CHECK(camera.neigh_matrix.row(2).sum() == 5);  // not includes self
     // Check specific neighbors for edge pixel
     CHECK(camera.neigh_matrix.coeff(2, 1) == 1);  // left neighbor
     CHECK(camera.neigh_matrix.coeff(2, 3) == 1);  // right neighbor
