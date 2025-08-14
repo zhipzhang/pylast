@@ -19,6 +19,10 @@ void GeometryReconstructor::configure(const json& config)
 {
     std::string image_query_config = config["ImageQuery"].dump();
     query_ = std::make_unique<ImageQuery>(image_query_config);
+    if(config.contains("use_fake_hillas"))
+    {
+        use_fake_hillas = config["use_fake_hillas"];
+    }
 }
 void GeometryReconstructor::operator()(ArrayEvent& event)
 {
@@ -34,6 +38,19 @@ void GeometryReconstructor::operator()(ArrayEvent& event)
     telescopes.clear();
     array_pointing_direction = SphericalRepresentation(event.pointing->array_azimuth, event.pointing->array_altitude);
     nominal_frame = std::make_unique<TelescopeFrame>(SphericalRepresentation(event.pointing->array_azimuth, event.pointing->array_altitude));
+    if(use_fake_hillas)
+    {
+        for(const auto tel_id: event.simulation->triggered_tels)
+        {
+            if((*query_)(event.simulation->tels[tel_id]->fake_image_parameters))
+            {
+                hillas_dicts[tel_id] = event.simulation->tels[tel_id]->fake_image_parameters.hillas;
+                telescope_pointing[tel_id] = SphericalRepresentation(event.pointing->tels[tel_id]->azimuth, event.pointing->tels[tel_id]->altitude);
+                telescopes.push_back(tel_id);
+            }
+        }
+        return;
+    }
     for(const auto& [tel_id, dl1]: event.dl1->tels)
     {
         if((*query_)(dl1->image_parameters))

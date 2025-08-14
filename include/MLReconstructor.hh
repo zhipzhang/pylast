@@ -11,6 +11,7 @@
 
 #pragma once
 #include "Configurable.hh"
+#include "ImageParameters.hh"
 #include "ImageQuery.hh"
 #include "ArrayEvent.hh"
 #include "Coordinates.hh"
@@ -29,6 +30,8 @@ class MLReconstructor: public Configurable
         void operator()(ArrayEvent& event);
         std::vector<int> telescopes; // Telescopes Pass the Image Query
         SphericalRepresentation array_pointing_direction;
+        std::unordered_map<int, ImageParameters> tel_rec_params;
     protected:
         std::unique_ptr<ImageQuery> query_;
+        bool use_fake_hillas = false;
 };

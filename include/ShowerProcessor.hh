@@ -25,7 +25,7 @@
 #include "SubarrayDescription.hh"
 #include "GeometryReconstructor.hh"
 #include "EventSource.hh"
-
+#include <set>
 //TODO add stereo quality query?
  class ShowerProcessor: public Configurable
  {

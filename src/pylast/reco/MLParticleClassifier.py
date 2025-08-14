@@ -34,7 +34,9 @@ class MLParticleClassifier(CMLReconstructor):
         super().__call__(event)
         if event.dl2.geometry["HillasReconstructor"].is_valid and event.dl2.energy["MLEnergyReconstructor"].energy_valid:
             features_list = []
-            weights = [event.dl1.tels[tel_id].image_parameters.hillas.intensity for tel_id in self.telescopes]
+            intensities = np.array([self.tel_rec_params[tel_id].hillas.intensity for tel_id in self.telescopes])
+            self.average_intensity = np.mean(intensities)
+            weights =  intensities
             for itel, tel_id in enumerate(self.telescopes):
                 features = self.get_features(event, tel_id)
                 features_list.append(features)
@@ -52,24 +54,28 @@ class MLParticleClassifier(CMLReconstructor):
         """
         Extract features from the event for the given telescope ID.
         """
-        dl1_tel = event.dl1.tels[tel_id]
+        image_parameter = self.tel_rec_params[tel_id]
         dl2_tel = event.dl2.tels[tel_id]
-        hillas = dl1_tel.image_parameters.hillas
-        leakage = dl1_tel.image_parameters.leakage
-        concentration = dl1_tel.image_parameters.concentration
-        morphology = dl1_tel.image_parameters.morphology
-        intensity = dl1_tel.image_parameters.intensity
+        hillas = image_parameter.hillas
+        leakage = image_parameter.leakage
+        concentration = image_parameter.concentration
+        morphology = image_parameter.morphology
+        intensity = image_parameter.intensity
 
         impact_parameter = dl2_tel.impact.distance
         rec_energy = event.dl2.energy["MLEnergyReconstructor"].estimate_energy
         tel_rec_energy = dl2_tel.estimate_energy
 
-
+        hmax = event.dl2.geometry["HillasReconstructor"].hmax;
         n_tel = len(self.telescopes)
         features = [
             impact_parameter,                # rec_impact_parameter
             hillas.length,                   # hillas_length
             hillas.width,                    # hillas_width
+            hillas.r,
+            hillas.psi,
+            hillas.phi,
+            hmax,
             hillas.skewness,                 # hillas_skewness
             hillas.kurtosis,                 # hillas_kurtosis
             hillas.intensity,                # hillas_intensity
@@ -82,10 +88,15 @@ class MLParticleClassifier(CMLReconstructor):
             concentration.concentration_pixel,# concentration_pixel
             morphology.n_pixels,             # morphology_num_pixels
             morphology.n_islands,            # morphology_num_islands
+            morphology.n_small_islands,
+            morphology.n_medium_islands,
+            morphology.n_large_islands,
             intensity.intensity_max,         # intensity_max
             intensity.intensity_mean,        # intensity_mean
             intensity.intensity_std,         # intensity_std
-            intensity.intensity_mean,        # average_intensity
+            intensity.intensity_skewness,
+            intensity.intensity_kurtosis,    # intensity_kurtosis
+            self.average_intensity,
             n_tel,                           # n_tel
             rec_energy,                      # rec_energy
             tel_rec_energy,                  # tel_rec_energy

@@ -46,14 +46,6 @@ else()
   message(STATUS "CompressionHandler not found")
 endif()
 
-set(LAST_ARRAY_EVENT_SOURCE_FILES
-    R0Event.cpp
-    R1Event.cpp
-    EventMonitor.cpp
-    SimulatedCamera.cpp
-    TelMonitor.cpp
-)
-add_library(last_array_event SHARED ${LAST_ARRAY_EVENT_SOURCE_FILES})
 
 set(BASIC_EVENT_SOURCE_FILES
     EventSource.cpp
@@ -67,7 +59,6 @@ set(BASIC_EVENT_SOURCE_FILES
     SubarrayDescription.cpp
     )
 add_library(basic_event SHARED ${BASIC_EVENT_SOURCE_FILES})
-target_link_libraries(basic_event PUBLIC last_array_event)
 
 set(SIMTEL_SOURCE_FILES
     SimtelEventSource.cpp

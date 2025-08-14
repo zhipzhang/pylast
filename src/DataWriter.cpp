@@ -47,7 +47,7 @@ void DataWriter::configure(const json& config)
     }
     if(config.at("write_simulation_config"))
     {
-        //file_writer->write_simulation_config();
+        file_writer->write_simulation_config();
     }
     
     // Store configuration for selective component writing
