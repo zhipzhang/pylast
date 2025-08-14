@@ -4,10 +4,14 @@
 #include "CameraGeometry.hh"
 #include "LACT_hessioxxx/include/io_basic.h"
 #include "LACT_hessioxxx/include/io_hess.h"
+#include "Pointing.hh"
 #include "R0Event.hh"
 #include "R1Event.hh"
 #include "SimtelFileHandler.hh"
+#include "SimulatedCamera.hh"
 #include "SimulatedShowerArray.hh"
+#include "TelImpactParameter.hh"
+#include "TelMonitor.hh"
 #include "spdlog/spdlog.h"
 #include "spdlog/fmt/fmt.h"
 #include <cassert>
@@ -137,8 +141,8 @@ void SimtelEventSource::set_telescope_settings(int tel_id)
         camera_geometry.pix_y_fov = camera_geometry.pix_y / optics.equivalent_focal_length;
         camera_geometry.pix_width_fov = camera_geometry.pix_width / optics.equivalent_focal_length;
     }
-    auto camera_description = CameraDescription(camera_name, std::move(camera_geometry), std::move(camera_readout));
-    auto telescope_description = TelescopeDescription(std::move(camera_description), std::move(optics));
+    auto camera_description = CameraDescription{camera_name, std::move(camera_geometry), std::move(camera_readout)};
+    auto telescope_description = TelescopeDescription{.camera_description = std::move(camera_description), .optics_description = std::move(optics)};
     auto telescope_position = get_telescope_position(itel);
     subarray->add_telescope(tel_id, std::move(telescope_description), telescope_position);
 }
@@ -168,7 +172,7 @@ CameraReadout SimtelEventSource::get_telescope_camera_readout(int tel_index)
             reference_pulse_shape(i, j) = simtel_file_handler->hsdata->pixel_set[tel_index].refshape[i][j];
         }
     }
-    return CameraReadout(camera_name, sampling_rate, reference_pulse_sample_width, n_channels, num_pixels, n_samples, std::move(reference_pulse_shape));
+    return CameraReadout{.camera_name = camera_name, .sampling_rate = sampling_rate, .reference_pulse_sample_width = reference_pulse_sample_width, .n_channels = n_channels, .n_pixels = num_pixels,.n_samples= n_samples, .reference_pulse_shape = std::move(reference_pulse_shape)};
 }
 OpticsDescription SimtelEventSource::get_telescope_optics(int tel_index)
 {
@@ -176,7 +180,7 @@ OpticsDescription SimtelEventSource::get_telescope_optics(int tel_index)
     double mirror_area = simtel_file_handler->hsdata->camera_set[tel_index].mirror_area;
     int num_mirrors = simtel_file_handler->hsdata->camera_set[tel_index].num_mirrors;
     double effective_focal_length = simtel_file_handler->hsdata->camera_set[tel_index].eff_flen;
-    return OpticsDescription(optics_name, num_mirrors, mirror_area, focal_length, effective_focal_length);
+    return OpticsDescription{.optics_name = optics_name, .num_mirrors = num_mirrors, .mirror_area = mirror_area, .equivalent_focal_length = focal_length, .effective_focal_length = effective_focal_length};
 }
 std::array<double, 3> SimtelEventSource::get_telescope_position(int tel_index)
 {
@@ -354,7 +358,7 @@ void SimtelEventSource::read_monitor(ArrayEvent& event)
                     dc_to_pe(ich, ipix) = simtel_file_handler->hsdata->tel_lascal[tel_index].calib[ich][ipix];
                 }
             }
-            event.monitor->add_tel(tel_id, n_channels, n_pixels, std::move(pedestal_per_sample), std::move(dc_to_pe));
+            event.monitor->add_tel(tel_id, TelMonitor{.n_channels = n_channels, .n_pixels = n_pixels, .pedestal_per_sample = std::move(pedestal_per_sample), .dc_to_pe = std::move(dc_to_pe)});
         }
     }
 }
@@ -377,7 +381,7 @@ void SimtelEventSource::read_pointing(ArrayEvent& event)
             // Have raw pointing information
             double azimuth = simtel_file_handler->hsdata->event.trackdata[tel_index].azimuth_raw;
             double altitude = simtel_file_handler->hsdata->event.trackdata[tel_index].altitude_raw;
-            event.pointing->add_tel(tel_id, azimuth, altitude);
+            event.pointing->add_tel(tel_id, PointingTelescope{.azimuth = azimuth, .altitude = altitude});
         }
     }
     event.pointing->set_array_pointing(simtel_file_handler->hsdata->run_header.direction[0], simtel_file_handler->hsdata->run_header.direction[1]);
@@ -399,12 +403,15 @@ void SimtelEventSource::read_true_image(ArrayEvent& event)
             };
             double impact_parameter = Utils::point_line_distance(tel_position, shower_core, line_direction);
             int npe = simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].npe;
+            int n_pixels = simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].pixels;
             // Skip telescopes with very low npe.
             if(npe <= 30)
             {
                 continue;
             }
-            event.simulation->add_simulated_image(tel_id, simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].pixels,simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].pe_count, impact_parameter);
+            Eigen::VectorXi true_image = Eigen::VectorXi{Eigen::Map<Eigen::VectorXi>(simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].pe_count, n_pixels)};
+            int image_sum = true_image.sum();
+            event.simulation->add_tel(tel_id, SimulatedCamera{.true_image_sum = image_sum, .true_image= std::move(true_image), .impact_parameter = impact_parameter}); 
             /*
             event.simulation->tels.at(tel_id)->pe_amplitude = Eigen::VectorXd(Eigen::Map<Eigen::VectorXd>(simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].amplitudes, npe));
             event.simulation->tels.at(tel_id)->pe_time = Eigen::VectorXd(Eigen::Map<Eigen::VectorXd>(simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].atimes, npe));

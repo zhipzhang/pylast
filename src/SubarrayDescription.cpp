@@ -1,10 +1,5 @@
 #include "SubarrayDescription.hh"
 #include "spdlog/spdlog.h"
-TelescopeDescription::TelescopeDescription(CameraDescription camera_description, OpticsDescription optics_description):
-    camera_description(std::move(camera_description)), optics_description(std::move(optics_description))
-{
-    spdlog::debug("TelescopeDescription created with camera_description");
-}
 
 const string TelescopeDescription::print() const
 {

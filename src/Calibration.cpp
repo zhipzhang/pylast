@@ -1,5 +1,6 @@
 #include "Calibration.hh"
 #include "Configurable.hh"
+#include "DL0Event.hh"
 #include <stdexcept>
 
 Eigen::VectorXi select_gain_channel_by_threshold(const std::array<Eigen::Matrix<uint16_t, -1, -1, Eigen::RowMajor>, 2>& waveform, const double threshold)
@@ -67,6 +68,6 @@ void Calibrator::operator()(ArrayEvent& event)
     for(const auto& [tel_id, r1_camera]: event.r1->tels)
     {
         auto [charge, peak_time] = (*image_extractor)(r1_camera->waveform, r1_camera->gain_selection, tel_id);
-        event.dl0->add_tel(tel_id, charge, peak_time);
+        event.dl0->add_tel(tel_id, DL0Camera{.image = std::move(charge), .peak_time=std::move(peak_time)});
     }
 }
