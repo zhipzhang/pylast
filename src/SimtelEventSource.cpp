@@ -1,3 +1,4 @@
+#define STORE_PIX_PHOTONS 1
 #include "SimtelEventSource.hh"
 #include "ArrayEvent.hh"
 #include "CameraDescription.hh"
@@ -412,6 +413,18 @@ void SimtelEventSource::read_true_image(ArrayEvent& event)
             Eigen::VectorXi true_image = Eigen::VectorXi{Eigen::Map<Eigen::VectorXi>(simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].pe_count, n_pixels)};
             int image_sum = true_image.sum();
             event.simulation->add_tel(tel_id, SimulatedCamera{.true_image_sum = image_sum, .true_image= std::move(true_image), .impact_parameter = impact_parameter}); 
+            if(simtel_file_handler->hsdata->mc_event.mc_pe_list->amplitudes != NULL)
+            {
+                event.simulation->tels.at(tel_id)->pe_amplitude = Eigen::VectorXd{Eigen::Map<Eigen::VectorXd>(simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].amplitudes, npe)};
+            }
+            if(simtel_file_handler->hsdata->mc_event.mc_pe_list->atimes != NULL)
+            {
+                event.simulation->tels.at(tel_id)->pe_time = Eigen::VectorXd{Eigen::Map<Eigen::VectorXd>(simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].atimes, npe)};
+            }
+            if(simtel_file_handler->hsdata->mc_event.mc_pe_list->photon_count != NULL)
+            {
+                event.simulation->tels.at(tel_id)->photon_counts = Eigen::VectorXi{Eigen::Map<Eigen::VectorXi>(simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].photon_count, n_pixels)};
+            }
             /*
             event.simulation->tels.at(tel_id)->pe_amplitude = Eigen::VectorXd(Eigen::Map<Eigen::VectorXd>(simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].amplitudes, npe));
             event.simulation->tels.at(tel_id)->pe_time = Eigen::VectorXd(Eigen::Map<Eigen::VectorXd>(simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].atimes, npe));

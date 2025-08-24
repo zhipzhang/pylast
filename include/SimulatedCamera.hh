@@ -43,6 +43,7 @@ public:
     Eigen::VectorXd pe_amplitude; // Amplitude of the photoelectrons
     Eigen::VectorXd pe_time; // Time of the photoelectrons
     double time_range_10_90;
+    Eigen::VectorXi photon_counts; // Number of photons in each pixel
 
     ImageParameters fake_image_parameters;
     //ImageParameters true_image;
