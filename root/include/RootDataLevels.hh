@@ -76,13 +76,13 @@ class RootSimulationShower
        void initialize_write(TTree* tree)
        {
               tree->Branch("event_id", &event_id);
-              TTreeSerializer::branch(tree, shower, "shower");
+              TTreeSerializer::branch(tree, shower);
        }
        void initialize_read(TTree* tree)
        {
               read_tree = tree;
               tree->SetBranchAddress("event_id", &event_id);
-              TTreeSerializer::set_branch_addresses(tree, shower, "shower");
+              TTreeSerializer::set_branch_addresses(tree, shower);
        }
        SimulatedShower& get_entry(int ientry)
        {

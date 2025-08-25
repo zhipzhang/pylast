@@ -42,6 +42,8 @@ class RootWriter: public FileWriter
         void write_atmosphere_model() override;
         void write_subarray() override;
         void write_simulation_config() override;
+        void write_all_simulation_shower(const SimulatedShowerArray& shower_array) override;
+
         // Methods for writing specific parts of an ArrayEvent
         void write_simulation_shower(const ArrayEvent& event) override;
         void write_simulated_camera(const ArrayEvent& event, bool write_image = false) override;
