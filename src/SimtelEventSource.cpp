@@ -1,4 +1,4 @@
-#define STORE_PIX_PHOTONS 1
+#define STORE_PIX_PHOTONS 1 
 #include "SimtelEventSource.hh"
 #include "ArrayEvent.hh"
 #include "CameraDescription.hh"
