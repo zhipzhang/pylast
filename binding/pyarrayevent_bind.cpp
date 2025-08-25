@@ -1,4 +1,5 @@
 #include "R0Event.hh"
+#include "SimulatedCamera.hh"
 #include "nanobind/nanobind.h"
 #include "ArrayEvent.hh"
 #include "SimulatedShowerArray.hh"
@@ -354,7 +355,8 @@ void bind_simulated_event(nb::module_ &m) {
         .def_ro("pe_amplitude", &SimulatedCamera::pe_amplitude)
         .def_ro("pe_time", &SimulatedCamera::pe_time)
         .def_ro("time_range_10_90", &SimulatedCamera::time_range_10_90)
-        .def_ro("photon_counts", &SimulatedCamera::photon_counts);
+        .def_ro("photon_counts", &SimulatedCamera::photon_counts)
+        .def_ro("pe_index", &SimulatedCamera::pe_index);
 
    // nb::class_<TelImpactParameter>(m, "TelImpactParameter")
    //     .def_ro("impact_distance", &TelImpactParameter::distance)

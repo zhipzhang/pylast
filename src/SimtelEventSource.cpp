@@ -408,6 +408,7 @@ void SimtelEventSource::read_true_image(ArrayEvent& event)
             // Skip telescopes with very low npe.
             if(npe <= 30)
             {
+                spdlog::debug("Skip tel_id: {} with npe: {}", tel_id, npe);
                 continue;
             }
             Eigen::VectorXi true_image = Eigen::VectorXi{Eigen::Map<Eigen::VectorXi>(simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].pe_count, n_pixels)};
@@ -420,6 +421,7 @@ void SimtelEventSource::read_true_image(ArrayEvent& event)
             if(simtel_file_handler->hsdata->mc_event.mc_pe_list->atimes != NULL)
             {
                 event.simulation->tels.at(tel_id)->pe_time = Eigen::VectorXd{Eigen::Map<Eigen::VectorXd>(simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].atimes, npe)};
+                event.simulation->tels.at(tel_id)->pe_index = Eigen::VectorXi{Eigen::Map<Eigen::VectorXi>(simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].itstart, n_pixels)};
             }
             if(simtel_file_handler->hsdata->mc_event.mc_pe_list->photon_count != NULL)
             {
