@@ -2,6 +2,7 @@
 #include <string>
 #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
 #include "SimtelFileHandler.hh"
+#include "LoggerInitialize.hh"
 #include "LACT_hessioxxx/include/io_hess.h"
 #include "LACT_hessioxxx/include/io_history.h"
 #include "LACT_hessioxxx/include/mc_atmprof.h"
@@ -11,7 +12,6 @@
 #ifdef HAVE_EVENTIO_EXTENSION
 #include "EventIOWrapper.h"
 #endif
-
 #define LOG_SCOPE(message)\
     SPDLOG_DEBUG("Begin {}", message);\
     auto scope_exit = finally([msg = message](){SPDLOG_DEBUG("End {}", msg);});
