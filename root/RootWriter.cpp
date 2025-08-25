@@ -2,6 +2,7 @@
 #include "RootDataLevels.hh"
 #include "SimulatedShower.hh"
 #include "SimulationConfiguration.hh"
+#include "TDirectory.h"
 #include "TH2.h"
 #include "spdlog/spdlog.h"
 #include "ROOT/RVec.hxx"
@@ -253,6 +254,28 @@ TDirectory* RootWriter::get_or_create_directory(const std::string& path)
     }
     
     return current_dir;
+}
+void RootWriter::write_all_simulation_shower(const SimulatedShowerArray& shower_array)
+{
+    if(!file)
+    {
+        throw std::runtime_error("file not open");
+    }
+    if(shower_array.size() == 0)
+    {
+        spdlog::warn("No simulated showers to write");
+        return;
+    }
+    gDirectory->cd("/");
+    std::unique_ptr<TTree> tree = std::make_unique<TTree>("shower", "Simulation shower data");
+    RootSimulationShower shower;
+    shower.initialize_write(tree.get());
+    for(int i = 0; i < shower_array.size(); ++i)
+    {
+        shower.shower = shower_array[i];
+        tree->Fill();
+    }
+    tree->Write();
 }
 void RootWriter::write_simulation_config()
 {

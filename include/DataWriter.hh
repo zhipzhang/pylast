@@ -13,6 +13,7 @@
  #include "Configurable.hh"
  #include "ArrayEvent.hh"
  #include "EventSource.hh"
+#include "SimulatedShowerArray.hh"
  #include "Statistics.hh"
 
 
@@ -32,6 +33,7 @@
         virtual void unique_write_method(const ArrayEvent& event) = 0;
         
         // Methods for writing specific parts of an ArrayEvent
+        virtual void write_all_simulation_shower(const SimulatedShowerArray& shower_array) = 0;
         virtual void write_simulation_shower(const ArrayEvent& event) = 0;
         virtual void write_simulated_camera(const ArrayEvent& event, bool write_image = false) = 0;
         virtual void write_r0(const ArrayEvent& event) = 0;
@@ -71,6 +73,10 @@
         static json get_default_config();
         json default_config() const override {return get_default_config();}
         
+        void write_all_simulation_shower(const SimulatedShowerArray& shower_array)
+        {
+            file_writer->write_all_simulation_shower(shower_array);
+        }
         // Methods for writing specific parts of an ArrayEvent
         void write_simulation_shower(const ArrayEvent& event);
         void write_simulated_camera(const ArrayEvent& event);
