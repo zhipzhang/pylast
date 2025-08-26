@@ -46,7 +46,7 @@
         
         // Write all parts of the event (or those enabled in configuration)
         virtual void write_event(const ArrayEvent& event) = 0;
-        virtual void write_statistics(const Statistics& statistics) = 0;
+        virtual void write_statistics(const Statistics& statistics, bool last) = 0;
         //virtual void write_simulation_config() = 0;
     protected:
         EventSource& source;
@@ -87,7 +87,7 @@
         void write_dl2(const ArrayEvent& event);
         void write_monitor(const ArrayEvent& event);
         void write_pointing(const ArrayEvent& event);
-        void write_statistics(const Statistics& statistics);
+        void write_statistics(const Statistics& statistics, bool last);
         
         // Write all parts of the event (or those enabled in configuration)
         //void write_event(const ArrayEvent& event);

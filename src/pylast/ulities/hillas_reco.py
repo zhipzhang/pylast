@@ -104,10 +104,9 @@ def hillas_reco():
     # Process each input-output pair
     for input_file, output_file in tqdm.tqdm(zip(args.input, args.output)):
         try:
-            source = SimtelEventSource(input_file, load_simulated_showers=True)
+            source = SimtelEventSource(input_file, load_simulated_showers=False)
             statistics = Statistics()
             simulated_shower_hist = make_regular_histogram(min=-1, max=3, bins=60)
-            simulated_shower_hist.fill(np.log10(source.shower_array.energy))
             angular_resolution_versus_energy_hist = make_regular_histogram2d(min_x=-1, max_x=3, bins_x=60, min_y=0, max_y=1, bins_y=1000)
             # Initialize processors
             calibrator = Calibrator(source.subarray, config_str=json.dumps(config["calibrator"]))
@@ -124,8 +123,10 @@ def hillas_reco():
                 if(event.dl2.geometry["HillasReconstructor"].is_valid):
                     angular_resolution_versus_energy_hist.fill(np.log10(event.simulation.shower.energy), event.dl2.geometry["HillasReconstructor"].direction_error)
             statistics.add_histogram("Direction Error(deg) versus True Energy(TeV)", angular_resolution_versus_energy_hist)
+            simulated_shower_hist.fill(np.log10(source.shower_array.energy))
             statistics.add_histogram("log10(True Energy(TeV))", simulated_shower_hist)
             data_writer.write_statistics(statistics)
+            data_writer.write_all_simulation_shower(source.shower_array)
             data_writer.close()
             del calibrator, image_processor, shower_processor, data_writer, source
         except Exception as e:

@@ -2,6 +2,7 @@
 #include "RootDataLevels.hh"
 #include "SimulatedShower.hh"
 #include "SimulationConfiguration.hh"
+#include "Statistics.hh"
 #include "TDirectory.h"
 #include "TH2.h"
 #include "spdlog/spdlog.h"
@@ -11,6 +12,7 @@
 #include "TH2F.h"
 #include "TProfile.h"
 #include <set>
+
 REGISTER_WRITER(root, [](EventSource& source, const std::string& filename) { return std::make_unique<RootWriter>(source, filename); });
 RootWriter::RootWriter(EventSource& source, const std::string& filename):
     FileWriter(source, filename)
@@ -39,11 +41,14 @@ void RootWriter::close()
 {
     for(auto& [name, tree] : trees)
     {
-        if(directories.find(name) == directories.end())
+        if(directories.contains(name))
         {
-            throw std::runtime_error("directory not found: " + name);
+            directories[name]->cd();
         }
-        directories[name]->cd();
+        else
+        {
+            gDirectory->cd("/");
+        }
         if(build_index[name])
         {
             int ret = tree->BuildIndex("event_id", "tel_id");
@@ -56,6 +61,7 @@ void RootWriter::close()
         tree->Write();
     }
     file->Write();
+    write_statistics({}, true);
     spdlog::info("writing file: {}", filename);
 }
 
@@ -266,16 +272,21 @@ void RootWriter::write_all_simulation_shower(const SimulatedShowerArray& shower_
         spdlog::warn("No simulated showers to write");
         return;
     }
-    gDirectory->cd("/");
-    std::unique_ptr<TTree> tree = std::make_unique<TTree>("shower", "Simulation shower data");
-    RootSimulationShower shower;
-    shower.initialize_write(tree.get());
+    auto all_shower_tree = get_tree("all_shower");
+    if(!all_shower_tree)
+    {
+        spdlog::debug("initalize shower tree");
+        auto tree = new TTree("shower", "All simulated showers");
+        trees["all_shower"] = tree;
+        all_shower_tree = tree;
+        helper.root_simulation_shower = RootSimulationShower();
+        helper.root_simulation_shower->initialize_write(tree);
+    }
     for(int i = 0; i < shower_array.size(); ++i)
     {
-        shower.shower = shower_array[i];
-        tree->Fill();
+        helper.root_simulation_shower->shower = shower_array[i];
+        all_shower_tree->Fill();
     }
-    tree->Write();
 }
 void RootWriter::write_simulation_config()
 {
@@ -810,17 +821,23 @@ void RootWriter::initialize_data_level(const std::string& level_name, std::optio
     directories[level_name] = dir;
     build_index[level_name] = true;
 }
-void RootWriter::write_statistics(const Statistics& statistics)
+void RootWriter::write_statistics(const Statistics& statistics, bool last)
 {
     if(!file)
     {
         throw std::runtime_error("file not open");
     }
+    static Statistics hist;
+    if(!last)
+    {
+        hist += statistics;
+        return;
+    }
     TDirectory* dir = get_or_create_directory("statistics");
     dir->cd();
     // In ROOT Format, we just convert the histogram to TH1D Or TH2D
     int ihist = 0;
-    for(const auto& [name, hist] : statistics.histograms)
+    for(const auto& [name, hist] : hist.histograms)
     {
         if(hist->get_dimension() == 1)
         {
