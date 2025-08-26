@@ -15,6 +15,7 @@
  #include "EventSource.hh"
  #include "RootDataLevels.hh"
  #include <memory>
+#include "SimulatedShowerArray.hh"
  #include "TFile.h"
  #include "RootHistogram.hh"
  class RootEventSource : public EventSource
@@ -34,6 +35,13 @@
         virtual ArrayEvent get_event() override;
         virtual ArrayEvent get_event(int index) override ;
         virtual bool is_finished()  override;
+        const SimulatedShowerArray& get_shower_array() {
+            if(!shower_array.has_value())
+            {
+                load_all_simulated_showers();
+            }
+            return *shower_array;
+        }
 
 
     private:

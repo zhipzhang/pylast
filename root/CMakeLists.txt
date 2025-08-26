@@ -24,4 +24,4 @@ target_link_libraries(test_root_read PUBLIC root_event)
 add_executable(test_root test_root.cpp RootWriter.cpp)
 target_link_libraries(test_root PUBLIC root_event root_writer simtel_event reconstructor image_processor calibrator)
 
-#add_subdirectory(ulities)
+add_subdirectory(ulities)

@@ -16,6 +16,7 @@
 #include <unordered_map>
 #include <memory>
 #include "SimtelFileHandler.hh"
+#include "SimulatedShowerArray.hh"
 /**
  * @brief SimtelEventSource can automatically read the simtel files and fill the DataLevel R0 and R1 and SimulatedEvent
  * 
@@ -34,6 +35,13 @@ public:
      * 
      */
     virtual void load_all_simulated_showers() override;
+    const SimulatedShowerArray& get_shower_array() {
+        if(!shower_array.has_value())
+        {
+            shower_array = SimulatedShowerArray(std::move(simtel_file_handler->shower_array));
+        }
+        return *shower_array;
+    }
 private:
     /**
      * @brief Initialize the `SimtelFileHandler` and read util events

@@ -2,9 +2,9 @@
 #include "spdlog/async_logger.h"
 #include "spdlog/async.h"
 #include "spdlog/common.h"
+#include <memory>
 
 static std::shared_ptr<spdlog::details::thread_pool> global_thread_pool;
-void initialize_logger(const std::string& log_level, const std::string& log_file);
 void initialize_logger(const std::string& log_level, const std::string& log_file) {
     // Create async console sink
     auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
@@ -36,6 +36,7 @@ void initialize_logger(const std::string& log_level, const std::string& log_file
 
     // Set as default logger
     spdlog::set_default_logger(logger);
+    spdlog::set_level(spdlog::level::from_str(log_level));
 
     spdlog::info("Logger initialized with level: {}", log_level);
     if (!log_file.empty()) {
@@ -43,9 +44,11 @@ void initialize_logger(const std::string& log_level, const std::string& log_file
     } else {
         spdlog::info("File logging is disabled");
     }
+    spdlog::debug("This is a debug message");
 }
 
 void shutdown_logger() {
+    spdlog::debug("Shutting down logger");
     // Flush any remaining logs
     spdlog::default_logger()->flush();
     // Drop all loggers and close threadpool

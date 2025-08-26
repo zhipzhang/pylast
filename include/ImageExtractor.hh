@@ -76,7 +76,7 @@ class LocalPeakExtractor: public ImageExtractor, public Configurable
         auto peak_index = this->get_peak_index(waveform);
         double sampling_rate_ghz = this->sampling_rate_ghz[tel_id];
         auto [charge, peak_time] = extract_around_peak(waveform, peak_index, Eigen::VectorXi::Constant(waveform.rows(), this->window_width), Eigen::VectorXi::Constant(waveform.rows(), this->window_shift), sampling_rate_ghz);
-        auto readout = subarray.tels.at(tel_id).camera_description.camera_readout;
+        const auto& readout = subarray.tels.at(tel_id).camera_description.camera_readout;
         if (this->apply_correction)
         {
             this->correction(charge, gain_selection, readout, sampling_rate_ghz);

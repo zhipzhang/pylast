@@ -76,13 +76,13 @@ class RootSimulationShower
        void initialize_write(TTree* tree)
        {
               tree->Branch("event_id", &event_id);
-              TTreeSerializer::branch(tree, shower, "shower");
+              TTreeSerializer::branch(tree, shower);
        }
        void initialize_read(TTree* tree)
        {
               read_tree = tree;
               tree->SetBranchAddress("event_id", &event_id);
-              TTreeSerializer::set_branch_addresses(tree, shower, "shower");
+              TTreeSerializer::set_branch_addresses(tree, shower);
        }
        SimulatedShower& get_entry(int ientry)
        {
@@ -191,6 +191,13 @@ class RootCameraReadout: public RootTelConfiguration<CameraReadout>
             reference_pulse_shape = RVecD(config.reference_pulse_shape.data(), config.reference_pulse_shape.size());
             return *this;
         }
+        RootCameraReadout& operator=(const CameraReadout& other) noexcept
+        {
+            config = other;
+            camera_name = TString(config.camera_name.c_str());
+            reference_pulse_shape = RVecD(config.reference_pulse_shape.data(), config.reference_pulse_shape.size());
+            return *this;
+        }
         void initialize_read_pointer(TTree* tree) override
         {
             if(tree->GetBranch("camera_name") != nullptr)
@@ -240,6 +247,17 @@ class RootCameraGeometry: public RootTelConfiguration<CameraGeometryHelper>
             config.pix_y = RVecD(other.pix_y.data(), other.pix_y.size());
             config.pix_area = RVecD(other.pix_area.data(), other.pix_area.size());
             config.pix_type = RVecI(other.pix_type.data(), other.pix_type.size());
+            return *this;
+        }
+        RootCameraGeometry& operator=(const CameraGeometry& other) noexcept
+        {
+            config.camera_name = other.camera_name;
+            config.cam_rotation = other.cam_rotation;
+            config.num_pixels = other.num_pixels;
+            config.pix_x = RVecD(other.pix_x.begin(), other.pix_x.end());
+            config.pix_y = RVecD(other.pix_y.begin(), other.pix_y.end());
+            config.pix_area = RVecD(other.pix_area.begin(), other.pix_area.end());
+            config.pix_type = RVecI(other.pix_type.begin(), other.pix_type.end());
             return *this;
         }
         void initialize_read_pointer(TTree* tree) override

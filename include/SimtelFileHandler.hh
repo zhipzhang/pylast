@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <optional>
 #include <functional>
+#include "SimulatedShowerArray.hh"
 #include "spdlog/spdlog.h"
 
 using History_Entry = std::pair<time_t, std::string>;
@@ -75,6 +76,7 @@ private:
     bool have_true_image = false;
     std::string filename = "none";
 
+    SimulatedShowerArray shower_array;
     // C-Style Pointer here for eventio hsdata
     FILE* input_file = nullptr;
     IO_BUFFER* iobuf = nullptr;

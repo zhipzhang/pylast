@@ -2,6 +2,7 @@
 #include <string>
 #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
 #include "SimtelFileHandler.hh"
+#include "LoggerInitialize.hh"
 #include "LACT_hessioxxx/include/io_hess.h"
 #include "LACT_hessioxxx/include/io_history.h"
 #include "LACT_hessioxxx/include/mc_atmprof.h"
@@ -11,7 +12,6 @@
 #ifdef HAVE_EVENTIO_EXTENSION
 #include "EventIOWrapper.h"
 #endif
-
 #define LOG_SCOPE(message)\
     SPDLOG_DEBUG("Begin {}", message);\
     auto scope_exit = finally([msg = message](){SPDLOG_DEBUG("End {}", msg);});
@@ -452,6 +452,18 @@ void SimtelFileHandler::_read_mc_event() {
         spdlog::error("Failed to read mc event");
         throw std::runtime_error("Failed to read mc event");
     }
+    SimulatedShower shower;
+            shower.energy = hsdata->mc_shower.energy;
+            shower.alt = hsdata->mc_shower.altitude;
+            shower.az = hsdata->mc_shower.azimuth;
+            shower.core_x = hsdata->mc_event.xcore;
+            shower.core_y = hsdata->mc_event.ycore;
+            shower.h_first_int = hsdata->mc_shower.h_first_int;
+            shower.x_max = hsdata->mc_shower.xmax;
+            shower.starting_grammage = hsdata->mc_shower.depth_start;
+            shower.shower_primary_id = hsdata->mc_shower.primary_id;
+            shower.h_max = hsdata->mc_shower.hmax;
+    shower_array.push_back(shower);
 }
 void SimtelFileHandler::_read_pixel_monitor() {
     LOG_SCOPE("Read pixel monitor block");

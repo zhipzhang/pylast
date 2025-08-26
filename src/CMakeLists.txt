@@ -33,10 +33,10 @@ if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/bernlohr/LACT_hessioxxx/CMakeLists.tx
     message(FATAL_ERROR "Git not found, please install git to manage submodules")
   endif()
 endif()
+set_hessio_definitions("LACT_PROD0")
 add_subdirectory(bernlohr/LACT_hessioxxx)
 add_subdirectory(muparser)
 
-set_hessio_definitions("LACT_PROD0")
 
 find_package(CompressionHandler QUIET)
 if(CompressionHandler_FOUND)
@@ -62,7 +62,8 @@ add_library(basic_event SHARED ${BASIC_EVENT_SOURCE_FILES})
 
 set(SIMTEL_SOURCE_FILES
     SimtelEventSource.cpp
-    SimtelFileHandler.cpp)
+    SimtelFileHandler.cpp
+    LoggerInitialize.cpp)
 
 set(CALIBRATION_SOURCE_FILES
     Calibration.cpp

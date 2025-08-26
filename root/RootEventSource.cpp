@@ -137,7 +137,20 @@ void RootEventSource::init_atmosphere_model()
 }
 void RootEventSource::load_all_simulated_showers()
 {
-    spdlog::warn("Not implemented");
+    TTree* shower_tree = static_cast<TTree*>(file->Get("shower"));
+    if(shower_tree == nullptr)
+    {
+        spdlog::warn("No Simulated Shower tree is stored!");
+        return ;
+    }
+    RootSimulationShower shower;
+    shower_array = SimulatedShowerArray(shower_tree->GetEntries());
+    shower.initialize_read(shower_tree);
+    for(int i = 0; i < shower_tree->GetEntries(); ++i)
+    {
+        shower_tree->GetEntry(i);
+        shower_array->push_back(shower.shower);
+    }
 }
 
 template<typename T>
@@ -182,6 +195,11 @@ void RootEventSource::initialize_array_event()
     initialize_dl2_trees("geometry", event_helper.root_dl2_rec_geometry_map);
     initialize_dl2_trees("energy", event_helper.root_dl2_rec_energy_map);
     initialize_dl2_trees("particle", event_helper.root_dl2_rec_particle_map);
+    if(!event_helper.root_event_index.has_value())
+    {
+        spdlog::warn("No event index found");
+        return;
+    }
     max_events = event_helper.root_event_index->index_tree->GetEntries();
     
 }
