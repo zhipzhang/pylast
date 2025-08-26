@@ -185,10 +185,10 @@ void DataWriter::write_pointing(const ArrayEvent& event)
         file_writer->write_pointing(event);
     }
 }
-void DataWriter::write_statistics(const Statistics& statistics)
+void DataWriter::write_statistics(const Statistics& statistics, bool last)
 {
     if(file_writer)
     {
-        file_writer->write_statistics(statistics);
+        file_writer->write_statistics(statistics, last);
     }
 }

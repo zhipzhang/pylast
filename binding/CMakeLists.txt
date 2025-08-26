@@ -23,7 +23,7 @@ endmacro()
 
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../root)
-add_python_binding(_pylast_arrayevent  pyarrayevent_bind.cpp last_array_event "")
+add_python_binding(_pylast_arrayevent  pyarrayevent_bind.cpp "" "")
 add_python_binding(_pylast_subarray pysubarray_bind.cpp basic_event "")
 add_python_binding(_pylast_imageprocessor pyimageprocessor_bind.cpp image_processor "")
 add_python_binding(_pylast_calibrator pycalibrator_bind.cpp calibrator "")

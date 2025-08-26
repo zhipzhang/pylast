@@ -13,6 +13,7 @@
 
 #include "DataWriter.hh"
 #include "DataWriterFactory.hh"
+#include "Statistics.hh"
 #include "TFile.h"
 #include "TTree.h"
 #include "ROOT/RVec.hxx"
@@ -55,7 +56,7 @@ class RootWriter: public FileWriter
         void write_monitor(const ArrayEvent& event) override;
         void write_pointing(const ArrayEvent& event) override;
         
-        void write_statistics(const Statistics& statistics) override;
+        void write_statistics(const Statistics& statistics, bool last=false) override;
         // Write event with components based on configuration
         void write_event(const ArrayEvent& event) override;
         void unique_write_method(const ArrayEvent& event) override
@@ -65,7 +66,7 @@ class RootWriter: public FileWriter
         //void write_simulation_config() override;
     private:
         std::unique_ptr<TFile> file;
-        
+        static Statistics hist;
        // RootArrayEvent array_event;
         RootEventHelper helper;
         RootConfigHelper config_helper;
