@@ -38,6 +38,7 @@ endif()
 set_hessio_definitions("LACT_PROD0")
 add_subdirectory(bernlohr/LACT_hessioxxx)
 add_subdirectory(muparser)
+set_hessio_definitions("LACT_PROD0")
 
 find_package(CompressionHandler QUIET)
 if(CompressionHandler_FOUND)

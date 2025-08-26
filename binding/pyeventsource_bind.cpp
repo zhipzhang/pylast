@@ -22,7 +22,6 @@ NB_MODULE(_pyeventsource, m){
         .def_ro("atmosphere_model", &EventSource::atmosphere_model)
         .def_ro("metaparam", &EventSource::metaparam)
         .def_ro("subarray", &EventSource::subarray)
-        .def_ro("shower_array", &EventSource::shower_array)
         .def_ro("statistics", &EventSource::statistics)
         .def("load_simulated_showers", &EventSource::load_all_simulated_showers)
         .def("__iter__",
@@ -93,9 +92,11 @@ NB_MODULE(_pyeventsource, m){
     m.def("shutdown_logger", &shutdown_logger);
     nb::class_<RootEventSource, EventSource>(m, "RootEventSource")
         .def(nb::init<const std::string&, int64_t, std::vector<int>, bool>(), nb::arg("filename"), nb::arg("max_events") = -1, nb::arg("subarray")=std::vector<int>{}, nb::arg("load_subarray_from_env")=false)
+        .def_prop_ro("shower_array", &RootEventSource::get_shower_array)
         .def("__getitem__", &RootEventSource::operator[]);
     nb::class_<SimtelEventSource, EventSource>(m, "SimtelEventSource")
         .def(nb::init<const std::string&, int64_t, std::vector<int>, bool>(), nb::arg("filename"), nb::arg("max_events") = -1, nb::arg("subarray")=std::vector<int>{}, nb::arg("load_simulated_showers")=false)
+        .def_prop_ro("shower_array", &SimtelEventSource::get_shower_array)
         .def("__repr__", &SimtelEventSource::print);
     
     m.def("write_statistics", RootHistogram::write_statistics, nb::arg("statistics"), nb::arg("filename"));

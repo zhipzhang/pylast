@@ -13,6 +13,7 @@
 
 #include "DataWriter.hh"
 #include "DataWriterFactory.hh"
+#include "Statistics.hh"
 #include "TFile.h"
 #include "TTree.h"
 #include "ROOT/RVec.hxx"
@@ -42,6 +43,8 @@ class RootWriter: public FileWriter
         void write_atmosphere_model() override;
         void write_subarray() override;
         void write_simulation_config() override;
+        void write_all_simulation_shower(const SimulatedShowerArray& shower_array) override;
+
         // Methods for writing specific parts of an ArrayEvent
         void write_simulation_shower(const ArrayEvent& event) override;
         void write_simulated_camera(const ArrayEvent& event, bool write_image = false) override;
@@ -53,7 +56,7 @@ class RootWriter: public FileWriter
         void write_monitor(const ArrayEvent& event) override;
         void write_pointing(const ArrayEvent& event) override;
         
-        void write_statistics(const Statistics& statistics) override;
+        void write_statistics(const Statistics& statistics, bool last=false) override;
         // Write event with components based on configuration
         void write_event(const ArrayEvent& event) override;
         void unique_write_method(const ArrayEvent& event) override
@@ -63,7 +66,7 @@ class RootWriter: public FileWriter
         //void write_simulation_config() override;
     private:
         std::unique_ptr<TFile> file;
-        
+        static Statistics hist;
        // RootArrayEvent array_event;
         RootEventHelper helper;
         RootConfigHelper config_helper;
