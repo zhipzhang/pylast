@@ -195,7 +195,7 @@ void RootEventSource::initialize_array_event()
     initialize_dl2_trees("geometry", event_helper.root_dl2_rec_geometry_map);
     initialize_dl2_trees("energy", event_helper.root_dl2_rec_energy_map);
     initialize_dl2_trees("particle", event_helper.root_dl2_rec_particle_map);
-    if(event_helper.root_event_index == std::nullopt)
+    if(!event_helper.root_event_index.has_value())
     {
         spdlog::warn("No event index found");
         return;
