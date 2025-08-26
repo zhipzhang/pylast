@@ -190,13 +190,13 @@ void RootWriter::write_subarray()
         if(!source.subarray->tels.count(id))
             continue;
             
-        auto& camera_geom = source.subarray->tels.at(id).camera_description.camera_geometry;
-        auto& camera_readout = source.subarray->tels.at(id).camera_description.camera_readout;
+        const auto& camera_geom = source.subarray->tels.at(id).camera_description.camera_geometry;
+        const auto& camera_readout = source.subarray->tels.at(id).camera_description.camera_readout;
 
         root_camera_readout.tel_id = id;
-        root_camera_readout = std::move(camera_readout);
+        root_camera_readout = camera_readout;
         root_camera_geometry.tel_id = id;
-        root_camera_geometry = std::move(camera_geom);
+        root_camera_geometry = camera_geom;
         camera_geometry_tree->Fill();
         camera_readout_tree->Fill();
     }
@@ -275,6 +275,7 @@ void RootWriter::write_all_simulation_shower(const SimulatedShowerArray& shower_
     auto all_shower_tree = get_tree("all_shower");
     if(!all_shower_tree)
     {
+        gDirectory->cd("/");
         spdlog::debug("initalize shower tree");
         auto tree = new TTree("shower", "All simulated showers");
         trees["all_shower"] = tree;
