@@ -28,8 +28,6 @@ jobs:
           mkdir root_build  && cd root_build
           cmake -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/root_install ../root_src  -Dfitsio=OFF -Dgeometry=OFF -Dmysql=OFF -Dvdt=OFF  -DCMAKE_CXX_STANDARD=20 -Dclad=OFF -Dxrootd=OFF  -Dx11=OFF -Dxml=OFF
           cmake --build . -- install -j8
-      - name: Source ROOT
-        run: echo "source ${{github.workspace}}/root_install/bin/thisroot.sh" >> $GITHUB_ENV
       - name: Update submodules
         run: git submodule update --init --recursive
       - name: Set up CMake
@@ -38,6 +36,7 @@ jobs:
           cmake-version: '3.30.0'
       - name: Build and test
         run: |
+          source ${{github.workspace}}/root_install/bin/thisroot.sh
           cmake -S . -B build -DWITH_TEST=ON
           cmake --build build -j 5
           cmake --install build --prefix install
