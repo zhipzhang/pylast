@@ -21,13 +21,14 @@ jobs:
         with:
           path: ${{github.workspace}}/root_install
           key: ${{runner.os}}-root
+          save-always: true
       - name: Build ROOT from scratch without cache
         if: steps.cache-root.outputs.cache-hit != 'true'
         run: |
           git clone --branch latest-stable --depth=1 https://github.com/root-project/root.git root_src
           mkdir root_build  && cd root_build
-          cmake -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/root_install ../root_src  -Dfitsio=OFF -Dgeometry=OFF -Dmysql=OFF -Dvdt=OFF  -DCMAKE_CXX_STANDARD=20 -Dclad=OFF -Dxrootd=OFF  -Dx11=OFF -Dxml=OFF
-          cmake --build . -- install -j8
+          cmake -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/root_install ../root_src  -Dfitsio=OFF -Dgeometry=OFF -Dmysql=OFF -Dvdt=OFF  -DCMAKE_CXX_STANDARD=20 -Dclad=OFF -Dxrootd=OFF  -Dx11=OFF -Dxml=OFF -Dwebgui=OFF -Droot7=OFF -Drootfit=OFF -Dmysql=OFF
+          cmake --build . -- install -j10
       - name: Update submodules
         run: git submodule update --init --recursive
       - name: Set up CMake
