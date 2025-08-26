@@ -26,7 +26,7 @@ jobs:
         run: |
           git clone --branch latest-stable --depth=1 https://github.com/root-project/root.git root_src
           mkdir root_build  && cd root_build
-          cmake -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/root_install ../root_src -Dpyroot=OFF -Dfitsio=OFF -Dgeometry=OFF -Dmysql=OFF -Dvdt=OFF  -DCMAKE_CXX_STANDARD=20 -Dclad=OFF -Dxrootd=OFF
+          cmake -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/root_install ../root_src  -Dfitsio=OFF -Dgeometry=OFF -Dmysql=OFF -Dvdt=OFF  -DCMAKE_CXX_STANDARD=20 -Dclad=OFF -Dxrootd=OFF 
           cmake --build . -- install -j8
       - name: Source ROOT
         run: echo "source ${{github.workspace}}/root_install/bin/thisroot.sh" >> $GITHUB_ENV
