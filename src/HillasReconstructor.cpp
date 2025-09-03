@@ -83,7 +83,7 @@ bool HillasReconstructor::reconstruct(const std::unordered_map<int, HillasParame
     auto [tilted_x, tilted_y, tilted_sigma_x, tilted_sigma_y] = reconstruction_tilted_intersection();
     auto tilted_core_position = CartesianPoint(tilted_x, tilted_y, 0);
     auto intersection_position = tilted_core_position.transform_to_ground(*tilted_frame);
-    auto [core_x, core_y] = project_to_ground(intersection_position, SkyDirection(AltAzFrame(), rec_az, rec_alt));
+    auto [core_x, core_y] = project_to_ground(intersection_position, SkyDirection(AltAzFrame(), array_pointing_direction.azimuth, array_pointing_direction.altitude));
 
     for(const auto tel_id: telescopes)
     {

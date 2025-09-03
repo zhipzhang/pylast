@@ -12,6 +12,7 @@ struct TelescopeData
     double true_alt;
     double true_az;
     double true_energy;
+    double xmax;
     double rec_alt;
     double rec_az;
     double rec_energy;
@@ -55,6 +56,7 @@ void initialize_telescope_tree(TTree* tree,  TelescopeData& data)
     tree->Branch("rec_az", &data.rec_az);
     tree->Branch("rec_energy", &data.rec_energy);
     tree->Branch("tel_rec_energy", &data.tel_rec_energy);
+    tree->Branch("xmax", &data.xmax);
     // Image parameters
     tree->Branch("hillas_length", &data.params.hillas.length);
     tree->Branch("hillas_width", &data.params.hillas.width);

@@ -30,6 +30,6 @@ wheel.py-api = "cp312"
 sdist.include = ["model/*"]
 [project.scripts]
 hillas_reco = "pylast.ulities.hillas_reco:hillas_reco"
-merge_root = "pylast.ulities.merge_root:merge_root"
-simplified_convert = "pylast.ulities.simplified_convert:simplified_convert"
+merge_source = "pylast.ulities.merge_source:main"
+simplified_convert = "pylast.ulities.simplified_convert:main"
 make_histogram = "pylast.ulities.make_histogram:make_histogram"

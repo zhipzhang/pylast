@@ -46,7 +46,7 @@ void ShowerProcessor::operator()(ArrayEvent& event)
     {
         (*geometry_reconstructor)(event);
         // Only store the geometry for the telescopes that were used in the reconstruction
-        for(const auto tel_id: geometry_reconstructor->telescopes)
+        for(const auto& [tel_id, dl1]: event.dl1->tels)
         {
             if(event.dl2->geometry[geometry_reconstructor->name()].is_valid)
             {

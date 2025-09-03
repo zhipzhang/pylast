@@ -73,6 +73,7 @@ int main(int argc, const char* argv[])
         
         // Ensure we recreate the output file
         cfg["overwrite"] = true;
+        cfg["write_simulated_camera"] = true; // No simulation camera data in input files
         writer.configure(cfg);
 
         // Write events from first source

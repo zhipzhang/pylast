@@ -85,6 +85,7 @@ void RootEventSource::init_subarray()
     assert(tel_pos_tree->GetEntries() == optics_tree->GetEntries());
     for(int i = 0; i < optics_tree->GetEntries(); ++i)
     {
+        tel_pos_tree->GetEntry(i);
         std::array<double, 3> tel_position = {(*tel_pos)[0], (*tel_pos)[1], (*tel_pos)[2]};
         auto telescope_description = config_helper.get_telescope_description(i);
         subarray->add_telescope(tel_id, std::move(telescope_description), tel_position);
@@ -251,7 +252,7 @@ ArrayEvent RootEventSource::get_event()
         spdlog::warn("No more events to read");
         return ArrayEvent();
     }
-    return event_helper.get_event();
+    return get_event(current_event_index);
 }
 
 ArrayEvent RootEventSource::get_event(int index)

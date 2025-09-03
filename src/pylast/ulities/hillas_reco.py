@@ -67,7 +67,7 @@ def default_config():
     config["data_writer"]["write_r1"] = False
     config["data_writer"]["write_dl0"] = False
     config["data_writer"]["write_dl1"] = True
-    config["data_writer"]["write_dl1_image"] = False
+    config["data_writer"]["write_dl1_image"] = True
     config["data_writer"]["write_dl2"] = True
     config["data_writer"]["write_monitor"] = False
     config["data_writer"]["write_pointing"] = True
@@ -77,65 +77,73 @@ def default_config():
     config["data_writer"]["write_metaparam"] = False
     
     return config
-
 def hillas_reco():
-    parser = argparse.ArgumentParser(description="Process multiple input files and save results to corresponding output files")
-    parser.add_argument("--input", "-i", action="append", required=True, 
-                        help="Input file path (can be used multiple times)")
-    parser.add_argument("--output", "-o", action="append", required=True,
-                        help="Output file path (can be used multiple times)")
-    parser.add_argument("--config", "-c", required=False,
-                        help="Config file path(If not provided, default config will be used)")
-    parser.add_argument("--max-leakage2", "-l", required=False,
-                        help="Max leakage2 for hillas reconstruction")
-    args = parser.parse_args()
-    
-    # Verify that input and output lists have the same length
-    if len(args.input) != len(args.output):
-        raise ValueError("Number of input files must match number of output files")
-    if(args.config is None):
-        config = default_config()
-    else:
-        with open(args.config, "r") as f:
-            config = json.load(f)
-    if(args.max_leakage2 is not None):
-        config["shower_processor"]["HillasReconstructor"]["ImageQuery"] = f"leakage_intensity_width_2 < {args.max_leakage2} && hillas_intensity > 100"
-    
-    # Process each input-output pair
-    for input_file, output_file in tqdm.tqdm(zip(args.input, args.output)):
-        try:
-            source = SimtelEventSource(input_file, load_simulated_showers=False)
-            statistics = Statistics()
-            simulated_shower_hist = make_regular_histogram(min=-1, max=3, bins=60)
-            angular_resolution_versus_energy_hist = make_regular_histogram2d(min_x=-1, max_x=3, bins_x=60, min_y=0, max_y=1, bins_y=1000)
-            # Initialize processors
-            calibrator = Calibrator(source.subarray, config_str=json.dumps(config["calibrator"]))
-            image_processor = ImageProcessor(source.subarray, config_str=json.dumps(config["image_processor"]))
-            shower_processor = ShowerProcessor(source.subarray, config_str=json.dumps(config["shower_processor"]))
-            data_writer = DataWriter(source, output_file, config_str=json.dumps(config["data_writer"]))
-            # Process the file
-            for event in source:
-                # Write results
-                calibrator(event)
-                image_processor(event)
-                shower_processor(event)
-                data_writer(event)
-                if(event.dl2.geometry["HillasReconstructor"].is_valid):
-                    angular_resolution_versus_energy_hist.fill(np.log10(event.simulation.shower.energy), event.dl2.geometry["HillasReconstructor"].direction_error)
-            statistics.add_histogram("Direction Error(deg) versus True Energy(TeV)", angular_resolution_versus_energy_hist)
-            simulated_shower_hist.fill(np.log10(source.shower_array.energy))
-            statistics.add_histogram("log10(True Energy(TeV))", simulated_shower_hist)
-            data_writer.write_statistics(statistics)
-            data_writer.write_all_simulation_shower(source.shower_array)
-            data_writer.close()
-            del calibrator, image_processor, shower_processor, data_writer, source
-        except Exception as e:
-            print(f"Error processing {input_file}: {e}")
-            # Continue with next file instead of stopping
-            continue
-            
-    print("Processing complete")
+        parser = argparse.ArgumentParser(description="Process multiple input files and save results to corresponding output files")
+        parser.add_argument("--input", "-i", action="append", required=True, 
+                            help="Input file path (can be used multiple times)")
+        parser.add_argument("--output", "-o", action="append", required=True,
+                            help="Output file path (can be used multiple times)")
+        parser.add_argument("--config", "-c", required=False,
+                            help="Config file path(If not provided, default config will be used)")
+        parser.add_argument("--max-leakage2", "-l", required=False,
+                            help="Max leakage2 for hillas reconstruction")
+        parser.add_argument("--subarray", "-s", required=False,
+                            help="Specify telescopes to use (comma-separated list, e.g., '1,2,3,4')")
+        args = parser.parse_args()
+        
+        # Verify that input and output lists have the same length
+        if len(args.input) != len(args.output):
+            raise ValueError("Number of input files must match number of output files")
+        if(args.config is None):
+            config = default_config()
+        else:
+            with open(args.config, "r") as f:
+                config = json.load(f)
+        if(args.max_leakage2 is not None):
+            config["shower_processor"]["HillasReconstructor"]["ImageQuery"] = f"leakage_intensity_width_2 < {args.max_leakage2} && hillas_intensity > 100"
+        
+        # Process each input-output pair
+        for input_file, output_file in tqdm.tqdm(zip(args.input, args.output)):
+            try:
+                # Parse the subarray parameter if provided
+                tel_ids = None
+                if args.subarray:
+                    tel_ids = [int(tel_id) for tel_id in args.subarray.split(',')]
+                
+                # Pass the tel_ids to SimtelEventSource
+                source = SimtelEventSource(input_file, load_simulated_showers=False, subarray=tel_ids)
+                
+                statistics = Statistics()
+                simulated_shower_hist = make_regular_histogram(min=-1, max=3, bins=60)
+                angular_resolution_versus_energy_hist = make_regular_histogram2d(min_x=-1, max_x=3, bins_x=60, min_y=0, max_y=1, bins_y=1000)
+                # Initialize processors
+                calibrator = Calibrator(source.subarray, config_str=json.dumps(config["calibrator"]))
+                image_processor = ImageProcessor(source.subarray, config_str=json.dumps(config["image_processor"]))
+                shower_processor = ShowerProcessor(source.subarray, config_str=json.dumps(config["shower_processor"]))
+                data_writer = DataWriter(source, output_file, config_str=json.dumps(config["data_writer"]))
+                # Process the file
+                for event in source:
+                    # Write results
+                    calibrator(event)
+                    image_processor(event)
+                    shower_processor(event)
+                    data_writer(event)
+                    if(event.dl2.geometry["HillasReconstructor"].is_valid):
+                        angular_resolution_versus_energy_hist.fill(np.log10(event.simulation.shower.energy), event.dl2.geometry["HillasReconstructor"].direction_error)
+                statistics.add_histogram("Direction Error(deg) versus True Energy(TeV)", angular_resolution_versus_energy_hist)
+                simulated_shower_hist.fill(np.log10(source.shower_array.energy))
+                statistics.add_histogram("log10(True Energy(TeV))", simulated_shower_hist)
+                data_writer.write_statistics(statistics)
+                data_writer.write_all_simulation_shower(source.shower_array)
+                data_writer.close()
+                del calibrator, image_processor, shower_processor, data_writer, source
+            except Exception as e:
+                print(f"Error processing {input_file}: {e}")
+                # Continue with next file instead of stopping
+                continue
+                
+        print("Processing complete")
 
 
 if __name__ == "__main__":
-    hillas_reco()
+        hillas_reco()

@@ -1,3 +1,6 @@
+import os
+import subprocess
+import sys
 from ._pylast_arrayevent import *
 from ._pylast_subarray import *
 from ._pyeventsource import *
@@ -25,3 +28,19 @@ def compute_angle_separation(rec_alt, rec_az, true_alt, true_az):
     elif cos_angle > 1.0:
         cos_angle = 1.0
     return np.degrees(np.arccos(cos_angle))
+    
+
+def register_exe(exename):
+    # Get the path to the C++ executable
+    # This assumes the executable is installed alongside the Python package
+    package_dir = os.path.dirname(os.path.abspath(__file__))
+    executable = os.path.join(package_dir, f'{exename}')
+    
+    
+    # Forward all command line arguments to the C++ executable
+    try:
+        result = subprocess.run([executable] + sys.argv[1:], check=True)
+        return result.returncode
+    except subprocess.CalledProcessError as e:
+        print(f"Error running simplified_convert: {e}", file=sys.stderr)
+        return e.returncode
