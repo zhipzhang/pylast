@@ -55,6 +55,7 @@ ArrayEvent RootEventHelper::get_event()
     }
     // Process DL2 reconstruction data
     process_dl2_rec_data(event);
+    current_entry++;
     
     return event;
 }

@@ -543,7 +543,7 @@ void RootWriter::write_dl1(const ArrayEvent& event, bool write_image)
         throw std::runtime_error("file not open");
     }
 
-    if(!event.dl1.has_value())
+    if(!event.dl1.has_value() || event.dl1->tels.size() == 0)
     {
         // Nothing to write
         return;
@@ -653,6 +653,10 @@ void RootWriter::write_dl2(const ArrayEvent& event)
         particle_tree->Fill();
     }
     
+    if(event.dl2->tels.size() == 0)
+    {
+        return;
+    }
     auto dl2_tree = get_tree("dl2");
     if(!dl2_tree)
     {
