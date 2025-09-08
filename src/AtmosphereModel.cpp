@@ -1,4 +1,5 @@
 #include "AtmosphereModel.hh"
+#include "rpolator.h"
 #include <filesystem>
 #include <fstream>
 
@@ -42,6 +43,7 @@ TableAtmosphereModel::TableAtmosphereModel(const std::string& filename) : input_
     this->rho = Eigen::Map<Eigen::VectorXd>(rho_data.data(), n_alt);
     this->thick = Eigen::Map<Eigen::VectorXd>(thick_data.data(), n_alt);
     this->refidx_m1 = Eigen::Map<Eigen::VectorXd>(refidx_data.data(), n_alt);
+    cs_thick = set_1d_cubic_params(alt_km.data(), thick.data(), n_alt, 0);
 }
 TableAtmosphereModel::TableAtmosphereModel(int n_alt, double* alt_km, double* rho, double* thick, double* refidx_m1)
 {
@@ -53,5 +55,17 @@ TableAtmosphereModel::TableAtmosphereModel(int n_alt, double* alt_km, double* rh
     this->rho = Eigen::VectorXd(Eigen::Map<Eigen::VectorXd>(rho, n_alt));
     this->thick = Eigen::VectorXd(Eigen::Map<Eigen::VectorXd>(thick, n_alt));
     this->refidx_m1 = Eigen::VectorXd(Eigen::Map<Eigen::VectorXd>(refidx_m1, n_alt));
+    cs_thick = set_1d_cubic_params(alt_km, thick, n_alt, 0);
 }
 
+
+Eigen::VectorXd TableAtmosphereModel::convert_hmax_to_xmax(const Eigen::VectorXd& hmax)
+{
+}
+
+double TableAtmosphereModel::convert_hmax_to_xmax(double hmax)
+{
+    if(hmax >= 100000) return -1;
+    double xmax = rpol_cspline(alt_km.data(), thick.data(), cs_thick, n_alt, hmax, 0, 0);
+    return xmax;
+}

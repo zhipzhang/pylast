@@ -1,6 +1,7 @@
 #define STORE_PIX_PHOTONS 1 
 #include "SimtelEventSource.hh"
 #include "ArrayEvent.hh"
+#include "AtmosphereModel.hh"
 #include "CameraDescription.hh"
 #include "CameraGeometry.hh"
 #include "LACT_hessioxxx/include/io_basic.h"
@@ -43,6 +44,7 @@ void SimtelEventSource::init_metaparam()
 void SimtelEventSource::init_atmosphere_model()
 {
     atmosphere_model = TableAtmosphereModel(simtel_file_handler->atmprof->n_alt, simtel_file_handler->atmprof->alt_km, simtel_file_handler->atmprof->rho, simtel_file_handler->atmprof->thick, simtel_file_handler->atmprof->refidx_m1);
+    TableAtmosphereModel::global_instance() = atmosphere_model.value();
 }
 void SimtelEventSource::init_simulation_config()
 {

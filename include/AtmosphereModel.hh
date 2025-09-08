@@ -11,15 +11,49 @@
 #pragma once
 #include "Eigen/Dense"
 #include <spdlog/fmt/fmt.h>
+#include "rpolator.h"
 
 
 class TableAtmosphereModel   
 {
 public:
     TableAtmosphereModel() = default;
+    ~TableAtmosphereModel() {
+        if(cs_thick) {
+            free(cs_thick);
+            cs_thick = nullptr;
+        }
+    }
     TableAtmosphereModel(const std::string& filename);
     TableAtmosphereModel(int n_alt, double* alt_km, double* rho, double* thick, double* refidx_m1);
-  
+    TableAtmosphereModel(const TableAtmosphereModel& other)
+    {
+        n_alt = other.n_alt;
+        alt_km = other.alt_km;
+        rho = other.rho;
+        thick = other.thick;
+        refidx_m1 = other.refidx_m1;
+        input_filename = other.input_filename;
+        cs_thick = set_1d_cubic_params(alt_km.data(), thick.data(), n_alt, 0);
+    }
+    TableAtmosphereModel& operator=(const TableAtmosphereModel& other)
+    {
+        if(this != &other)
+        {
+            n_alt = other.n_alt;
+            alt_km = other.alt_km;
+            rho = other.rho;
+            thick = other.thick;
+            refidx_m1 = other.refidx_m1;
+            input_filename = other.input_filename;
+            cs_thick = set_1d_cubic_params(alt_km.data(), thick.data(), n_alt, 0);
+        }
+        return *this;
+    }
+    static TableAtmosphereModel& global_instance() {
+        static TableAtmosphereModel instance;
+        return instance;
+    }
    // double get_density(double altitude) const;
    // double get_thickness(double altitude) const;
    // double get_refidx_m1(double altitude) const;
@@ -46,4 +80,8 @@ public:
     /** @brief Index of refraction minus one (n-1) at each altitude level */
     Eigen::VectorXd refidx_m1;
     std::string input_filename = "none";
+    Eigen::VectorXd convert_hmax_to_xmax(const Eigen::VectorXd& hmax);
+    double convert_hmax_to_xmax(double hmax);
+private:
+    CsplinePar* cs_thick = nullptr;  /**< Cubic spline parameters for thickness vs. altitude */
 };
