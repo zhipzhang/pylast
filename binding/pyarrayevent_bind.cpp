@@ -350,6 +350,7 @@ void bind_simulated_event(nb::module_ &m) {
         .def_ro("true_image", &SimulatedCamera::true_image)
         .def_ro("impact_parameter", &SimulatedCamera::impact_parameter)
         .def("__repr__", &SimulatedCamera::print)
+        .def_ro("image_parameters", &SimulatedCamera::fake_image_parameters)
         .def_ro("fake_image", &SimulatedCamera::fake_image)
         .def_ro("fake_image_mask", &SimulatedCamera::fake_image_mask)
         .def_ro("pe_amplitude", &SimulatedCamera::pe_amplitude)

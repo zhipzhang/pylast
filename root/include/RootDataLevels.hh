@@ -384,6 +384,7 @@ class RootSimulatedCamera: public NewRootDataLevels<SimulatedCamera>
             true_image = std::move(RVecI(datalevels.true_image.data(), datalevels.true_image.size()));
             fake_image = std::move(RVecD(datalevels.fake_image.data(), datalevels.fake_image.size()));
             fake_image_mask = std::move(RVecB(datalevels.fake_image_mask.data(), datalevels.fake_image_mask.size()));
+            fake_image_parameters = datalevels.fake_image_parameters;
             return *this;
         }
         void initialize_internal_structure(TTree* tree) override

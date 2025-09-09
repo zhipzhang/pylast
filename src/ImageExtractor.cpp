@@ -92,15 +92,19 @@ std::pair<Eigen::VectorXd, Eigen::VectorXd>  extract_around_peak(const Eigen::Ma
         
         // Sum the waveform values in the window
         charge(ipix) = waveform.block(ipix, start, 1, end - start).sum();
-        
         // Calculate weighted time average
         double time_sum = 0;
+        double time_den = 0;
         for(int i = start; i < end; i++) {
             if(waveform(ipix, i) > 0) {
                 time_sum += i * waveform(ipix, i);
+                time_den += waveform(ipix, i);
             }
         }
-        peak_time(ipix) = time_sum / charge(ipix) / sampling_rate_ghz;
+        if(time_den > 0)
+            peak_time(ipix) = time_sum / time_den / sampling_rate_ghz;
+        else
+            peak_time(ipix) = peak_index(ipix) / sampling_rate_ghz; // Fallback to peak index if no signal
     }
 
     return std::make_pair(charge, peak_time);
