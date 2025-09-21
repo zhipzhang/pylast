@@ -312,6 +312,7 @@ void SimtelFileHandler::_read_mcrunheader() {
         spdlog::error("Failed to read mcrunheader");
         throw std::runtime_error("Failed to read mcrunheader");
     }
+    shower_array.resize(hsdata->mc_run_header.num_showers * hsdata->mc_run_header.num_use);
 }
 void SimtelFileHandler::_read_atmosphere() {
     LOG_SCOPE("handle atmosphere block");

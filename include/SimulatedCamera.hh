@@ -46,7 +46,7 @@ public:
     Eigen::VectorXi photon_counts; // Number of photons in each pixel
     Eigen::VectorXi pe_index;
 
-    ImageParameters fake_image_parameters;
+    ImageParameters image_parameters;
     //ImageParameters true_image;
     std::string print() const {
         return fmt::format("SimulatedCamera:\n"

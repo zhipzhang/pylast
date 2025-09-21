@@ -7,6 +7,7 @@ struct TelescopeData
     int64_t event_id;
     int tel_id;
     ImageParameters params;
+    ImageParameters fake_params;
     double rec_impact_parameter;
     double true_impact_parameter;
     double true_alt;
@@ -31,6 +32,7 @@ struct EventData
     double hillas_rec_core_x;
     double hillas_rec_core_y;
     double hillas_direction_error;
+    double hillas_direction_sigma;
     double rec_energy;
     double hadroness;
     double disp_stereo_rec_alt;
@@ -69,6 +71,17 @@ void initialize_telescope_tree(TTree* tree,  TelescopeData& data)
     tree->Branch("hillas_kurtosis", &data.params.hillas.kurtosis);
     tree->Branch("hillas_intensity", &data.params.hillas.intensity);
     tree->Branch("hillas_hmax", &data.hillas_hmax);
+
+    tree->Branch("fake_hillas_length", &data.fake_params.hillas.length);
+    tree->Branch("fake_hillas_width", &data.fake_params.hillas.width);
+    tree->Branch("fake_hillas_x", &data.fake_params.hillas.x);
+    tree->Branch("fake_hillas_y", &data.fake_params.hillas.y);
+    tree->Branch("fake_hillas_phi", &data.fake_params.hillas.phi);
+    tree->Branch("fake_hillas_psi", &data.fake_params.hillas.psi);
+    tree->Branch("fake_hillas_r", &data.fake_params.hillas.r);
+    tree->Branch("fake_hillas_skewness", &data.fake_params.hillas.skewness);
+    tree->Branch("fake_hillas_kurtosis", &data.fake_params.hillas.kurtosis);
+    tree->Branch("fake_hillas_intensity", &data.fake_params.hillas.intensity);
     // Leakage parameters
     tree->Branch("leakage_pixels_width_1", &data.params.leakage.pixels_width_1);
     tree->Branch("leakage_pixels_width_2", &data.params.leakage.pixels_width_2);
@@ -98,6 +111,13 @@ void initialize_telescope_tree(TTree* tree,  TelescopeData& data)
     tree->Branch("extra_true_psi", &data.params.extra.true_psi);
     tree->Branch("extra_cog_err", &data.params.extra.cog_err);
     tree->Branch("extra_beta_err", &data.params.extra.beta_err);
+
+    tree->Branch("fake_extra_miss", &data.fake_params.extra.miss);
+    tree->Branch("fake_extra_disp", &data.fake_params.extra.disp);
+    tree->Branch("fake_extra_theta", &data.fake_params.extra.theta);
+    tree->Branch("fake_extra_true_psi", &data.fake_params.extra.true_psi);
+    tree->Branch("fake_extra_cog_err", &data.fake_params.extra.cog_err);
+    tree->Branch("fake_extra_beta_err", &data.fake_params.extra.beta_err);
 }
 
 void initialize_event_tree(TTree* tree,  EventData& data)
@@ -105,6 +125,7 @@ void initialize_event_tree(TTree* tree,  EventData& data)
     tree->Branch("event_id", &data.event_id);
     tree->Branch("hillas_n_tels", &data.hillas_n_tels);
     tree->Branch("hillas_direction_error", &data.hillas_direction_error);
+    tree->Branch("hillas_direction_sigma", &data.hillas_direction_sigma);
     tree->Branch("hillas_rec_alt", &data.hillas_rec_alt);
     tree->Branch("hillas_rec_az", &data.hillas_rec_az);
     tree->Branch("hillas_rec_core_x", &data.hillas_rec_core_x);

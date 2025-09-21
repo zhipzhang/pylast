@@ -108,7 +108,7 @@ void ShowerProcessor::operator()(ArrayEvent& event)
 
     for(auto& [tel_id, simulated_camera]: event.simulation->tels)
     {
-        auto& image_parameter = simulated_camera->fake_image_parameters;
+        auto& image_parameter = simulated_camera->image_parameters;
         if(image_parameter.hillas.intensity < 40)
         {
             continue;
