@@ -33,6 +33,7 @@ public:
         x_maxs.reserve(new_size);
         starting_grammages.reserve(new_size);
         shower_primary_ids.reserve(new_size);
+        h_maxs.reserve(new_size);
     }
 
     void push_back(const SimulatedShower& shower) {
@@ -43,6 +44,7 @@ public:
         core_ys.push_back(shower.core_y);
         h_first_ints.push_back(shower.h_first_int);
         x_maxs.push_back(shower.x_max);
+        h_maxs.push_back(shower.h_max);
         starting_grammages.push_back(shower.starting_grammage);
         shower_primary_ids.push_back(shower.shower_primary_id);
     }
@@ -77,6 +79,9 @@ public:
     Eigen::Map<const Eigen::VectorXi> shower_primary_id() const { 
         return {shower_primary_ids.data(), static_cast<Eigen::Index>(shower_primary_ids.size())}; 
     }
+    Eigen::Map<const Eigen::VectorXd> h_max() const { 
+        return {h_maxs.data(), static_cast<Eigen::Index>(h_maxs.size())}; 
+    }
 
     // 获取单个shower的所有属性
     SimulatedShower at(size_t idx) const {
@@ -93,6 +98,7 @@ public:
         shower.x_max = x_maxs[idx];
         shower.starting_grammage = starting_grammages[idx];
         shower.shower_primary_id = shower_primary_ids[idx];
+        shower.h_max = h_maxs[idx];
         return shower;
     }
     SimulatedShower operator[](size_t idx) const {
@@ -123,6 +129,7 @@ private:
     std::vector<double> core_ys;
     std::vector<double> h_first_ints;
     std::vector<double> x_maxs;
+    std::vector<double> h_maxs;
     std::vector<double> starting_grammages;
     std::vector<int> shower_primary_ids;
 };

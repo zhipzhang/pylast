@@ -29,10 +29,10 @@ void MLReconstructor::operator()(ArrayEvent& event)
     {
         for(const auto tel_id: event.simulation->triggered_tels)
         {
-            if((*query_)(event.simulation->tels[tel_id]->fake_image_parameters))
+            if((*query_)(event.simulation->tels[tel_id]->image_parameters))
             {
                 telescopes.push_back(tel_id);
-                tel_rec_params[tel_id] = event.simulation->tels[tel_id]->fake_image_parameters;
+                tel_rec_params[tel_id] = event.simulation->tels[tel_id]->image_parameters;
             }
         }
         return;

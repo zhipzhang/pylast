@@ -92,6 +92,8 @@ int main(int argc, const char* argv[])
                 event_data.hillas_rec_core_x = event.dl2->geometry.at("HillasReconstructor").core_x;
                 event_data.hillas_rec_core_y = event.dl2->geometry.at("HillasReconstructor").core_y;
                 event_data.hillas_direction_error = event.dl2->geometry.at("HillasReconstructor").direction_error;
+                double sigma = pow(event.dl2->geometry.at("HillasReconstructor").alt_uncertainty, 2) + pow(event.dl2->geometry.at("HillasReconstructor").az_uncertainty, 2);
+                event_data.hillas_direction_sigma = sqrt(sigma);
                 event_data.shower = event.simulation->shower;
                 event_data.hillas_hmax = event.dl2->geometry.at("HillasReconstructor").hmax;
                 if(!event.dl2->particle.empty())
@@ -121,6 +123,8 @@ int main(int argc, const char* argv[])
                 double average_intensity = average_intensity_sum / event.dl2->tels.size();
                 for(const auto& [tel_id, rec_impact]: event.dl2->tels)
                 {
+                    if(event.simulation->tels.contains(tel_id) == false)
+                        continue;
                     auto tel_coord = subarray->tel_positions.at(tel_id);
                     std::array<double, 3> true_core = {event.simulation->shower.core_x, event.simulation->shower.core_y, 0};
                     auto true_direction = SkyDirection(AltAzFrame(), event.simulation->shower.az, event.simulation->shower.alt)->transform_to_cartesian();
@@ -131,6 +135,7 @@ int main(int argc, const char* argv[])
                     data.rec_impact_parameter = rec_impact.impact_parameters.at("HillasReconstructor").distance;
                     data.true_impact_parameter = impact_parameter;
                     data.params = event.dl1->tels.at(tel_id)->image_parameters;
+                    data.fake_params = event.simulation->tels.at(tel_id)->image_parameters;
                     data.true_alt = event.simulation->shower.alt;
                     data.true_az = event.simulation->shower.az;
                     data.true_energy = event.simulation->shower.energy;

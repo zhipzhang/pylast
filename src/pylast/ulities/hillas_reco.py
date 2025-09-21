@@ -111,7 +111,10 @@ def hillas_reco():
                     tel_ids = [int(tel_id) for tel_id in args.subarray.split(',')]
                 
                 # Pass the tel_ids to SimtelEventSource
-                source = SimtelEventSource(input_file, load_simulated_showers=False, subarray=tel_ids)
+                if tel_ids:
+                    source = SimtelEventSource(input_file, load_simulated_showers=False, subarray=tel_ids)
+                else:
+                    source = SimtelEventSource(input_file, load_simulated_showers=False)
                 
                 statistics = Statistics()
                 simulated_shower_hist = make_regular_histogram(min=-1, max=3, bins=60)

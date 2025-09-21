@@ -44,7 +44,7 @@ public:
     Eigen::VectorXd pe_time; // Time of the photoelectrons
     double time_range_10_90;
 
-    ImageParameters fake_image_parameters;
+    ImageParameters image_parameters;
     //ImageParameters true_image;
     std::string print() const {
         return fmt::format("SimulatedCamera:\n"

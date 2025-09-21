@@ -61,7 +61,6 @@ set(BASIC_EVENT_SOURCE_FILES
     )
 add_library(basic_event SHARED ${BASIC_EVENT_SOURCE_FILES})
 target_include_directories(basic_event PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/bernlohr/LACT_hessioxxx/include)
-target_link_libraries(basic_event PUBLIC hessio)
 
 set(SIMTEL_SOURCE_FILES
     SimtelEventSource.cpp
@@ -80,7 +79,7 @@ target_link_libraries(image_processor PUBLIC basic_event)
 
 add_library(simtel_event SHARED ${SIMTEL_SOURCE_FILES})
 
-target_link_libraries(simtel_event PUBLIC basic_event)
+target_link_libraries(simtel_event PUBLIC basic_event hessio)
 target_include_directories(simtel_event PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/bernlohr/)
 if(CompressionHandler_FOUND)
   target_compile_definitions(simtel_event PRIVATE HAVE_EVENTIO_EXTENSION)

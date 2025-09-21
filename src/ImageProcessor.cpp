@@ -302,7 +302,7 @@ void ImageProcessor::handle_simulation_level(ArrayEvent& event)
 
         if(masked_image.sum() < 50)
         {
-            simulated_camera->fake_image_parameters = ImageParameters();
+            simulated_camera->image_parameters = ImageParameters();
             continue;
         }
         HillasParameter hillas_parameter = ImageProcessor::hillas_parameter(subarray.tels.at(tel_id).camera_description.camera_geometry, masked_image);
@@ -312,11 +312,11 @@ void ImageProcessor::handle_simulation_level(ArrayEvent& event)
         IntensityParameter intensity_parameter = ImageProcessor::intensity_parameter(masked_image);
 
         simulated_camera->fake_image_mask = image_mask;
-        simulated_camera->fake_image_parameters.hillas = hillas_parameter;
-        simulated_camera->fake_image_parameters.leakage = leakage_parameter;
-        simulated_camera->fake_image_parameters.concentration = concentration_parameter;
-        simulated_camera->fake_image_parameters.morphology = morphology_parameter;
-        simulated_camera->fake_image_parameters.intensity = intensity_parameter;
+        simulated_camera->image_parameters.hillas = hillas_parameter;
+        simulated_camera->image_parameters.leakage = leakage_parameter;
+        simulated_camera->image_parameters.concentration = concentration_parameter;
+        simulated_camera->image_parameters.morphology = morphology_parameter;
+        simulated_camera->image_parameters.intensity = intensity_parameter;
     }
 }
 Eigen::VectorXd ImageProcessor::adding_poisson_noise(Eigen::VectorXi true_image, double poisson_noise)

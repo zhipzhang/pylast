@@ -349,13 +349,12 @@ void bind_simulated_event(nb::module_ &m) {
         .def_ro("true_image", &SimulatedCamera::true_image)
         .def_ro("impact_parameter", &SimulatedCamera::impact_parameter)
         .def("__repr__", &SimulatedCamera::print)
-        .def_ro("image_parameters", &SimulatedCamera::fake_image_parameters)
+        .def_ro("image_parameters", &SimulatedCamera::image_parameters)
         .def_ro("fake_image", &SimulatedCamera::fake_image)
         .def_ro("fake_image_mask", &SimulatedCamera::fake_image_mask)
         .def_ro("pe_amplitude", &SimulatedCamera::pe_amplitude)
         .def_ro("pe_time", &SimulatedCamera::pe_time)
-        .def_ro("time_range_10_90", &SimulatedCamera::time_range_10_90)
-        .def_ro("fake_image_parameters", &SimulatedCamera::fake_image_parameters);
+        .def_ro("time_range_10_90", &SimulatedCamera::time_range_10_90);
 
    // nb::class_<TelImpactParameter>(m, "TelImpactParameter")
    //     .def_ro("impact_distance", &TelImpactParameter::distance)
@@ -368,6 +367,7 @@ void bind_simulated_event(nb::module_ &m) {
         .def_ro("energy", &SimulatedShower::energy)
         .def_ro("h_first_int", &SimulatedShower::h_first_int)
         .def_ro("x_max", &SimulatedShower::x_max)
+        .def_ro("h_max", &SimulatedShower::h_max)
         .def_ro("starting_grammage", &SimulatedShower::starting_grammage)
         .def_ro("shower_primary_id", &SimulatedShower::shower_primary_id)
         .def("__repr__", &SimulatedShower::print);
@@ -465,6 +465,7 @@ void bind_simulated_shower_array(nb::module_ &m) {
         .def_prop_ro("core_y", &SimulatedShowerArray::core_y)
         .def_prop_ro("h_first_int", &SimulatedShowerArray::h_first_int)
         .def_prop_ro("x_max", &SimulatedShowerArray::x_max)
+        .def_prop_ro("h_max", &SimulatedShowerArray::h_max)
         .def_prop_ro("starting_grammage", &SimulatedShowerArray::starting_grammage)
         .def_prop_ro("shower_primary_id", &SimulatedShowerArray::shower_primary_id)
         .def("__repr__", &SimulatedShowerArray::print)

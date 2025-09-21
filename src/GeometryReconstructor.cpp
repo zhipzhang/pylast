@@ -42,9 +42,9 @@ void GeometryReconstructor::operator()(ArrayEvent& event)
     {
         for(const auto tel_id: event.simulation->triggered_tels)
         {
-            if((*query_)(event.simulation->tels[tel_id]->fake_image_parameters))
+            if((*query_)(event.simulation->tels[tel_id]->image_parameters))
             {
-                hillas_dicts[tel_id] = event.simulation->tels[tel_id]->fake_image_parameters.hillas;
+                hillas_dicts[tel_id] = event.simulation->tels[tel_id]->image_parameters.hillas;
                 telescope_pointing[tel_id] = SphericalRepresentation(event.pointing->tels[tel_id]->azimuth, event.pointing->tels[tel_id]->altitude);
                 telescopes.push_back(tel_id);
             }
