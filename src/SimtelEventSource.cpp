@@ -416,16 +416,21 @@ void SimtelEventSource::read_true_image(ArrayEvent& event)
             Eigen::VectorXi true_image = Eigen::VectorXi{Eigen::Map<Eigen::VectorXi>(simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].pe_count, n_pixels)};
             int image_sum = true_image.sum();
             event.simulation->add_tel(tel_id, SimulatedCamera{.true_image_sum = image_sum, .true_image= std::move(true_image), .impact_parameter = impact_parameter}); 
-            if(simtel_file_handler->hsdata->mc_event.mc_pe_list->amplitudes != NULL)
+            if(simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].amplitudes != NULL)
             {
                 event.simulation->tels.at(tel_id)->pe_amplitude = Eigen::VectorXd{Eigen::Map<Eigen::VectorXd>(simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].amplitudes, npe)};
             }
-            if(simtel_file_handler->hsdata->mc_event.mc_pe_list->atimes != NULL)
+            if(simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].atimes != NULL)
             {
                 event.simulation->tels.at(tel_id)->pe_time = Eigen::VectorXd{Eigen::Map<Eigen::VectorXd>(simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].atimes, npe)};
                 event.simulation->tels.at(tel_id)->pe_index = Eigen::VectorXi{Eigen::Map<Eigen::VectorXi>(simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].itstart, n_pixels)};
             }
-            if(simtel_file_handler->hsdata->mc_event.mc_pe_list->photon_count != NULL)
+            else
+            {
+                spdlog::warn("No pe times available for tel_id: {} event_id {}", tel_id, event.event_id);
+                continue;
+            }
+            if(simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_id].photon_count != NULL)
             {
                 event.simulation->tels.at(tel_id)->photon_counts = Eigen::VectorXi{Eigen::Map<Eigen::VectorXi>(simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].photon_count, n_pixels)};
             }
@@ -439,9 +444,12 @@ void SimtelEventSource::read_true_image(ArrayEvent& event)
             std::sort(sorted_times.data(), sorted_times.data() + sorted_times.size());
 
             // Calculate indices for 10% and 90% positions
-            int index_10 = static_cast<int>(0.1 * (npe - 1));
-            int index_90 = static_cast<int>(0.9 * (npe - 1));
-
+            int index_10 = static_cast<int>(0.1 * npe - 1);
+            int index_90 = static_cast<int>(0.9 * npe - 1);
+            if(index_10 < 0) index_10 = 0;
+            if(index_90 < 0) index_90 = 0;
+            if(index_10 >= npe) index_10 = npe - 1;
+            if(index_90 >= npe) index_90 = npe - 1;
             // Store the time range in the simulation event
             event.simulation->tels.at(tel_id)->time_range_10_90 = sorted_times[index_90] - sorted_times[index_10];
 

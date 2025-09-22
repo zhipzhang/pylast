@@ -42,5 +42,5 @@ def register_exe(exename):
         result = subprocess.run([executable] + sys.argv[1:], check=True)
         return result.returncode
     except subprocess.CalledProcessError as e:
-        print(f"Error running simplified_convert: {e}", file=sys.stderr)
+        print(f"Error running {executable}: {e}", file=sys.stderr)
         return e.returncode
