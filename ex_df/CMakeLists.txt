@@ -37,12 +37,14 @@ ExternalProject_Add(arrow_ep
 set(ARROW_LIB_PATH ${ARROW_INSTALL_DIR}/lib)
 
 ExternalProject_Get_Property(arrow_ep install_dir)
-ExternalProject_Add_Step(arrow_ep install_lib
+if(SKBUILD)
+ExternalProject_Add_Step(arrow_ep install_lib_arrow
     COMMAND ${CMAKE_COMMAND} -E copy_if_different 
             "${ARROW_LIB_PATH}/libarrow.so"
             "${CMAKE_INSTALL_PREFIX}/pylast/libarrow.so"
     DEPENDEES install
 )
+endif()
 
 set(Arrow_DIR "${ARROW_INSTALL_DIR}/lib/cmake/arrow")
 
@@ -88,8 +90,8 @@ set_target_properties(Arrow::arrow_python PROPERTIES
 )
 
 add_library(dataframe DataFrame.cpp)
-target_include_directories(dataframe PUBLIC ${ROOT_INCLUDE_DIRS} ${ARROW_INSTALL_DIR}/include ${PYARROW_INCLUDE_DIR} include)
-target_link_libraries(dataframe PUBLIC Arrow::arrow  basic_event ROOT::Core ROOT::RIO ROOT::Tree)
+target_include_directories(dataframe PUBLIC ${ARROW_INSTALL_DIR}/include ${PYARROW_INCLUDE_DIR} include)
+target_link_libraries(dataframe PUBLIC Arrow::arrow  basic_event)
 
 add_executable(test_data test_data.cpp)
 target_link_libraries(test_data PUBLIC dataframe root_event)

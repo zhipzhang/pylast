@@ -51,6 +51,10 @@ if(HAVE_EVENTIO_EXTENSION)
     install(TARGETS eventio_extension LIBRARY DESTINATION pylast)
 endif()
 
+
+if(WITH_PYARROW)
+include(ExternalProject)
+
 set(DATAFRAME_LIBRARIES dataframe basic_event Arrow::arrow Arrow::arrow_python)
 
 nanobind_add_module(_pylast_dataframe
@@ -92,10 +96,7 @@ set_property(TARGET _pylast_dataframe APPEND PROPERTY INSTALL_RPATH
 )
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-# 额外建议（可选）：让 CMake 自动把 link 的路径也加入 INSTALL_RPATH
-# 这样当你 link 到其它目标/外部库时，CMake 会把那些位置加入 rpath
-#set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-
 install(TARGETS dataframe LIBRARY DESTINATION pylast)
 install(TARGETS _pylast_dataframe LIBRARY DESTINATION pylast)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/_pylast_dataframe.pyi DESTINATION pylast)
+endif()
