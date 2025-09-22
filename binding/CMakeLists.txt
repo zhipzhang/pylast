@@ -46,7 +46,11 @@ add_python_binding(_pylast_datawriter "${DATAWRITER_SOURCES}" "${DATAWRITER_LIBR
 install(TARGETS query LIBRARY DESTINATION pylast)
 install(TARGETS muparser LIBRARY DESTINATION pylast)
 install(TARGETS hessio LIBRARY DESTINATION pylast)
-
 if(HAVE_EVENTIO_EXTENSION)
     install(TARGETS eventio_extension LIBRARY DESTINATION pylast)
+endif()
+if(ENABLE_DB_FEATURES)
+add_python_binding(_pylast_databasewriter pydatabase_bind.cpp database_supporter _pyeventsource)
+install(TARGETS database_supporter LIBRARY DESTINATION pylast)
+install(FILES ${DUCKDB_LIBRARY} DESTINATION pylast)
 endif()

@@ -4,5 +4,8 @@ This is the standard analysis science tool for LACT Project.
 pip install .
 ```
 
+## Support Database
+pip install . --config-settings=cmake.args="-DENABLE_DB_FEATURES"
+
 
 
