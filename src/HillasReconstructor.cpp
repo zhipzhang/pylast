@@ -102,7 +102,7 @@ bool HillasReconstructor::reconstruct(const std::unordered_map<int, HillasParame
 
     geometry.hmax = reconstruction_hmax(fov_x, fov_y,rec_alt);
     auto & atmosphere = TableAtmosphereModel::global_instance();
-    geometry.xmax = atmosphere.convert_hmax_to_xmax(geometry.hmax/1e3);
+    //geometry.xmax = atmosphere.convert_hmax_to_xmax(geometry.hmax/1e3);
     geometry.core_x = core_x;
     geometry.core_y = core_y;
     geometry.tilted_core_x = tilted_x;

@@ -30,6 +30,7 @@ if(SKBUILD)
     message(STATUS "Building Python bindings with scikit-build-core")
     set(BUILD_PYTHON_BINDINGS ON)
     set(WITH_ROOT ON)
+    set(WITH_PYARROW ON)
 endif()
 # Try to import all Python components potentially needed by nanobind
 if(BUILD_PYTHON_BINDINGS)
@@ -59,6 +60,7 @@ else()
     set(BASEPOINT $ORIGIN)
 endif()
 set(CMAKE_INSTALL_RPATH ${BASEPOINT} ${BASEPOINT}/${CMAKE_INSTALL_LIBDIR})
+
 # Option for Intel MKL support
 option(FAST "Enable Intel MKL/OpenMp support"  OFF)
 if(FAST)
@@ -84,6 +86,10 @@ if(WITH_TEST)
 endif()
 if(WITH_ROOT)
     add_subdirectory(root)
+endif()
+
+if(WITH_PYARROW)
+    add_subdirectory(ex_df)
 endif()
 
 if(SKBUILD)

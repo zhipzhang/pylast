@@ -37,7 +37,6 @@ set_hessio_definitions("LACT_PROD0")
 add_subdirectory(bernlohr/LACT_hessioxxx)
 add_subdirectory(muparser)
 
-
 find_package(CompressionHandler QUIET)
 if(CompressionHandler_FOUND)
   message(STATUS "CompressionHandler found, Using eventio_extension")

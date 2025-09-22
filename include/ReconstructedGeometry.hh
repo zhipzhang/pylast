@@ -28,7 +28,7 @@ class ReconstructedGeometry
         double tilted_core_uncertainty_x;
         double tilted_core_uncertainty_y;
         double hmax;
-        double xmax;
+        //double xmax;
         std::vector<int> telescopes;
         
 };
