@@ -59,7 +59,8 @@
         DECLARE_CONFIGURABLE_DOUBLE_DEFINITIONS (EventSource&, source, const std::string&, filename, DataWriter);
         virtual ~DataWriter() 
         {
-            close();
+            if(file_writer != nullptr)
+                close();
         }
         void close()
         {

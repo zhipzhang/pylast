@@ -409,6 +409,7 @@ void SimtelEventSource::read_true_image(ArrayEvent& event)
             // Skip telescopes with very low npe.
             if(npe <= 30)
             {
+                spdlog::debug("Skip true image for tel_id: {} with npe: {}", tel_id, npe);
                 continue;
             }
             Eigen::VectorXi true_image = Eigen::VectorXi{Eigen::Map<Eigen::VectorXi>(simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].pe_count, n_pixels)};
@@ -423,9 +424,12 @@ void SimtelEventSource::read_true_image(ArrayEvent& event)
             std::sort(sorted_times.data(), sorted_times.data() + sorted_times.size());
 
             // Calculate indices for 10% and 90% positions
-            int index_10 = static_cast<int>(0.1 * (npe - 1));
-            int index_90 = static_cast<int>(0.9 * (npe - 1));
-
+            int index_10 = static_cast<int>(0.1 * npe - 1);
+            int index_90 = static_cast<int>(0.9 * npe - 1);
+            if(index_10 < 0) index_10 = 0;
+            if(index_90 < 0) index_90 = 0;
+            if(index_10 >= npe) index_10 = npe - 1;
+            if(index_90 >= npe) index_90 = npe - 1;
             // Store the time range in the simulation event
             event.simulation->tels.at(tel_id)->time_range_10_90 = sorted_times[index_90] - sorted_times[index_10];
             */
