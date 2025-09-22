@@ -433,6 +433,7 @@ void SimtelEventSource::read_true_image(ArrayEvent& event)
             event.simulation->tels.at(tel_id)->pe_amplitude = Eigen::VectorXd(Eigen::Map<Eigen::VectorXd>(simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].amplitudes, npe));
             event.simulation->tels.at(tel_id)->pe_time = Eigen::VectorXd(Eigen::Map<Eigen::VectorXd>(simtel_file_handler->hsdata->mc_event.mc_pe_list[tel_index].atimes, npe));
 
+            */
             // Create sorted copy of pe_time
             auto sorted_times = event.simulation->tels.at(tel_id)->pe_time;
             std::sort(sorted_times.data(), sorted_times.data() + sorted_times.size());
@@ -443,7 +444,6 @@ void SimtelEventSource::read_true_image(ArrayEvent& event)
 
             // Store the time range in the simulation event
             event.simulation->tels.at(tel_id)->time_range_10_90 = sorted_times[index_90] - sorted_times[index_10];
-            */
 
         }
     
