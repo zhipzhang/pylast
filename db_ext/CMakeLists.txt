@@ -3,8 +3,8 @@
 include(FetchContent)
 FetchContent_Declare(
     duckdb
-    URL "https://gh.felicity.ac.cn/https://github.com/duckdb/duckdb/releases/download/v1.4.0/libduckdb-linux-amd64.zip"
-    URL_HASH SHA256=3e7a902ee6cddf7d55035903cf26f14a9a45302bed6fbd379cf34e1c9cc9983f
+    URL "https://gh.felicity.ac.cn/https://github.com/duckdb/duckdb/releases/download/v1.3.2/libduckdb-linux-amd64.zip"
+    URL_HASH SHA256=748f7c3722f8a4a15e7666e24b917615776879a2e9d92e079d0191a7832e93c1
 )
 FetchContent_MakeAvailable(duckdb)
 FetchContent_GetProperties(duckdb)

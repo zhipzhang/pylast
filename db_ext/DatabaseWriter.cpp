@@ -171,6 +171,7 @@ void DatabaseWriter::writeEventData(EventSource& event_source, bool use_true) {
     
     // Commit the transaction
     result = conn_.Query("COMMIT");
+    spdlog::info("Finished writing events to database: {}", source_file);
     if (result->HasError()) {
         std::cerr << "Error committing transaction: " << result->GetError() << std::endl;
         return;
