@@ -61,7 +61,7 @@ endif()
 set(CMAKE_INSTALL_RPATH ${BASEPOINT} ${BASEPOINT}/${CMAKE_INSTALL_LIBDIR})
 # Option for Intel MKL support
 option(FAST "Enable Intel MKL/OpenMp support"  OFF)
-option(ENABLE_DB_FEATURES "Build with DATABASE support" OFF)
+#option(ENABLE_DB_FEATURES "Build with DATABASE support" OFF)
 if(FAST)
     message(STATUS "Building with Intel MKL and OpenMP support for performance optimization")
     # Find required packages

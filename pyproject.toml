@@ -17,6 +17,9 @@ classifiers = [
     "Programming Language :: C++",
 ]
 dependencies = [
+    "ibis",
+    "numpy",
+    "pandas",
     "ibis-framework",
     "duckdb==1.3.2"
 ]

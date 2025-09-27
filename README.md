@@ -5,7 +5,7 @@ pip install .
 ```
 
 ## Support Database
-pip install . --config-settings=cmake.args="-DENABLE_DB_FEATURES"
+pip install . --config-settings=cmake.args="-DENABLE_DB_FEATURES=ON"
 
 
 
