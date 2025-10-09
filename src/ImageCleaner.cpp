@@ -1,37 +1,27 @@
 #include "ImageCleaner.hh"
+#include "Eigen/src/Core/MathFunctions.h"
 #include "spdlog/spdlog.h"
-json TailcutsCleaner::default_config() const
-{
-    return get_default_config();
-}
+
 json TailcutsCleaner::get_default_config()
 {
-    return Configurable::from_string(R"(
-    {
-        "picture_thresh": 10,
-        "boundary_thresh": 5,
-        "keep_isolated_pixels": false,
-        "min_number_picture_neighbors": 2
-    }
-    )");
+    json config;
+    config["picture_thresh"] = 10;
+    config["boundary_thresh"] = 5;
+    config["keep_isolated_pixels"] = false;
+    config["min_number_picture_neighbors"] = 2;
+    return config;
 }
 
-void TailcutsCleaner::configure(const json& config)
+void TailcutsCleaner::registerParams()
 {
-    try {
-        const json& cfg = config.contains("Tailcuts_cleaner") ? config.at("Tailcuts_cleaner") : config;
-        
-        if (config.contains("Tailcuts_cleaner")) {
-            spdlog::debug("Using top level TailcutsCleaner config");
-        }
-        picture_thresh = cfg.at("picture_thresh");
-        boundary_thresh = cfg.at("boundary_thresh"); 
-        keep_isolated_pixels = cfg.at("keep_isolated_pixels");
-        min_number_picture_neighbors = cfg.at("min_number_picture_neighbors");
-    }
-    catch(const std::exception& e) {
-        throw std::runtime_error("Error configuring TailcutsCleaner: " + std::string(e.what()));
-    }
+    registerParam<double>("picture_thresh",10, picture_thresh);
+    registerParam<double>("boundary_thresh",5, boundary_thresh);
+    registerParam<bool>("keep_isolated_pixels", false, keep_isolated_pixels);
+    registerParam<int>("min_number_picture_neighbors", 2, min_number_picture_neighbors);
+}
+
+void TailcutsCleaner::setUp()
+{
 }
 
 Eigen::Vector<bool, -1> TailcutsCleaner::operator()(const CameraGeometry& camera_geometry, const Eigen::VectorXd& image) const

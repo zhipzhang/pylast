@@ -38,19 +38,22 @@ Eigen::Vector<bool, -1> ImageProcessor::tailcuts_clean(const CameraGeometry& cam
         return (pixel_above_boundary.array() && pixel_with_picture_neighbors.array()) || (pixel_in_picture.array() && pixel_with_boundary_neighbors.array());
     }
 }
-void ImageProcessor::configure(const json& config)
+void ImageProcessor::registerParams()
 {
-    image_cleaner_type = config["image_cleaner_type"];
+    registerParam<std::string>("image_cleaner_type", "Tailcuts_cleaner", image_cleaner_type);
+    registerParam<double>("poisson_noise", 0.0, poisson_noise);
+}
+
+void ImageProcessor::setUp()
+{
     std::cout << "image_cleaner_type: " << image_cleaner_type << std::endl;
     if(image_cleaner_type == "Tailcuts_cleaner")
     {
-        image_cleaner = std::make_unique<TailcutsCleaner>(config["Tailcuts_cleaner"]);
+        if(getConfig().contains("Tailcuts_cleaner"))
+            image_cleaner = std::make_unique<TailcutsCleaner>(getConfig()["Tailcuts_cleaner"]);
+        else
+            image_cleaner = std::make_unique<TailcutsCleaner>();
     }
-    if(config.contains("poisson_noise"))
-    {
-        poisson_noise = config["poisson_noise"];
-    }
-
 }
 // First is clean the image , then extractor the parameter
 void ImageProcessor::operator()(ArrayEvent& event)
@@ -145,6 +148,10 @@ LeakageParameter ImageProcessor::leakage_parameter(CameraGeometry& camera_geomet
     auto  second_outermost_pixel_mask = camera_geometry.get_border_pixel_mask(2);
     int   image_pixels = (masked_image.array() > 0).count();
     double intensity = masked_image.sum();
+    if(intensity <= 0)
+    {
+        return LeakageParameter{std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN()};
+    }
     double intensity_width_1 = outermost_pixel_mask.cast<double>().dot(masked_image)/intensity;
     double intensity_width_2 = second_outermost_pixel_mask.cast<double>().dot(masked_image)/intensity;
     double pixel_width_1 = 1.0 * (outermost_pixel_mask.array() && (masked_image.array() > 0)).count() / image_pixels;
@@ -345,17 +352,6 @@ bool ImageProcessor::fake_trigger(const CameraGeometry& camera_geometry, const E
         return false; // Not enough pixels in the group above the threshold
     }
     return true;
+}
 
 
-}
-json ImageProcessor::get_default_config()
-{
-    std::string default_config = R"(
-    {
-        "image_cleaner_type": "Tailcuts_cleaner"
-    }
-    )";
-    json base_config = Configurable::from_string(default_config);
-    base_config["Tailcuts_cleaner"] = TailcutsCleaner::get_default_config();
-    return base_config;
-}
