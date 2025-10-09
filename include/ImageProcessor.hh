@@ -9,6 +9,7 @@
  * 
  */
 #pragma once
+#include "CameraDescription.hh"
 #include "CameraGeometry.hh"
 #include "SimulatedCamera.hh"
 #include "SubarrayDescription.hh"
@@ -38,6 +39,7 @@ public:
     static MorphologyParameter morphology_parameter(const CameraGeometry& camera_geometry, const Eigen::Vector<bool, -1>& image_mask);
     static IntensityParameter intensity_parameter(const Eigen::VectorXd& masked_image);
     static void dilate_image(const CameraGeometry& camera_geometry, Eigen::Vector<bool, -1>& image_mask);
+    static Eigen::Vector<bool, -1> cut_pixel_distance(const CameraGeometry& camera_geometry, double focal_length,  double cut_radius);
     
     
 private:
@@ -45,6 +47,8 @@ private:
     std::string image_cleaner_type;
     std::unique_ptr<ImageCleaner> image_cleaner;
     double poisson_noise = 0.0;
+    double cut_radius = 0.0;
+    bool use_cut_radius = false;
     void handle_simulation_level(ArrayEvent& event);
     bool fake_trigger(const CameraGeometry& camera_geometry, const Eigen::VectorXd& image, double threshold, int min_pixels_above_threshold = 4);
     Eigen::VectorXd adding_poisson_noise(Eigen::VectorXi true_image, double poisson_noise);

@@ -283,7 +283,7 @@ void RootWriter::write_all_simulation_shower(const SimulatedShowerArray& shower_
         helper.root_simulation_shower = RootSimulationShower();
         helper.root_simulation_shower->initialize_write(tree);
     }
-    for(int i = 0; i < shower_array.size(); ++i)
+    for(size_t i = 0; i < shower_array.size(); ++i)
     {
         helper.root_simulation_shower->shower = shower_array[i];
         all_shower_tree->Fill();
@@ -336,7 +336,6 @@ void RootWriter::write_simulated_camera(const ArrayEvent& event, bool write_imag
 
     }
     auto& root_simulated_camera = helper.root_simulation_camera.value();
-    const auto& sim = event.simulation.value();
     root_simulated_camera.event_id = event.event_id;
     for(const auto& [tel_id,camera] : event.simulation->tels)
     {

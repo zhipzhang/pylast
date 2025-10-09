@@ -21,9 +21,6 @@ void bind_imageprocessor(nb::module_ &m)
         .def("__call__", [](ImageProcessor& self, ArrayEvent& event) {
             self(event);
         })
-        .def("__repr__", [](ImageProcessor& self) {
-            return "ImageProcessor:\n  Config: " + self.get_config_str();
-        })
         .def_static("dilate_image", [](const CameraGeometry& camera_geometry, Eigen::Vector<bool, -1>& image_mask) {
             ImageProcessor::dilate_image(camera_geometry, image_mask);
         });
