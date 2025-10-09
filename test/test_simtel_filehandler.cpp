@@ -24,7 +24,7 @@ TEST_CASE_FIXTURE(SimtelFileHandlerTestSuite, "OpenFile")
     SUBCASE("Open Test file")
     {
         auto test_directory = std::filesystem::path(__FILE__);
-        auto test_file = test_directory.parent_path() / "test_data" / "simtel.zst";
+        auto test_file = test_directory.parent_path() / "test_data" / "lact_prod0_simtel_particle_gamma_energy_1000.0_1000.0_zenith_0.0_azimuth_0.0_run_1_event_0.zst";
         simtel_file_handler = std::make_unique<SimtelFileHandler>(test_file.string());
         CHECK(simtel_file_handler != nullptr);
     }
@@ -33,7 +33,7 @@ TEST_CASE_FIXTURE(SimtelFileHandlerTestSuite, "OpenFile")
 TEST_CASE_FIXTURE(SimtelFileHandlerTestSuite, "MethodTest")
 {
     auto test_directory = std::filesystem::path(__FILE__);
-    auto test_file = test_directory.parent_path() / "test_data" / "simtel.zst";
+    auto test_file = test_directory.parent_path() / "test_data" / "lact_prod0_simtel_particle_gamma_energy_1000.0_1000.0_zenith_0.0_azimuth_0.0_run_1_event_0.zst";
     simtel_file_handler = std::make_unique<SimtelFileHandler>(test_file.string());
     REQUIRE(simtel_file_handler != nullptr);
     simtel_file_handler->read_until_event(); 
