@@ -5,19 +5,29 @@
 #include "HillasReconstructor.hh"
 #include "Utils.hh"
 #include "spdlog/spdlog.h"
-void ShowerProcessor::configure(const json& config)
+
+void ShowerProcessor::registerParams()
+{
+    // Register the geometry reconstruction types parameter
+    std::vector<std::string> default_types = {"HillasReconstructor"};
+    registerParam<std::vector<std::string>>("GeometryReconstructionTypes", default_types, geometry_types_);
+}
+
+void ShowerProcessor::setUp()
 {
     try {
+        const auto& config = getConfig();
         auto cfg = config.contains("ShowerProcessor") ? config["ShowerProcessor"] : config;
-        for(auto& geometry_types: cfg["GeometryReconstructionTypes"])
+        for(const auto& geometry_type : geometry_types_)
         {
-            if(geometry_types == "HillasReconstructor")
+            if(geometry_type == "HillasReconstructor")
             {
-                geometry_reconstructors.push_back(std::make_unique<HillasReconstructor>(subarray, cfg["HillasReconstructor"]));
+                json reconstructor_config = cfg.contains("HillasReconstructor") ? cfg["HillasReconstructor"] : json::object();
+                geometry_reconstructors.push_back(std::make_unique<HillasReconstructor>(subarray, reconstructor_config));
             }
             else
             {
-                spdlog::debug("Unknown geometry reconstruction type: {}", geometry_types.dump());
+                spdlog::debug("Unknown geometry reconstruction type: {}", geometry_type);
             }
         }
     }
@@ -26,15 +36,6 @@ void ShowerProcessor::configure(const json& config)
     }
 }
 
-json ShowerProcessor::get_default_config()
-{
-    auto default_config = R"({
-        "GeometryReconstructionTypes": ["HillasReconstructor"]
-    })";
-    auto defualt_json = from_string(default_config);
-    defualt_json["HillasReconstructor"] = HillasReconstructor::get_default_config();
-    return defualt_json;
-}
 
 void ShowerProcessor::operator()(ArrayEvent& event)
 {

@@ -1,4 +1,5 @@
 #include "ImageQuery.hh"
+#include <stdexcept>
 
 void ImageQuery::init_variables()
 {
@@ -28,17 +29,24 @@ void ImageQuery::init_morphology_parameter()
     parser_.DefineVar("morphology_n_pixels", &morphology_n_pixels_);
 }
 
-void ImageQuery::configure(const json& config)
+void ImageQuery::registerParams()
 {
+    // No specific parameters to register for this class
+    // The configuration is handled in setUp method
+}
+
+void ImageQuery::setUp()
+{
+    const auto& config = getConfig();
     try {
-        const json& cfg = config.contains("ImageQuery") ? config.at("ImageQuery") : config;
+        const json& cfg = config.contains("ImageQuery") ? config["ImageQuery"] : config;
         for (const auto& [key, value] : cfg.items()) {
             add_expr(value);
         }
         set_expr();
     }
     catch(const std::exception& e) {
-        throw std::runtime_error("Error configuring StereoQuery: " + std::string(e.what()));
+        throw std::runtime_error("Error configuring ImageQuery: " + std::string(e.what()));
     }
 }
 
@@ -57,10 +65,10 @@ bool ImageQuery::operator()(const ImageParameters &image_parameter)
         printf("Token:    %s\n", e.GetToken().c_str());
         printf("Position: %d\n", e.GetPos());
         printf("Error code: %d\n", e.GetCode());
-        return false;
+        throw(std::runtime_error("Error evaluating ImageQuery: " + get_expr()));
     }
     catch(const std::exception& e) {
-        printf("Unexpected error evaluating StereoQuery: %s\n", e.what());
-        return false;
+        printf("Unexpected error evaluating ImageQuery: %s\n", e.what());
+        throw(std::runtime_error("Error evaluating ImageQuery: " + get_expr()));
     }
 }

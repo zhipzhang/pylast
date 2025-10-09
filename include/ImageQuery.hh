@@ -11,10 +11,11 @@
 
  #pragma once
 
- #include "Configurable.hh"
+ #include "ConfigSystem.hh"
+ #include "ConfigMacros.hh"
  #include "ImageParameters.hh"
  #include "ExprQuery.hh"
- class ImageQuery : public ExprQuery, public Configurable{
+ class ImageQuery : public ExprQuery, public config::Configurable{
     public:
     /**
      * @brief Construct a new Image Query object
@@ -23,14 +24,15 @@
      * 
      * @param expr 
      */
-    ImageQuery(const std::string& expr):Configurable(expr, [this](const std::string& expr){set_expr(expr);})
+    ImageQuery(const std::string& expr): config::Configurable(expr, [this](const std::string& expr){set_expr(expr);})
     {
-        if(!config.empty())
+        initialize();
+        if(!getConfig().is_null())
         {
-            initialize();
+            setUp();
         }
         init_variables();
-    } 
+    }
     /**
      * @brief Evaluate the image query on the given image parameters
      * 
@@ -43,11 +45,8 @@
 
     protected:
         void init_variables();
-        void configure(const json& config) override;
-        virtual json default_config() const override
-        {
-            return json();
-        }
+        void registerParams() override;
+        void setUp() override;
     private:
         void init_hillas_parameter();
         void init_leakage_parameter();

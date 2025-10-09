@@ -1,67 +1,48 @@
 #include "DataWriter.hh"
 #include "DataWriterFactory.hh"
-json DataWriter::get_default_config()
+
+void DataWriter::registerParams()
 {
-    std::string default_config = R"(
-    {
-        "output_type": "root",
-        "eos_url": "root://eos01.ihep.ac.cn/",
-        "overwrite": true,
-        "write_simulation_shower": true,
-        "write_simulated_camera": true,
-        "write_simulated_camera_image": false,
-        "write_r0": true,
-        "write_r1": true,
-        "write_dl0": true,
-        "write_dl1": true,
-        "write_dl1_image": false,
-        "write_dl2": true,
-        "write_monitor": true,
-        "write_pointing": true,
-        "write_simulation_config": true,
-        "write_atmosphere_model": false,
-        "write_subarray": true,
-        "write_metaparam": true
-    }
-    )";
-    json base_config = Configurable::from_string(default_config);
-    return base_config;
+    // Register all configuration parameters using the new system
+    registerParam<std::string>("output_type", "root", output_type);
+    registerParam<std::string>("eos_url", "root://eos01.ihep.ac.cn/", eos_url);
+    registerParam<bool>("overwrite", true, overwrite);
+    registerParam<bool>("write_simulation_shower", true, write_simulation_shower_enabled);
+    registerParam<bool>("write_simulated_camera", true, write_simulated_camera_enabled);
+    registerParam<bool>("write_simulated_camera_image", false, write_simulated_camera_image_enabled);
+    registerParam<bool>("write_r0", false, write_r0_enabled);
+    registerParam<bool>("write_r1", false, write_r1_enabled);
+    registerParam<bool>("write_dl0", false, write_dl0_enabled);
+    registerParam<bool>("write_dl1", true, write_dl1_enabled);
+    registerParam<bool>("write_dl1_image", false, write_dl1_image_enabled);
+    registerParam<bool>("write_dl2", true, write_dl2_enabled);
+    registerParam<bool>("write_monitor", false, write_monitor_enabled);
+    registerParam<bool>("write_pointing", false, write_pointing_enabled);
+    registerParam<bool>("write_atmosphere_model", false, write_atmosphere_model_enabled);
+    registerParam<bool>("write_subarray", true, write_subarray_enabled);
+    registerParam<bool>("write_simulation_config", true, write_simulation_config_enabled);
 }
 
-void DataWriter::configure(const json& config)
+void DataWriter::setUp()
 {
-    std::string output_type = config.at("output_type");
     if(filename.find("/eos") != std::string::npos)
     {
-        filename = std::string(config.at("eos_url")) + filename;
+        filename = eos_url + filename;
     }
     file_writer = DataWriterFactory::instance().create(output_type, source, filename);
-    file_writer->open(config.at("overwrite"));
-    if(config.at("write_atmosphere_model"))
+    file_writer->open(overwrite);
+    if(write_atmosphere_model_enabled)
     {
         file_writer->write_atmosphere_model();
     }
-    if(config.at("write_subarray"))
+    if(write_subarray_enabled)
     {
         file_writer->write_subarray();
     }
-    if(config.at("write_simulation_config"))
+    if(write_simulation_config_enabled)
     {
         file_writer->write_simulation_config();
     }
-    
-    // Store configuration for selective component writing
-    write_simulation_shower_enabled = config.value("write_simulation_shower", true);
-    write_simulated_camera_enabled = config.value("write_simulated_camera", false);
-    write_simulated_camera_image_enabled = config.value("write_simulated_camera_image", false);
-    write_r0_enabled = config.value("write_r0", false);
-    write_r1_enabled = config.value("write_r1", false);
-    write_dl0_enabled = config.value("write_dl0", false);
-    write_dl1_enabled = config.value("write_dl1", true);
-    write_dl1_image_enabled = config.value("write_dl1_image", false);
-    write_dl2_enabled = config.value("write_dl2", true);
-    write_monitor_enabled = config.value("write_monitor", false);
-    write_pointing_enabled = config.value("write_pointing", false);
 }
 
 void DataWriter::operator()(const ArrayEvent& event)

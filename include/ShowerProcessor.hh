@@ -21,16 +21,17 @@
  */
  #include <memory>
  #include "ArrayEvent.hh"
- #include "Configurable.hh"
+ #include "ConfigSystem.hh"
+ #include "ConfigMacros.hh"
 #include "SubarrayDescription.hh"
 #include "GeometryReconstructor.hh"
 #include "EventSource.hh"
 #include <set>
 //TODO add stereo quality query?
- class ShowerProcessor: public Configurable
+ class ShowerProcessor: public config::Configurable
  {
     public:
-        DECLARE_CONFIGURABLE_DEFINITIONS(const SubarrayDescription& , subarray, ShowerProcessor);
+        CONFIG_PARAM_CONSTRUCTORS(ShowerProcessor, const SubarrayDescription&, subarray);
         // Contain the unique_ptr, so we have to delete the copy-constructor
         ~ShowerProcessor() = default;
         ShowerProcessor(const ShowerProcessor&) = delete;
@@ -38,11 +39,11 @@
         ShowerProcessor& operator=(const ShowerProcessor&) = delete;
         ShowerProcessor& operator=(ShowerProcessor&&) = delete;
         void operator()(ArrayEvent& event);
-        void configure(const json& config) override;
-        json default_config() const override {return get_default_config();}
-        static json get_default_config();
+        void registerParams() override;
+        void setUp() override;
 
     private:
     const SubarrayDescription& subarray;
+    std::vector<std::string> geometry_types_ = {"HillasReconstructor"};
     std::vector<std::unique_ptr<GeometryReconstructor>> geometry_reconstructors;
  };

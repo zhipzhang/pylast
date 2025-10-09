@@ -49,16 +49,8 @@ int main(int argc, const char* argv[])
         return 1;
     }
 
-    try {
-        // Open first source to initialize writer and static metadata (subarray, configs, etc.)
-        auto first_source = std::make_unique<RootEventSource>(in_files.front(), -1, std::vector<int>{}, true);
-
-        // Configure DataWriter once; it will own and keep the output file open
-        DataWriter writer(*first_source, out_file);
-        
-        // Load configuration
-        json cfg;
-        if (config) {
+    json cfg;
+    if (config) {
             // Read external JSON config file
             std::ifstream config_stream(config_file);
             if (!config_stream.is_open()) {
@@ -66,35 +58,41 @@ int main(int argc, const char* argv[])
             }
             config_stream >> cfg;
             spdlog::info("Loaded configuration from {}", config_file);
+    } 
+    try {
+        // Open first source to initialize writer and static metadata (subarray, configs, etc.)
+        auto first_source = std::make_unique<RootEventSource>(in_files.front(), -1, std::vector<int>{}, true);
+
+        // Configure DataWriter once; it will own and keep the output file open
+        DataWriter* writer = nullptr;
+        if(cfg.contains("DataWriter"))
+        {
+            writer = new DataWriter(*first_source, out_file, cfg["DataWriter"]);
         } else {
-            // Use default configuration
-            cfg = DataWriter::get_default_config();
+            writer = new DataWriter(*first_source, out_file);
         }
         
-        // Ensure we recreate the output file
-        cfg["overwrite"] = true;
-        cfg["write_simulated_camera"] = true; // No simulation camera data in input files
-        writer.configure(cfg);
+        // Load configuration
 
-        // Write events from first source
-        writer.write_all_simulation_shower(first_source->get_shower_array());
-        writer.write_statistics(first_source->statistics.value(), false);
+        
+        writer->write_all_simulation_shower(first_source->get_shower_array());
+        writer->write_statistics(first_source->statistics.value(), false);
         for (const auto& ev : *first_source) {
-            writer(ev);
+            (*writer)(ev);
         }
 
         // Process remaining sources: reuse the same writer, just feed events
         for (size_t i = 1; i < in_files.size(); ++i) {
             spdlog::info("Merging from {}", in_files[i]);
             auto src = std::make_unique<RootEventSource>(in_files[i], -1, std::vector<int>{}, false);
-            writer.write_all_simulation_shower(src->get_shower_array());
-            writer.write_statistics(src->statistics.value(), false);
+            writer->write_all_simulation_shower(src->get_shower_array());
+            writer->write_statistics(src->statistics.value(), false);
             for (const auto& ev : *src) {
-                writer(ev);
+                (*writer)(ev);
             }
         }
         // Explicitly close to flush and build indices
-        writer.close();
+        writer->close();
         spdlog::info("Merged {} file(s) into {}", in_files.size(), out_file);
     } catch (const std::exception& e) {
         spdlog::error("Merge failed: {}", e.what());

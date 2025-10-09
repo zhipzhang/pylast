@@ -202,7 +202,7 @@ int main(int argc, const char* argv[]) {
             auto image_processor = std::make_unique<ImageProcessor>(*source->subarray, config["image_processor"]);
             auto shower_processor = std::make_unique<ShowerProcessor>(*source->subarray, config["shower_processor"]);
             auto data_writer = std::make_unique<DataWriter>(*source, output_file, config["data_writer"]);
-
+            spdlog::info("Finishing initializing..");
             // Process events
             for (auto& event : *source) {
                 // Process the event

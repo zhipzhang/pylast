@@ -43,6 +43,10 @@
         {
             parser_.SetExpr(expr_.c_str());
         }
+        std::string get_expr() const
+        {
+            return expr_;
+        }
     mu::Parser parser_;
     private:
     std::string expr_;

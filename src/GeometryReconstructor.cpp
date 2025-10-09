@@ -5,24 +5,20 @@
 #include <unordered_map>
 
 
-json GeometryReconstructor::get_default_config()
+
+void GeometryReconstructor::registerParams()
 {
-    auto default_config = R"({
-        "ImageQuery": {
-            "100p.e.": "hillas_intensity > 100",
-            "less leakage": "leakage_intensity_width_2 < 0.3"
-        }
-    })";
-    return from_string(default_config);
+    // Register the use_fake_hillas parameter
+    registerParam<bool>("use_fake_hillas", false, use_fake_hillas);
+    registerParam<std::string>("ImageQuery", R"({
+        "100p.e.": "hillas_intensity > 100",
+        "less leakage": "leakage_intensity_width_2 < 0.3"
+    })", image_query_config_);
 }
-void GeometryReconstructor::configure(const json& config)
+
+void GeometryReconstructor::setUp()
 {
-    std::string image_query_config = config["ImageQuery"].dump();
-    query_ = std::make_unique<ImageQuery>(image_query_config);
-    if(config.contains("use_fake_hillas"))
-    {
-        use_fake_hillas = config["use_fake_hillas"];
-    }
+    query_ = std::make_unique<ImageQuery>(image_query_config_);
 }
 void GeometryReconstructor::operator()(ArrayEvent& event)
 {

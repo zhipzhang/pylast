@@ -10,7 +10,8 @@
  */
 
  #pragma once
- #include "Configurable.hh"
+ #include "ConfigSystem.hh"
+ #include "ConfigMacros.hh"
  #include "ArrayEvent.hh"
  #include "EventSource.hh"
 #include "SimulatedShowerArray.hh"
@@ -53,10 +54,10 @@
         std::string filename;
  };
  
- class DataWriter: public Configurable
+ class DataWriter: public config::Configurable
  {
     public:
-        DECLARE_CONFIGURABLE_DOUBLE_DEFINITIONS (EventSource&, source, const std::string&, filename, DataWriter);
+        CONFIG_DOUBLE_PARAM_CONSTRUCTORS(DataWriter, EventSource&, source, const std::string&, filename);
         virtual ~DataWriter() 
         {
             if(file_writer != nullptr)
@@ -70,9 +71,8 @@
                 file_writer = nullptr;
             }
         }
-        void configure(const json& config) override;
-        static json get_default_config();
-        json default_config() const override {return get_default_config();}
+        void registerParams() override;
+        void setUp() override;
         
         void write_all_simulation_shower(const SimulatedShowerArray& shower_array)
         {
@@ -98,17 +98,25 @@
         std::string filename;
         
         // Flags to control which components to write
-        bool write_simulation_shower_enabled = true;
-        bool write_simulated_camera_enabled = true;
-        bool write_simulated_camera_image_enabled = false;
-        bool write_r0_enabled = false;
-        bool write_r1_enabled = false;
-        bool write_dl0_enabled = false;
-        bool write_dl1_enabled = true;
-        bool write_dl1_image_enabled = false;
-        bool write_dl2_enabled = true;
-        bool write_monitor_enabled = false;
-        bool write_pointing_enabled = false;
+        bool write_simulation_shower_enabled;
+        bool write_simulated_camera_enabled;
+        bool write_simulated_camera_image_enabled ;
+        bool write_r0_enabled;
+        bool write_r1_enabled;
+        bool write_dl0_enabled ;
+        bool write_dl1_enabled ;
+        bool write_dl1_image_enabled ;
+        bool write_dl2_enabled ;
+        bool write_monitor_enabled ;
+        bool write_pointing_enabled;
+        
+        // Additional configuration parameters
+        std::string output_type;
+        std::string eos_url; 
+        bool overwrite;
+        bool write_atmosphere_model_enabled;
+        bool write_subarray_enabled;
+        bool write_simulation_config_enabled;
         
     private:
         std::unique_ptr<FileWriter> file_writer;

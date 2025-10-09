@@ -13,23 +13,24 @@
 
 #include "ImageQuery.hh"
 #include "ArrayEvent.hh"
-#include "Configurable.hh"
+#include "ConfigSystem.hh"
+#include "ConfigMacros.hh"
 #include "SubarrayDescription.hh"
 #include "CoordFrames.hh"
 #include "ReconstructedGeometry.hh"
-class GeometryReconstructor: private Configurable
+class GeometryReconstructor: private config::Configurable
 {
     public:
-        DECLARE_CONFIGURABLE_DEFINITIONS(const SubarrayDescription& , subarray, GeometryReconstructor);
+        CONFIG_PARAM_CONSTRUCTORS(GeometryReconstructor, const SubarrayDescription&, subarray);
         virtual ~GeometryReconstructor() = default;
         virtual void operator()(ArrayEvent& event);
         virtual std::string name() const {return "BaseGeometryReconstructor";}
-        json default_config() const override {return get_default_config();}
-        static json get_default_config();
-        void configure(const json& config) override;
+        void registerParams() override;
+        void setUp() override;
         std::vector<int> telescopes;
     protected:
         bool use_fake_hillas = false; 
+        std::string image_query_config_;
         static double compute_angle_separation(double az1, double alt1, double az2, double alt2);
         std::pair<double, double> convert_to_sky(double fov_x, double fov_y);
         std::pair<double, double> convert_to_fov(double alt, double az);
