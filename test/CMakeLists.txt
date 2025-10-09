@@ -17,6 +17,7 @@ add_executable(test_data_writer test_data_writer.cpp ${CMAKE_CURRENT_SOURCE_DIR}
 target_link_libraries(test_data_writer PUBLIC root_writer root_event simtel_event)
 
 add_executable(test_configurable test_configurable.cpp )
+target_include_directories(test_configurable PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../include/external)
 
 add_test(NAME test_simtel_filehandler
     COMMAND test_simtel_filehandler
