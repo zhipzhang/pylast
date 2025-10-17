@@ -231,6 +231,9 @@ void bind_dl1_event(nb::module_ &m) {
         .def_ro("miss", &ExtraParameters::miss)
         .def_ro("disp", &ExtraParameters::disp)
         .def_ro("theta", &ExtraParameters::theta)
+        .def_ro("true_psi", &ExtraParameters::true_psi)
+        .def_ro("cog_err", &ExtraParameters::cog_err)
+        .def_ro("beta_err", &ExtraParameters::beta_err)
         .def("__repr__", [](ExtraParameters& self) {
             return fmt::format("ExtraParameters:\n  miss: {}\n  disp: {}\n  theta: {}", self.miss, self.disp, self.theta);
         });

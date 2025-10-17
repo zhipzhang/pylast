@@ -145,6 +145,10 @@ HillasParameter ImageProcessor::hillas_parameter(const CameraGeometry& camera_ge
             psi = M_PI/2;
         }
     }
+    if(psi < 0)
+    {
+        psi += M_PI;
+    }
     // Uint vector along the major axis is (cos(psi), sin(psi))
     Eigen::VectorXd longitudinal = delta_x.array() * std::cos(psi) + delta_y.array() * std::sin(psi);
     double m3_long = pow(longitudinal.array(), 3).matrix().dot(masked_image)/intensity;

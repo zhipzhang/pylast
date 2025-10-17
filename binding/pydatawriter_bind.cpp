@@ -16,9 +16,6 @@ void bind_datawriter(nb::module_ &m)
         .def("__call__", [](DataWriter& self, ArrayEvent& event) {
             self(event);
         })
-        .def("__repr__", [](DataWriter& self) {
-            return "DataWriter:\n  Config: " + self.get_config_str();
-        })
         .def("close", &DataWriter::close)
         .def("write_all_simulation_shower", &DataWriter::write_all_simulation_shower)
         .def("write_statistics", &DataWriter::write_statistics, nb::arg("statistics"), nb::arg("last") = false);

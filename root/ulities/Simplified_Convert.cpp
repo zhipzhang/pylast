@@ -102,9 +102,10 @@ int main(int argc, const char* argv[])
                 event_data.pointing_az = event.pointing->array_azimuth;
                 if(event.dl2->geometry.contains("HillasWeightedReconstructor"))
                 {
-                    event_data.disp_stereo_rec_alt = event.dl2->geometry.at("HillasWeightedReconstructor").alt;
-                    event_data.disp_stereo_rec_az = event.dl2->geometry.at("HillasWeightedReconstructor").az;
-                    event_data.disp_direction_error = event.dl2->geometry.at("HillasWeightedReconstructor").direction_error;
+                    event_data.weighted_summed_rec_alt = event.dl2->geometry.at("HillasWeightedReconstructor").alt;
+                    event_data.weighted_sum_rec_az = event.dl2->geometry.at("HillasWeightedReconstructor").az;
+                    event_data.weighted_sum_direction_error = event.dl2->geometry.at("HillasWeightedReconstructor").direction_error;
+                    event_data.weighted_sum_direction_sigma = event.dl2->geometry.at("HillasWeightedReconstructor").alt_uncertainty;
                 }
                 if(!event.dl2->energy.empty())
                 {

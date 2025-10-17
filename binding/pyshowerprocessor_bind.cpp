@@ -32,9 +32,7 @@ void bind_showerprocessor(nb::module_ &m) {
         .def("__call__", [](ShowerProcessor& self, ArrayEvent& event) {
             self(event);
         })
-        .def("__repr__", [](ShowerProcessor& self) {
-            return "ShowerProcessor:\n  Config: " + self.get_config_str();
-        });
+        ;
     nb::class_<ImageQuery>(m, "ImageQuery")
         .def(nb::init<const std::string&>(), nb::arg("config"))
         .def("__call__", [](ImageQuery& self, const ImageParameters& image_parameters) {

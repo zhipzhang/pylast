@@ -65,9 +65,9 @@ int main(int argc, const char* argv[])
 
         // Configure DataWriter once; it will own and keep the output file open
         DataWriter* writer = nullptr;
-        if(cfg.contains("DataWriter"))
+        if(cfg.contains("data_writer"))
         {
-            writer = new DataWriter(*first_source, out_file, cfg["DataWriter"]);
+            writer = new DataWriter(*first_source, out_file, cfg["data_writer"]);
         } else {
             writer = new DataWriter(*first_source, out_file);
         }

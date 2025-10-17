@@ -1,0 +1,62 @@
+{
+  "calibrator": {
+    "image_extractor_type": "LocalPeakExtractor",
+    "LocalPeakExtractor": {
+      "window_shift": 3,
+      "window_width": 7,
+      "apply_correction": true
+    }
+  },
+  "image_processor": {
+    "poisson_noise": 5,
+    "cut_radius": 4.1,
+    "image_cleaner_type": "Tailcuts_cleaner",
+    "TailcutsCleaner": {
+      "picture_thresh": 15.0,
+      "boundary_thresh": 7.5,
+      "keep_isolated_pixels": false,
+      "min_number_picture_neighbors": 2
+    }
+  },
+  "shower_processor": {
+    "GeometryReconstructionTypes": [
+      "HillasReconstructor",
+      "HillasWeightedReconstructor"
+    ],
+    "MLParticleClassifier": {
+      "ImageQuery": "hillas_intensity > 100 && leakage_intensity_width_2 < 0.3 && hillas_width > 0 && morphology_n_pixels >= 5"
+    },
+    "HillasReconstructor": {
+      "ImageQuery": "hillas_intensity > 100 && leakage_intensity_width_2 < 0.3 && hillas_width > 0 && morphology_n_pixels >= 5",
+      "use_fake_hillas": true
+    },
+    "HillasWeightedReconstructor": {
+      "ImageQuery": "hillas_intensity > 100 && leakage_intensity_width_2 < 0.3 && hillas_width > 0 && morphology_n_pixels >= 5",
+      "lookup_table_path": "/data/home/zzp/GraduationPaper/ReconstructionMethodImprove/WeightedSumHillas/lookup_table.npz",
+      "use_fake_hillas": true
+    },
+    "MLEnergyReconstructor": {
+      "ImageQuery": "hillas_intensity > 100 && leakage_intensity_width_2 < 0.3 && hillas_width > 0 && morphology_n_pixels >= 5"
+    }
+  },
+  "data_writer": {
+    "output_type": "root",
+    "eos_url": "root://eos01.ihep.ac.cn/",
+    "overwrite": true,
+    "write_simulation_shower": true,
+    "write_simulated_camera": true,
+    "write_simulated_camera_image": false,
+    "write_r0": false,
+    "write_r1": false,
+    "write_dl0": false,
+    "write_dl1": true,
+    "write_dl1_image": true,
+    "write_dl2": true,
+    "write_monitor": false,
+    "write_pointing": true,
+    "write_simulation_config": false,
+    "write_atmosphere_model": false,
+    "write_subarray": true,
+    "write_metaparam": false
+  }
+}

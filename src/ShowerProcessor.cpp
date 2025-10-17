@@ -92,8 +92,6 @@ void ShowerProcessor::operator()(ArrayEvent& event)
                 {
                     beta_err += M_PI;
                 }
-                dl1->image_parameters.extra.cog_err = cog_err;
-                dl1->image_parameters.extra.beta_err = std::abs(beta_err);
                 
 
                 // Miss is the distance between the hillas ellipse center and the true direction
@@ -102,6 +100,16 @@ void ShowerProcessor::operator()(ArrayEvent& event)
                 double disp_projection = off_lon * cos(dl1->image_parameters.hillas.psi) + off_lat * sin(dl1->image_parameters.hillas.psi);
                 double disp = sqrt(off_lon * off_lon + off_lat * off_lat);
                 double miss = sqrt(pow(disp, 2) - pow(disp_projection, 2));
+                if(true_psi != M_PI/2 && std::tan(true_psi) * (-off_lon) + off_lat < 0)
+                {
+                    cog_err = -cog_err;
+                }
+                if(dl1->image_parameters.hillas.psi != M_PI/2 && std::tan(dl1->image_parameters.hillas.psi) * (off_lon) - off_lat < 0)
+                {
+                    miss = -miss;
+                }
+                dl1->image_parameters.extra.cog_err = cog_err;
+                dl1->image_parameters.extra.beta_err = beta_err;
                 dl1->image_parameters.extra.miss = miss;
                 dl1->image_parameters.extra.disp = disp ;
                 dl1->image_parameters.extra.theta = std::asin(miss/disp);
@@ -137,14 +145,22 @@ void ShowerProcessor::operator()(ArrayEvent& event)
         {
             beta_err += M_PI;
         }
-        image_parameter.extra.cog_err = cog_err;
-        image_parameter.extra.beta_err = std::abs(beta_err);
         // Miss is the distance between the hillas ellipse center and the true direction
         double off_lon = fov_direction->x() - image_parameter.hillas.x;
         double off_lat = fov_direction->y() - image_parameter.hillas.y;
+        if(true_psi != M_PI/2 && std::tan(true_psi) * (-off_lon) + off_lat < 0)
+        {
+            cog_err = -cog_err;
+        }
         double disp_projection = off_lon * cos(image_parameter.hillas.psi) + off_lat * sin(image_parameter.hillas.psi);
         double disp = sqrt(off_lon * off_lon + off_lat * off_lat);
         double miss = sqrt(pow(disp, 2) - pow(disp_projection, 2));
+        if( image_parameter.hillas.psi!=M_PI/2 && std::tan(image_parameter.hillas.psi)  * (off_lon) - off_lat < 0)
+        {
+            miss = -miss;
+        }
+        image_parameter.extra.cog_err = cog_err;
+        image_parameter.extra.beta_err = beta_err;
         image_parameter.extra.miss = miss;
         image_parameter.extra.disp = disp;
         image_parameter.extra.theta = std::asin(miss/disp);
