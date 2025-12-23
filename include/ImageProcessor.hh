@@ -47,6 +47,8 @@ private:
     std::string image_cleaner_type;
     std::unique_ptr<ImageCleaner> image_cleaner;
     double poisson_noise = 0.0;
+    int fake_trigger_pixels = 0;
+    double fake_trigger_pe = 0;
     double cut_radius = 0.0;
     bool use_cut_radius = false;
     void handle_simulation_level(ArrayEvent& event);

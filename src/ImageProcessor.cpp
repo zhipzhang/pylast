@@ -18,7 +18,7 @@ Eigen::Vector<bool, -1> ImageProcessor::tailcuts_clean(const CameraGeometry& cam
 {
     Eigen::Vector<bool, -1> pixel_above_picture = (image.array() >= picture_thresh);
     Eigen::Vector<bool, -1> pixel_in_picture;
-    if(keep_isolated_pixels or min_number_picture_neighbors == 0)
+    if(keep_isolated_pixels || min_number_picture_neighbors == 0)
     {
         pixel_in_picture = pixel_above_picture;
     }
@@ -45,6 +45,8 @@ void ImageProcessor::registerParams()
     registerParam<std::string>("image_cleaner_type", "Tailcuts_cleaner", image_cleaner_type);
     registerParam<double>("poisson_noise", 0.0, poisson_noise);
     registerParam<double>("cut_radius", 0.0, cut_radius);
+    registerParam<int>("trigger_pixels", 4, fake_trigger_pixels);
+    registerParam<double>("trigger_pe", 8, fake_trigger_pe);
 }
 
 void ImageProcessor::setUp()
@@ -66,6 +68,7 @@ void ImageProcessor::setUp()
 // First is clean the image , then extractor the parameter
 void ImageProcessor::operator()(ArrayEvent& event)
 {
+    event.rounded_tel_hillas.clear();
     if(!event.dl1)
     {
         event.dl1 = DL1Event();
@@ -302,7 +305,7 @@ void ImageProcessor::handle_simulation_level(ArrayEvent& event)
             if(poisson_noise > 0)
             {
                 auto noise_image = adding_poisson_noise(simulated_camera->true_image, poisson_noise);
-                if(fake_trigger(subarray.tels.at(tel_id).camera_description.camera_geometry, noise_image, 5.0, 4))
+                if(fake_trigger(subarray.tels.at(tel_id).camera_description.camera_geometry, noise_image, fake_trigger_pe, fake_trigger_pixels))
                 {
                     event.simulation->triggered_tels.push_back(tel_id);
                 }
@@ -322,12 +325,12 @@ void ImageProcessor::handle_simulation_level(ArrayEvent& event)
     {
         auto& simulated_camera = event.simulation->tels.at(tel_id);
         auto image_mask = (*image_cleaner)(subarray.tels.at(tel_id).camera_description.camera_geometry, simulated_camera->fake_image);
-        Eigen::VectorXd leakage_masked_image = image_mask.select(simulated_camera->fake_image, Eigen::VectorXd::Zero(simulated_camera->fake_image.size()));
-        if(use_cut_radius)
-        {
-            auto pixel_mask = cut_pixel_distance(subarray.tels.at(tel_id).camera_description.camera_geometry, subarray.tels.at(tel_id).optics_description.equivalent_focal_length,cut_radius);
-            image_mask = image_mask && pixel_mask;
-        }
+        //Eigen::VectorXd leakage_masked_image = image_mask.select(simulated_camera->fake_image, Eigen::VectorXd::Zero(simulated_camera->fake_image.size()));
+        //if(use_cut_radius)
+        //{
+        //    auto pixel_mask = cut_pixel_distance(subarray.tels.at(tel_id).camera_description.camera_geometry, subarray.tels.at(tel_id).optics_description.equivalent_focal_length,cut_radius);
+        //    image_mask = image_mask && pixel_mask;
+        //}
         Eigen::VectorXd masked_image = image_mask.select(simulated_camera->fake_image, Eigen::VectorXd::Zero(simulated_camera->fake_image.size()));
         if(masked_image.sum() < 50)
         {
@@ -335,11 +338,20 @@ void ImageProcessor::handle_simulation_level(ArrayEvent& event)
             continue;
         }
         HillasParameter hillas_parameter = ImageProcessor::hillas_parameter(subarray.tels.at(tel_id).camera_description.camera_geometry, masked_image);
-        LeakageParameter leakage_parameter = ImageProcessor::leakage_parameter(const_cast<CameraGeometry&>(subarray.tels.at(tel_id).camera_description.camera_geometry), leakage_masked_image);
+        LeakageParameter leakage_parameter = ImageProcessor::leakage_parameter(const_cast<CameraGeometry&>(subarray.tels.at(tel_id).camera_description.camera_geometry), masked_image);
         ConcentrationParameter concentration_parameter = ImageProcessor::concentration_parameter(subarray.tels.at(tel_id).camera_description.camera_geometry, masked_image, hillas_parameter);
         MorphologyParameter morphology_parameter = ImageProcessor::morphology_parameter(subarray.tels.at(tel_id).camera_description.camera_geometry, image_mask);
         IntensityParameter intensity_parameter = ImageProcessor::intensity_parameter(masked_image);
-
+        if(use_cut_radius)
+        {
+            auto pixel_mask = cut_pixel_distance(subarray.tels.at(tel_id).camera_description.camera_geometry, subarray.tels.at(tel_id).optics_description.equivalent_focal_length,cut_radius);
+            Eigen::VectorXd rounded_masked_image = masked_image.array() * pixel_mask.cast<double>().array();
+            if(rounded_masked_image.sum() > 50)
+            {
+                HillasParameter rounded_hillas = ImageProcessor::hillas_parameter(subarray.tels.at(tel_id).camera_description.camera_geometry, rounded_masked_image);
+                event.rounded_tel_hillas[tel_id] = rounded_hillas;
+            }
+        }
         simulated_camera->fake_image_mask = image_mask;
         simulated_camera->image_parameters.hillas = hillas_parameter;
         simulated_camera->image_parameters.leakage = leakage_parameter;
