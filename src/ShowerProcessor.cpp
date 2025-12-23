@@ -5,6 +5,7 @@
 #include "HillasReconstructor.hh"
 #include "Utils.hh"
 #include "spdlog/spdlog.h"
+#include "ReconstructorFactory.hh"
 
 void ShowerProcessor::registerParams()
 {
@@ -20,14 +21,14 @@ void ShowerProcessor::setUp()
         auto cfg = config.contains("ShowerProcessor") ? config["ShowerProcessor"] : config;
         for(const auto& geometry_type : geometry_types_)
         {
-            if(geometry_type == "HillasReconstructor")
+            spdlog::info("Checking if geometry reconstruction type {} is registered", geometry_type);
+            if (ReconstructorFactory::instance().is_registered(geometry_type))
             {
-                json reconstructor_config = cfg.contains("HillasReconstructor") ? cfg["HillasReconstructor"] : json::object();
-                geometry_reconstructors.push_back(std::make_unique<HillasReconstructor>(subarray, reconstructor_config));
+                reconstructors.push_back(ReconstructorFactory::instance().create(geometry_type, subarray, cfg[geometry_type]));
             }
             else
             {
-                spdlog::debug("Unknown geometry reconstruction type: {}", geometry_type);
+                spdlog::error("Unknown geometry reconstruction type: {}", geometry_type);
             }
         }
     }
@@ -43,20 +44,24 @@ void ShowerProcessor::operator()(ArrayEvent& event)
     {
         event.dl2 = DL2Event();
     }
-    for(auto& geometry_reconstructor: geometry_reconstructors)
+    for(auto& reconstructor: reconstructors)
     {
-        (*geometry_reconstructor)(event);
+        (*reconstructor)(event);
         // Only store the geometry for the telescopes that were used in the reconstruction
-        for(const auto& [tel_id, dl1]: event.dl1->tels)
+        if(reconstructor->name() != "HillasReconstructor")
         {
-            if(event.dl2->geometry[geometry_reconstructor->name()].is_valid)
+            continue;
+        }
+        for(const auto& tel_id: reconstructor->telescopes)
+        {
+            if(event.dl2->geometry[reconstructor->name()].is_valid)
             {
                 auto tel_coord = subarray.tel_positions.at(tel_id);
-                std::array<double, 3> rec_core = {event.dl2->geometry[geometry_reconstructor->name()].core_x, event.dl2->geometry[geometry_reconstructor->name()].core_y, 0};
-                auto rec_direction = SkyDirection(AltAzFrame(), event.dl2->geometry[geometry_reconstructor->name()].az, event.dl2->geometry[geometry_reconstructor->name()].alt)->transform_to_cartesian();
+                std::array<double, 3> rec_core = {event.dl2->geometry[reconstructor->name()].core_x, event.dl2->geometry[reconstructor->name()].core_y, 0};
+                auto rec_direction = SkyDirection(AltAzFrame(), event.dl2->geometry[reconstructor->name()].az, event.dl2->geometry[reconstructor->name()].alt)->transform_to_cartesian();
                 std::array<double, 3> line_direction = {rec_direction.direction[0], rec_direction.direction[1], rec_direction.direction[2]};
                 auto impact_parameter = Utils::point_line_distance(tel_coord, rec_core, line_direction);
-                event.dl2->add_tel_geometry(tel_id, impact_parameter, geometry_reconstructor->name());
+                event.dl2->add_tel_geometry(tel_id, impact_parameter, reconstructor->name());
             }
         }
     }
@@ -111,7 +116,7 @@ void ShowerProcessor::operator()(ArrayEvent& event)
                 dl1->image_parameters.extra.cog_err = cog_err;
                 dl1->image_parameters.extra.beta_err = beta_err;
                 dl1->image_parameters.extra.miss = miss;
-                dl1->image_parameters.extra.disp = disp ;
+                dl1->image_parameters.extra.disp = disp_projection ;
                 dl1->image_parameters.extra.theta = std::asin(miss/disp);
     }
 
@@ -162,7 +167,7 @@ void ShowerProcessor::operator()(ArrayEvent& event)
         image_parameter.extra.cog_err = cog_err;
         image_parameter.extra.beta_err = beta_err;
         image_parameter.extra.miss = miss;
-        image_parameter.extra.disp = disp;
+        image_parameter.extra.disp = disp_projection;
         image_parameter.extra.theta = std::asin(miss/disp);
     }
 }

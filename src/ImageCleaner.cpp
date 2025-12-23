@@ -33,7 +33,7 @@ Eigen::Vector<bool, -1> TailcutsCleaner::tailcuts_clean(const CameraGeometry& ca
 {
     Eigen::Vector<bool, -1> pixel_above_picture = (image.array() >= picture_thresh);
     Eigen::Vector<bool, -1> pixel_in_picture;
-    if(keep_isolated_pixels or min_number_picture_neighbors == 0)
+    if(keep_isolated_pixels || min_number_picture_neighbors == 0)
     {
         pixel_in_picture = pixel_above_picture;
     }

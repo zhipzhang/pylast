@@ -4,6 +4,16 @@
 #include "Utils.hh"
 #include "AtmosphereModel.hh"
 #include "spdlog/spdlog.h"
+#include "ReconstructorFactory.hh"
+
+
+
+static bool registered_hillas_reconstructor = []() {
+    ReconstructorFactory::instance().register_reconstructor("HillasReconstructor", [](const SubarrayDescription& subarray, const json& config) -> std::unique_ptr<Reconstructor> {
+    return std::make_unique<HillasReconstructor>(subarray, config);
+});
+    return true;
+}();
 
 void HillasReconstructor::fill_nominal_hillas_dicts(const std::unordered_map<int, HillasParameter>& hillas_dicts)
 {
@@ -27,25 +37,6 @@ void HillasReconstructor::fill_nominal_hillas_dicts(const std::unordered_map<int
     }
 }
 
-std::pair<double, double> HillasReconstructor::project_to_ground(Eigen::Vector3d intersection_position, const SkyDirection<AltAzFrame>& direction)
-{
-    auto direction_vector = direction->transform_to_cartesian();
-    // Calculate the intersection point with the ground (z=0)
-    // If the direction is parallel to the ground, return the current position
-    if (std::abs(direction_vector.direction.z()) < 1e-10) {
-        return {intersection_position.x(), intersection_position.y()};
-    }
-    
-    // Calculate how far we need to go to reach z=0
-    double t = -intersection_position.z() / direction_vector.direction.z();
-    
-    // Calculate the ground intersection point
-    double ground_x = intersection_position.x() + t * direction_vector.direction.x();
-    double ground_y = intersection_position.y() + t * direction_vector.direction.y();
-    
-    return {ground_x, ground_y};
-
-}
 std::vector<std::pair<int, int>> HillasReconstructor::get_tel_pairs()
 {
     std::vector<std::pair<int, int>> tel_pairs;
@@ -60,6 +51,7 @@ std::vector<std::pair<int, int>> HillasReconstructor::get_tel_pairs()
 }
 void HillasReconstructor::operator()(ArrayEvent& event)
 {
+    rounded_used = false;
     GeometryReconstructor::operator()(event);
     if(hillas_dicts.size() < 2)
     {
@@ -69,6 +61,21 @@ void HillasReconstructor::operator()(ArrayEvent& event)
         return;
     }
     reconstruct(hillas_dicts);
+    // This is a temporay solution, if rounded is used we will refill the hillas_dicts with rounded hillas
+    if(rounded_used)
+    {
+        for(auto telid: telescopes)
+        {
+            if(use_fake_hillas)
+            {
+                event.simulation->tels[telid]->image_parameters.hillas = rounded_hillas_dicts[telid];
+            }
+            else
+            {
+                event.dl1->tels[telid]->image_parameters.hillas = rounded_hillas_dicts[telid];
+            }
+        }
+    }
     geometry.direction_error = compute_angle_separation(event.simulation->shower.az, event.simulation->shower.alt, geometry.az, geometry.alt);
     event.dl2->geometry[this->name()] = geometry;
 }
@@ -76,12 +83,24 @@ bool HillasReconstructor::reconstruct(const std::unordered_map<int, HillasParame
 {
     if(hillas_dicts.size() < 2)
     {
+        geometry.is_valid = false;
         return false;
     }
     tilted_frame = std::make_unique<TiltedGroundFrame>(array_pointing_direction);
     fill_nominal_hillas_dicts(hillas_dicts);
     auto [fov_x, fov_y, sigma_x, sigma_y] = reconstruction_nominal_intersection();
     auto [rec_az, rec_alt] = convert_to_sky(fov_x, fov_y);
+    double rec_offset = compute_angle_separation(rec_az, rec_alt, array_pointing_direction.azimuth, array_pointing_direction.altitude) * 180.0 / M_PI;
+    if((rec_offset < rounded_hillas_radius_threshold) && (rounded_hillas_dicts.size() > 0))
+    {
+        // Use rounded hillas, and refill the telescopes
+        rounded_used = true;
+        telescopes = rounded_telescopes;
+        fill_nominal_hillas_dicts(rounded_hillas_dicts);
+        std::tie(fov_x, fov_y, sigma_x, sigma_y) = reconstruction_nominal_intersection();
+        std::tie(rec_az, rec_alt) = convert_to_sky(fov_x, fov_y);
+        rec_offset = compute_angle_separation(rec_az, rec_alt, array_pointing_direction.azimuth, array_pointing_direction.altitude) * 180.0 / M_PI;
+    }
     auto [tilted_x, tilted_y, tilted_sigma_x, tilted_sigma_y] = reconstruction_tilted_intersection();
     auto tilted_core_position = CartesianPoint(tilted_x, tilted_y, 0);
     auto intersection_position = tilted_core_position.transform_to_ground(*tilted_frame);
@@ -147,21 +166,10 @@ std::tuple<double, double, double, double> HillasReconstructor::reconstruction_n
     return std::make_tuple(mean_x, mean_y, sigma_x, sigma_y);
 }
 
-std::unordered_map<int, Point2D> HillasReconstructor::get_tiled_tel_position()
-{
-    std::unordered_map<int, Point2D> tiled_tel_positions;
-    for(const auto tel_id: telescopes)
-    {
-        auto tel_pos = CartesianPoint(subarray.tel_positions.at(tel_id));
-        auto tilted_tel_pos = tel_pos.transform_to_tilted(*tilted_frame);
-        tiled_tel_positions.emplace(tel_id, Point2D(tilted_tel_pos.x(), tilted_tel_pos.y()));
-    }
-    return tiled_tel_positions;
-}
 std::tuple<double, double, double, double> HillasReconstructor::reconstruction_tilted_intersection()
 {
     auto tel_pairs = get_tel_pairs();
-    auto tilted_tel_positions = get_tiled_tel_position();
+    auto tilted_tel_positions = get_tiled_tel_position(*tilted_frame);
     std::vector<double> intersection_x;
     std::vector<double> intersection_y;
     std::vector<double> weight;

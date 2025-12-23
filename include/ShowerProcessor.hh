@@ -45,5 +45,5 @@
     private:
     const SubarrayDescription& subarray;
     std::vector<std::string> geometry_types_ = {"HillasReconstructor"};
-    std::vector<std::unique_ptr<GeometryReconstructor>> geometry_reconstructors;
+    std::vector<std::unique_ptr<Reconstructor>> reconstructors;
  };
