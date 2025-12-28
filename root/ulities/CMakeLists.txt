@@ -24,8 +24,8 @@ endif()
 
 
 # Hillas reconstruction utility
-add_executable(hillas_reco hillas_reco.cpp ${CMAKE_CURRENT_SOURCE_DIR}/../RootWriter.cpp)
-target_link_libraries(hillas_reco PUBLIC root_event root_writer simtel_event calibrator data_writer image_processor reconstructor)
+add_executable(hillas_reco hillas_reco.cpp ${CMAKE_CURRENT_SOURCE_DIR}/../RootWriter.cpp  ${RECONSTURCTION_EXT_SOURCE_FILES})
+target_link_libraries(hillas_reco PUBLIC root_event root_writer simtel_event calibrator data_writer image_processor reconstructor reconstructor_ext)
 if(SKBUILD)
     MESSAGE(STATUS "Installing hillas_reco")
     install(TARGETS hillas_reco DESTINATION pylast)

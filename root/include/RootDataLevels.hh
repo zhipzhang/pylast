@@ -887,9 +887,9 @@ class RootPointing
             Pointing pointing;
             pointing.array_altitude = array_alt;
             pointing.array_azimuth = array_azimuth;
-            for(size_t i = 0; i < tel_id.size(); ++i)
+            for(size_t i = 0; i < (*tel_id_ptr).size(); ++i)
             {
-                pointing.add_tel(tel_id[i], PointingTelescope{
+                pointing.add_tel((*tel_id_ptr)[i], PointingTelescope{
                     .azimuth = (*tel_azimuth_ptr)[i],
                     .altitude = (*tel_alt_ptr)[i]
                 });

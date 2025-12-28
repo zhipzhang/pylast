@@ -24,7 +24,7 @@
 #include <memory>
 #include <exception>
 #include <fstream>
-#include <nlohmann/json.hpp>
+#include "nlohmann_json/json.hpp"
 
 using json = nlohmann::json;
 using namespace eigen_histogram;
@@ -121,6 +121,7 @@ int main(int argc, const char* argv[]) {
     const std::vector<std::string>& inputs = input_files.Get();
     const std::vector<std::string>& outputs = output_files.Get();
     
+    const std::string config_file_path = config_file.Get();
     if (inputs.empty()) {
         std::cerr << "Error: At least one input file must be specified" << std::endl;
         return 1;
@@ -134,10 +135,10 @@ int main(int argc, const char* argv[]) {
     
     // Load configuration
     json config;
-    if (config_file) {
-        std::ifstream f(config_file.Get());
+    if (!config_file_path.empty()) {
+        std::ifstream f(config_file_path);
         if (!f.is_open()) {
-            std::cerr << "Error: Could not open config file: " << config_file.Get() << std::endl;
+            std::cerr << "Error: Could not open config file: " << config_file_path << std::endl;
             return 1;
         }
         f >> config;

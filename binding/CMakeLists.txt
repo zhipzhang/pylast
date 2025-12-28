@@ -1,24 +1,36 @@
-# Define a macro to conditionally add Python bindings
-macro(add_python_binding MODULE_NAME  BINDING_FILES LIBRARIES DEPENDENCIES)
-    message(STATUS "Building Python binding for module '${MODULE_NAME}'")
+# Define a macro to conditionally add Python bindings, with an option to generate stubs (default: ON)
+macro(add_python_binding MODULE_NAME BINDING_FILES LIBRARIES DEPENDENCIES)
+    # Support legacy 4-argument call
+    set(_ADD_STUB TRUE)
+    if(${ARGC} GREATER 4)
+        set(_ADD_STUB ${ARGV4})
+    endif()
+    message(STATUS "Building Python binding for module '${MODULE_NAME}' (stub: ${_ADD_STUB})")
     nanobind_add_module(${MODULE_NAME}
         STABLE_ABI
-            ${BINDING_FILES}
-        )
-    
-        target_link_libraries(${MODULE_NAME} PRIVATE ${LIBRARIES})
-      # set_property(TARGET ${MODULE_NAME} APPEND PROPERTY INSTALL_RPATH "$ORIGIN")
-              # Generate stub file for each module
-    nanobind_add_stub(
-    ${MODULE_NAME}_stub
-    MODULE ${MODULE_NAME}
-    OUTPUT ${MODULE_NAME}.pyi
-    PYTHON_PATH $<TARGET_FILE_DIR:${MODULE_NAME}>
-    DEPENDS ${MODULE_NAME} ${DEPENDENCIES}
+        ${BINDING_FILES}
     )
-       install(TARGETS ${LIBRARIES} LIBRARY DESTINATION pylast)
-       install(TARGETS ${MODULE_NAME} LIBRARY DESTINATION pylast)
-       install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${MODULE_NAME}.pyi DESTINATION pylast)
+
+    target_link_libraries(${MODULE_NAME} PRIVATE ${LIBRARIES})
+    # set_property(TARGET ${MODULE_NAME} APPEND PROPERTY INSTALL_RPATH "$ORIGIN")
+
+    if(_ADD_STUB)
+        # Generate stub file for each module
+        nanobind_add_stub(
+            ${MODULE_NAME}_stub
+            MODULE ${MODULE_NAME}
+            OUTPUT ${MODULE_NAME}.pyi
+            PYTHON_PATH $<TARGET_FILE_DIR:${MODULE_NAME}>
+            DEPENDS ${MODULE_NAME} ${DEPENDENCIES}
+        )
+    endif()
+    
+    install(TARGETS ${LIBRARIES} LIBRARY DESTINATION pylast)
+    install(TARGETS ${MODULE_NAME} LIBRARY DESTINATION pylast)
+
+    if(_ADD_STUB)
+        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${MODULE_NAME}.pyi DESTINATION pylast)
+    endif()
 endmacro()
 
 
@@ -39,7 +51,9 @@ set(DATAWRITER_SOURCES
 set(EVENTSOURCE_LIBRARIES basic_event simtel_event root_event)
 add_python_binding(_pystatistic pystatistic_bind.cpp "" "")
 add_python_binding(_pyeventsource "${PYEVENTSOURCE_SOURCES}" "${EVENTSOURCE_LIBRARIES}" _pylast_arrayevent)
-add_python_binding(_pylast_showerprocessor pyshowerprocessor_bind.cpp reconstructor "")
+set(RECONSTRUCTOR_LIBRARIES reconstructor reconstructor_ext)
+set(RECONSTRUCTOR_SOURCES pyshowerprocessor_bind.cpp ${RECONSTURCTION_EXT_SOURCE_FILES})
+add_python_binding(_pylast_showerprocessor "${RECONSTRUCTOR_SOURCES}" "${RECONSTRUCTOR_LIBRARIES}" "")
 add_python_binding(_pylast_datawriter "${DATAWRITER_SOURCES}" "${DATAWRITER_LIBRARIES}" "")
 if(ENABLE_DB_FEATURES)
 add_python_binding(_pylast_databasewriter pydatabase_bind.cpp database_supporter _pyeventsource)

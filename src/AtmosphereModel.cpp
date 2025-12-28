@@ -2,6 +2,8 @@
 #include "rpolator.h"
 #include <filesystem>
 #include <fstream>
+#include "spdlog/spdlog.h"
+#include <iostream>
 
 TableAtmosphereModel::TableAtmosphereModel(const std::string& filename) : input_filename(filename)
 {
@@ -55,7 +57,7 @@ TableAtmosphereModel::TableAtmosphereModel(int n_alt, double* alt_km, double* rh
     this->rho = Eigen::VectorXd(Eigen::Map<Eigen::VectorXd>(rho, n_alt));
     this->thick = Eigen::VectorXd(Eigen::Map<Eigen::VectorXd>(thick, n_alt));
     this->refidx_m1 = Eigen::VectorXd(Eigen::Map<Eigen::VectorXd>(refidx_m1, n_alt));
-    cs_thick = set_1d_cubic_params(alt_km, thick, n_alt, 0);
+    cs_thick = set_1d_cubic_params(this->alt_km.data(), this->thick.data(), n_alt, 0);
 }
 
 
@@ -65,7 +67,7 @@ Eigen::VectorXd TableAtmosphereModel::convert_hmax_to_xmax(const Eigen::VectorXd
 
 double TableAtmosphereModel::convert_hmax_to_xmax(double hmax)
 {
-    if(hmax >= 100000) return -1;
+    if(hmax >= 100) return -1;
     double xmax = rpol_cspline(alt_km.data(), thick.data(), cs_thick, n_alt, hmax, 0, 0);
     return xmax;
 }

@@ -3,10 +3,10 @@ function(set_hessio_definitions config)
   if(config STREQUAL "LACT_PROD0")
     add_definitions(
       -DMAXIMUM_TELESCOPES=32
-      -DMAXIMUM_PIXELS=3000
+      -DMAXIMUM_PIXELS=6000
       -DMAXIMUM_SECTORS=6000
       -DMAXIMUM_PIXELSECTORS=19
-      -DMAXIMUM_DRAWERS=3000
+      -DMAXIMUM_DRAWERS=6000
       -DMAXIMUM_SLICES=128
     )
   endif()
@@ -102,9 +102,10 @@ set (COORDINATES_SOURCE_FILES
     CoordFrames.cpp
     )
 set (RECONSTRUCTION_SOURCE_FILES
+    Reconstructor.cpp
     GeometryReconstructor.cpp
+    ReconstructorFactory.cpp
     HillasReconstructor.cpp
-    MLReconstructor.cpp
     ShowerProcessor.cpp
     )
 add_library(reconstructor SHARED ${RECONSTRUCTION_SOURCE_FILES} ${COORDINATES_SOURCE_FILES})

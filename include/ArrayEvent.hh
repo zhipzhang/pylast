@@ -12,8 +12,10 @@
  * 
  */
  #pragma once
+#include "ImageParameters.hh"
 #include "SimulatedEvent.hh"
 #include <optional>
+#include <unordered_map>
 #include "R0Event.hh"
 #include "R1Event.hh"
 #include "EventMonitor.hh"
@@ -36,6 +38,7 @@ public:
     std::optional<DL1Event> dl1;
     std::optional<Pointing> pointing;
     std::optional<DL2Event> dl2;
+    std::unordered_map<int, HillasParameter> rounded_tel_hillas;
     int event_id;
     int run_id;
 };

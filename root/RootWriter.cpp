@@ -622,7 +622,8 @@ void RootWriter::write_dl2(const ArrayEvent& event)
         {
             TDirectory* dir = get_or_create_directory("/events/dl2/energy");
             dir->cd();
-            auto energy_tree = new TTree(name.c_str(), "Reconstructed energy parameters");
+            auto tree = new TTree(name.c_str(), "Reconstructed energy parameters");
+            energy_tree = tree;
             helper.root_dl2_rec_energy_map[name] = RootDL2RecEnergy();
             helper.root_dl2_rec_energy_map[name]->initialize_write(energy_tree);
             trees[name] = energy_tree;

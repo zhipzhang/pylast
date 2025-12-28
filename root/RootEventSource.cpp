@@ -201,7 +201,10 @@ void RootEventSource::initialize_array_event()
         spdlog::warn("No event index found");
         return;
     }
-    max_events = event_helper.root_event_index->index_tree->GetEntries();
+    if(max_events == -1)
+    {
+        max_events = event_helper.root_event_index->index_tree->GetEntries();
+    }
     
 }
 

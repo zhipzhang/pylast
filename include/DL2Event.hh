@@ -26,10 +26,19 @@ class TelReconstructedParameter
         
         // Returns the impact parameter value when there's only one entry
         TelImpactParameter& impact() {
-            if (impact_parameters.size() == 1) {
-                return impact_parameters.begin()->second;
+            if(impact_parameters.empty())
+            {
+                throw std::runtime_error("No impact parameter available");
             }
-            throw std::runtime_error("Cannot get default impact: multiple impact parameters available");
+            return impact_parameters.begin()->second;
+        }
+
+        const TelImpactParameter& impact() const {
+            if(impact_parameters.empty())
+            {
+                throw std::runtime_error("No impact parameter available");
+            }
+            return impact_parameters.begin()->second;
         }
         
         // Access a specific impact parameter by name

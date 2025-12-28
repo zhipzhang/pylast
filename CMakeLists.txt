@@ -76,6 +76,7 @@ if(FAST)
 endif()
 
 add_subdirectory(src)
+add_subdirectory(ml_ext)
 
 if(WITH_TEST)
     include(CTest)

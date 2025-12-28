@@ -87,6 +87,7 @@ void bind_dl2_event(nb::module_ &m) {
         .def_rw("tilted_core_uncertainty_x", &ReconstructedGeometry::tilted_core_uncertainty_x)
         .def_rw("tilted_core_uncertainty_y", &ReconstructedGeometry::tilted_core_uncertainty_y)
         .def_rw("hmax", &ReconstructedGeometry::hmax)
+        .def_rw("xmax", &ReconstructedGeometry::xmax)
         .def_rw("direction_error", &ReconstructedGeometry::direction_error)
         .def_rw("alt_uncertainty", &ReconstructedGeometry::alt_uncertainty)
         .def_rw("az_uncertainty", &ReconstructedGeometry::az_uncertainty)

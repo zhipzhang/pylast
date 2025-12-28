@@ -16,16 +16,34 @@ void bind_subarray_description(nb::module_ &m)
         .def_prop_ro("get_pix_x", [](const SubarrayDescription& self)->Eigen::VectorXd{
             auto id_vecs = self.get_ordered_telescope_ids();
             auto pix_x = self.tels.at(id_vecs[0]).camera_description.camera_geometry.pix_x;
-            double focal_length = self.tels.at(id_vecs[0]).optics_description.equivalent_focal_length;
+            double focal_length = self.tels.at(id_vecs[0]).optics_description.effective_focal_length;
             return pix_x.array()/focal_length * 180/M_PI;
         })
         .def_prop_ro("get_pix_y", [](const SubarrayDescription& self)->Eigen::VectorXd{
+            auto id_vecs = self.get_ordered_telescope_ids();
+            auto pix_y = self.tels.at(id_vecs[0]).camera_description.camera_geometry.pix_y;
+            double focal_length = self.tels.at(id_vecs[0]).optics_description.effective_focal_length;
+            return pix_y.array()/focal_length * 180/M_PI;
+        })
+        .def_prop_ro("get_pix_x_equivalent", [](const SubarrayDescription& self)->Eigen::VectorXd{
+            auto id_vecs = self.get_ordered_telescope_ids();
+            auto pix_x = self.tels.at(id_vecs[0]).camera_description.camera_geometry.pix_x;
+            double focal_length = self.tels.at(id_vecs[0]).optics_description.equivalent_focal_length;
+            return pix_x.array()/focal_length * 180/M_PI;
+        })
+        .def_prop_ro("get_pix_y_equivalent", [](const SubarrayDescription& self)->Eigen::VectorXd{
             auto id_vecs = self.get_ordered_telescope_ids();
             auto pix_y = self.tels.at(id_vecs[0]).camera_description.camera_geometry.pix_y;
             double focal_length = self.tels.at(id_vecs[0]).optics_description.equivalent_focal_length;
             return pix_y.array()/focal_length * 180/M_PI;
         })
         .def_prop_ro("get_pix_size", [](const SubarrayDescription& self)->double{
+            auto id_vecs = self.get_ordered_telescope_ids();
+            double focal_length = self.tels.at(id_vecs[0]).optics_description.effective_focal_length;
+            auto pix_area = self.tels.at(id_vecs[0]).camera_description.camera_geometry.pix_area;
+            return sqrt(pix_area[0])/focal_length * 180/M_PI;
+        })
+        .def_prop_ro("get_pix_size_equivalent", [](const SubarrayDescription& self)->double{
             auto id_vecs = self.get_ordered_telescope_ids();
             double focal_length = self.tels.at(id_vecs[0]).optics_description.equivalent_focal_length;
             auto pix_area = self.tels.at(id_vecs[0]).camera_description.camera_geometry.pix_area;
