@@ -21,6 +21,7 @@ struct TelescopeData
     double hillas_hmax;
     int n_tel;
     double average_intensity;
+    double tel_rec_disp;
 };
 struct EventData
 {
@@ -34,11 +35,24 @@ struct EventData
     double hillas_direction_error;
     double hillas_direction_sigma;
     double rec_energy;
+    double flow_rec_energy;
     double hadroness;
     double weighted_summed_rec_alt;
     double weighted_sum_rec_az;
     double weighted_sum_direction_error;
     double weighted_sum_direction_sigma;
+
+    double gw;
+    double disp_rec_alt;
+    double disp_rec_az;
+    double disp_direction_error;
+    double disp_direction_sigma;
+
+    double test_rec_alt;
+    double test_rec_az;
+    double test_direction_error;
+    double test_rec_core_x;
+    double test_rec_core_y;
     double hillas_hmax;
     double pointing_alt;
     double pointing_az;
@@ -59,6 +73,7 @@ void initialize_telescope_tree(TTree* tree,  TelescopeData& data)
     tree->Branch("rec_az", &data.rec_az);
     tree->Branch("rec_energy", &data.rec_energy);
     tree->Branch("tel_rec_energy", &data.tel_rec_energy);
+    tree->Branch("tel_rec_disp", &data.tel_rec_disp);
     tree->Branch("xmax", &data.xmax);
     // Image parameters
     tree->Branch("hillas_length", &data.params.hillas.length);
@@ -83,6 +98,7 @@ void initialize_telescope_tree(TTree* tree,  TelescopeData& data)
     tree->Branch("fake_hillas_skewness", &data.fake_params.hillas.skewness);
     tree->Branch("fake_hillas_kurtosis", &data.fake_params.hillas.kurtosis);
     tree->Branch("fake_hillas_intensity", &data.fake_params.hillas.intensity);
+    tree->Branch("fake_hillas_scale_ratio", &data.fake_params.hillas.scale_ratio);
     tree->Branch("fake_leakage_pixels_width_1", &data.fake_params.leakage.pixels_width_1);
     tree->Branch("fake_leakage_pixels_width_2", &data.fake_params.leakage.pixels_width_2);
     tree->Branch("fake_leakage_intensity_width_1", &data.fake_params.leakage.intensity_width_1);
@@ -158,11 +174,22 @@ void initialize_event_tree(TTree* tree,  EventData& data)
     tree->Branch("h_max", &data.shower.h_max);
     tree->Branch("starting_grammage", &data.shower.starting_grammage);
     tree->Branch("rec_energy", &data.rec_energy);
+    tree->Branch("flow_rec_energy", &data.flow_rec_energy);
     tree->Branch("weighted_summed_rec_alt", &data.weighted_summed_rec_alt);
     tree->Branch("weighted_sum_rec_az", &data.weighted_sum_rec_az);
     tree->Branch("weighted_sum_direction_error", &data.weighted_sum_direction_error);
     tree->Branch("weighted_sum_direction_sigma", &data.weighted_sum_direction_sigma);
+    tree->Branch("disp_rec_alt", &data.disp_rec_alt);
+    tree->Branch("disp_rec_az", &data.disp_rec_az);
+    tree->Branch("disp_direction_error", &data.disp_direction_error);
+    tree->Branch("disp_direction_sigma", &data.disp_direction_sigma);
     tree->Branch("hadroness", &data.hadroness);
     tree->Branch("pointing_alt", &data.pointing_alt);
     tree->Branch("pointing_az", &data.pointing_az);
+    tree->Branch("test_rec_alt", &data.test_rec_alt);
+    tree->Branch("test_rec_az", &data.test_rec_az);
+    tree->Branch("test_direction_error", &data.test_direction_error);
+    tree->Branch("test_rec_core_x", &data.test_rec_core_x);
+    tree->Branch("test_rec_core_y", &data.test_rec_core_y);
+    tree->Branch("gw", &data.gw);
 }
