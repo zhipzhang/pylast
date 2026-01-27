@@ -470,6 +470,7 @@ void bind_array_event(nb::module_ &m) {
       .def_ro("dl2", &ArrayEvent::dl2, nb::rv_policy::reference_internal)
       .def_ro("pointing", &ArrayEvent::pointing)
       .def_ro("event_id", &ArrayEvent::event_id)
+      .def_ro("mjd", &ArrayEvent::mjd)
       .def_ro("run_id", &ArrayEvent::run_id)
       .def("__repr__", [](ArrayEvent &self) {
         std::string repr = "ArrayEvent:\n";

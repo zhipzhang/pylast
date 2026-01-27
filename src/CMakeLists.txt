@@ -57,6 +57,7 @@ set(BASIC_EVENT_SOURCE_FILES
     CameraReadout.cpp
     OpticsDescription.cpp
     SubarrayDescription.cpp
+    LACT1CameraGeometry.cpp
     rpolator.c
     )
 add_library(basic_event SHARED ${BASIC_EVENT_SOURCE_FILES})
@@ -69,7 +70,8 @@ set(SIMTEL_SOURCE_FILES
 
 set(CALIBRATION_SOURCE_FILES
     Calibration.cpp
-    ImageExtractor.cpp)
+    ImageExtractor.cpp
+    LACT1Calibrator.cpp)
 add_library(calibrator  SHARED ${CALIBRATION_SOURCE_FILES})
 set(IMAGE_PROCESSOR_SOURCE_FILES
     ImageProcessor.cpp

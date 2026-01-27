@@ -61,9 +61,9 @@ void LACT1EventSource::load_calibrate_event(ArrayEvent &event, int index) {
   auto peak_df = event_df.Take<float>("amp");
   auto area_df = event_df.Take<float>("area");
   auto map_number = event_df.Take<int>("map_number");
-  int rabittime1 = event_df.Take<int>("RabbitTime")->at(0);
-  int rabbittime2 = event_df.Take<int>("Rabbittime")->at(0);
-
+  unsigned int rabittime1 = event_df.Take<unsigned int>("RabbitTime")->at(0);
+  unsigned int rabbittime2 = event_df.Take<unsigned int>("Rabbittime")->at(0);
+  event.mjd = get_mjd(rabittime1, rabbittime2);
   CalibCamera calib_camera;
   calib_camera.base.resize(2, camera_geometry.num_pixels);
   calib_camera.peak.resize(2, camera_geometry.num_pixels);
