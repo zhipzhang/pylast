@@ -14,6 +14,9 @@ static const field_registry dl1_tel_fields = {
     {"hillas_skewness", REGISTER_DL1_TEL_FIELD("hillas_skewness", image_parameters.hillas.skewness)},
     {"hillas_kurtosis", REGISTER_DL1_TEL_FIELD("hillas_kurtosis", image_parameters.hillas.kurtosis)},
     {"hillas_intensity", REGISTER_DL1_TEL_FIELD("hillas_intensity", image_parameters.hillas.intensity)},
+    {"log_intensity", FieldEntry{"log_intensity", [](const ArrayEvent& event, int tel_id) -> double {
+        return std::log10(event.dl1->tels.at(tel_id)->image_parameters.hillas.intensity);
+    }}},
     {"hillas_r", REGISTER_DL1_TEL_FIELD("hillas_r", image_parameters.hillas.r)},
     {"hillas_phi", REGISTER_DL1_TEL_FIELD("hillas_phi", image_parameters.hillas.phi)},
     {"leakage_pixels_width_1", REGISTER_DL1_TEL_FIELD("leakage_pixels_width_1", image_parameters.leakage.pixels_width_1)},
@@ -61,6 +64,9 @@ static const field_registry simulated_fields = {
     {"hillas_skewness", REGISTER_SIMULATION_TEL_FIELD("hillas_skewness", image_parameters.hillas.skewness)},
     {"hillas_kurtosis", REGISTER_SIMULATION_TEL_FIELD("hillas_kurtosis", image_parameters.hillas.kurtosis)},
     {"hillas_intensity", REGISTER_SIMULATION_TEL_FIELD("hillas_intensity", image_parameters.hillas.intensity)},
+    {"log_intensity", FieldEntry{"log_intensity", [](const ArrayEvent& event, int tel_id) -> double {
+        return std::log10(event.simulation->tels.at(tel_id)->image_parameters.hillas.intensity);
+    }}},
     {"hillas_r", REGISTER_SIMULATION_TEL_FIELD("hillas_r", image_parameters.hillas.r)},
     {"hillas_phi", REGISTER_SIMULATION_TEL_FIELD("hillas_phi", image_parameters.hillas.phi)},
     {"leakage_pixels_width_1", REGISTER_SIMULATION_TEL_FIELD("leakage_pixels_width_1", image_parameters.leakage.pixels_width_1)},

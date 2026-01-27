@@ -8,12 +8,17 @@ add_library(reconstructor_ext SHARED
             LGBMPredictor.cpp
             ParameterSchema.cpp)
 find_library(LIGHTGBM_LIBRARY NAMES _lightgbm PATHS ${CMAKE_CURRENT_SOURCE_DIR}/lib NO_DEFAULT_PATH)
+
 if(LIGHTGBM_LIBRARY)
     message(STATUS "Found LightGBM library: ${LIGHTGBM_LIBRARY}")
 else()
-    message(FATAL_ERROR "LightGBM library not found in ${CMAKE_CURRENT_SOURCE_DIR}/lib")
+     if(DEFINED ENV{LIGHTGBM_LIBRARY})
+        set(LIGHTGBM_LIBRARY $ENV{LIGHTGBM_LIBRARY})
+        message(STATUS "Found LightGBM library from environment: ${LIGHTGBM_LIBRARY}")
+        else()
+        message(FATAL_ERROR "LightGBM library not found in ${CMAKE_CURRENT_SOURCE_DIR}/lib")
+     endif()
 endif()
-
 
 
 add_library(test_onnx SHARED OnnxRunner.cpp)
