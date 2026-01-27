@@ -20,7 +20,7 @@ void LACT1EventSource::open_file() {
   } else {
     decode_file_name = input_filename;
   }
-  file = std::make_unique<TFile>(decode_file_name.c_str(), "READ");
+  file = std::unique_ptr<TFile>(TFile::Open(decode_file_name.c_str(), "READ"));
   if (!file) {
     throw std::runtime_error("Failed to open decode file: " + decode_file_name);
   }
