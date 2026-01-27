@@ -19,14 +19,14 @@ class ImageCleaner
 public:
     ImageCleaner() = default;
     virtual ~ImageCleaner() = default;
-    virtual Eigen::Vector<bool, -1> operator()(const CameraGeometry& camera_geometry, const Eigen::VectorXd& image) const = 0;
+    virtual Eigen::Vector<bool, -1> operator()(const CameraGeometry& camera_geometry, const Eigen::VectorXd& image, double level = 1.0) const = 0;
 };
 class TailcutsCleaner: public ImageCleaner, public config::Configurable
 {
 public:
     CONFIG_CONSTRUCTORS(TailcutsCleaner);
     static json get_default_config();
-    Eigen::Vector<bool, -1> operator()(const CameraGeometry& camera_geometry, const Eigen::VectorXd& image) const override;
+    Eigen::Vector<bool, -1> operator()(const CameraGeometry& camera_geometry, const Eigen::VectorXd& image, double level = 1.0) const override;
     static Eigen::Vector<bool, -1> tailcuts_clean(const CameraGeometry& camera_geometry, const Eigen::VectorXd& image, double picture_thresh, double boundary_thresh, bool keep_isolated_pixels = false, int min_number_picture_neighbors = 0);
     double get_picture_thresh() const {return picture_thresh;}
     double get_boundary_thresh() const {return boundary_thresh;}
