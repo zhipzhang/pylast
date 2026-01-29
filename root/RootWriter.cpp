@@ -344,7 +344,8 @@ void RootWriter::write_event_index(const ArrayEvent &event) {
   }
   helper.root_event_index->telescopes.clear();
   helper.root_event_index->event_id = event.event_id;
-  helper.root_event_index->mjd = event.mjd;
+  helper.root_event_index->mjd_int = event.mjd.mjd_int;
+  helper.root_event_index->mjd_double = event.mjd.mjd_double;
 
   std::set<int> unique_telescopes;
   // Get telescopes from the first available data level

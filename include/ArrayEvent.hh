@@ -28,6 +28,28 @@
  * @brief Main class to describe an array event
  *
  */
+
+struct MJDData {
+  int mjd_int;
+  double mjd_double;
+
+  MJDData operator+(const MJDData &other) const {
+    return MJDData{mjd_int + other.mjd_int, mjd_double + other.mjd_double};
+  }
+  MJDData operator+=(const MJDData &other) {
+    mjd_int += other.mjd_int;
+    mjd_double += other.mjd_double;
+    return *this;
+  }
+  MJDData operator-=(const MJDData &other) {
+    mjd_int -= other.mjd_int;
+    mjd_double -= other.mjd_double;
+    return *this;
+  }
+  MJDData operator-(const MJDData &other) const {
+    return MJDData{mjd_int - other.mjd_int, mjd_double - other.mjd_double};
+  }
+};
 class ArrayEvent {
 public:
   ArrayEvent() = default;
@@ -43,5 +65,5 @@ public:
   std::unordered_map<int, HillasParameter> rounded_tel_hillas;
   int event_id;
   int run_id;
-  double mjd = -1; // Only used in real-data.
+  MJDData mjd; // Only used in real-data.
 };

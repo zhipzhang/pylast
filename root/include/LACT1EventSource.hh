@@ -30,8 +30,18 @@ struct LACT1ChannelData {
 };
 constexpr int MJD19700101 = 40587;
 constexpr int TAI2UTC = 37;
-double get_mjd(float rabbitTime, float rabbittime) {
-  return MJD19700101 + (rabbitTime + rabbittime * 20 / 1e10 - TAI2UTC) / 86400;
+inline MJDData get_mjd(int rabbitTime, double rabbittime) {
+  // 先用整数和分数部分分开计算，避免double累积误差
+  int seconds_in_day = 86400;
+  double total_seconds = (rabbitTime + rabbittime * 8 / 1e9 - TAI2UTC);
+  int days = static_cast<int>(total_seconds / seconds_in_day);
+  int mjd_int = MJD19700101 + days;
+  double mjd_double = (total_seconds - days * seconds_in_day) / seconds_in_day;
+  if (mjd_double < 0) {
+    mjd_int -= 1;
+    mjd_double += 1.0;
+  }
+  return MJDData{mjd_int, mjd_double};
 }
 class LACT1EventSource : public EventSource {
 public:

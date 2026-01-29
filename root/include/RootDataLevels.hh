@@ -44,7 +44,8 @@ public:
   // Data members
   int event_id;
   RVecI telescopes;
-  int mjd;
+  int mjd_int;
+  double mjd_double;
   TTree *initialize_write(const std::string &name, const std::string &title);
   void initialize_read(TTree *tree);
   TTree *index_tree = nullptr;
