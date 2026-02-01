@@ -17,6 +17,7 @@
 #include "nanobind/stl/unordered_map.h"
 #include "nanobind/stl/vector.h"
 #include "spdlog/spdlog.h"
+#include <iomanip>
 namespace nb = nanobind;
 
 void bind_dl2_event(nb::module_ &m) {
@@ -459,6 +460,23 @@ void bind_pointing_event(nb::module_ &m) {
       });
 }
 void bind_array_event(nb::module_ &m) {
+  nb::class_<MJDData>(m, "MJDData")
+      .def_ro("mjd_int", &MJDData::mjd_int)
+      .def_ro("mjd_double", &MJDData::mjd_double)
+      .def("__repr__", [](MJDData &self) {
+        std::ostringstream oss;
+        oss << std::fixed << std::setprecision(12) << self.mjd_double;
+        std::string frac = oss.str(); // e.g. "0.123450000000"
+        // 去掉 "0."
+        if (frac.rfind("0.", 0) == 0) {
+          frac.erase(0, 2);
+        }
+        // 去掉末尾多余的 0
+        while (!frac.empty() && frac.back() == '0') {
+          frac.pop_back();
+        }
+        return fmt::format("MJD:{}.{}", self.mjd_int, frac);
+      });
   nb::class_<ArrayEvent>(m, "ArrayEvent")
       .def_ro("simulation", &ArrayEvent::simulation)
       .def_ro("r0", &ArrayEvent::r0)
