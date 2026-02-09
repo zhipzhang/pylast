@@ -21,6 +21,7 @@ struct TelescopeData
     double hillas_hmax;
     int n_tel;
     double average_intensity;
+    double tel_rec_energy_std;
     double tel_rec_disp;
 };
 struct EventData
@@ -35,8 +36,11 @@ struct EventData
     double hillas_direction_error;
     double hillas_direction_sigma;
     double rec_energy;
+    double rec_energy_std;
     double flow_rec_energy;
     double hadroness;
+    double mrsl;
+    double mrsw;
     double weighted_summed_rec_alt;
     double weighted_sum_rec_az;
     double weighted_sum_direction_error;
@@ -74,6 +78,7 @@ void initialize_telescope_tree(TTree* tree,  TelescopeData& data)
     tree->Branch("rec_energy", &data.rec_energy);
     tree->Branch("tel_rec_energy", &data.tel_rec_energy);
     tree->Branch("tel_rec_disp", &data.tel_rec_disp);
+    tree->Branch("tel_rec_energy_std", &data.tel_rec_energy_std);
     tree->Branch("xmax", &data.xmax);
     // Image parameters
     tree->Branch("hillas_length", &data.params.hillas.length);
@@ -174,7 +179,10 @@ void initialize_event_tree(TTree* tree,  EventData& data)
     tree->Branch("h_max", &data.shower.h_max);
     tree->Branch("starting_grammage", &data.shower.starting_grammage);
     tree->Branch("rec_energy", &data.rec_energy);
+    tree->Branch("rec_energy_std", &data.rec_energy_std);
     tree->Branch("flow_rec_energy", &data.flow_rec_energy);
+    tree->Branch("mrsl", &data.mrsl);
+    tree->Branch("mrsw", &data.mrsw);
     tree->Branch("weighted_summed_rec_alt", &data.weighted_summed_rec_alt);
     tree->Branch("weighted_sum_rec_az", &data.weighted_sum_rec_az);
     tree->Branch("weighted_sum_direction_error", &data.weighted_sum_direction_error);

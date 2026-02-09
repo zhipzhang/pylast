@@ -156,9 +156,12 @@ int main(int argc, const char *argv[]) {
         event_data.shower = event.simulation->shower;
         event_data.hillas_hmax =
             event.dl2->geometry.at("HillasReconstructor").hmax;
-        if (!event.dl2->particle.empty())
+        if (!event.dl2->particle.empty() && event.dl2->particle.contains("ParticleClassifier") && event.dl2->particle.at("ParticleClassifier").is_valid) {
           event_data.hadroness =
-              event.dl2->particle.at("MLParticleClassifier").hadroness;
+              event.dl2->particle.at("ParticleClassifier").hadroness;
+        } else {
+          event_data.hadroness = -999;
+        }
         event_data.pointing_alt = event.pointing->array_altitude;
         event_data.pointing_az = event.pointing->array_azimuth;
         if (event.dl2->geometry.contains("HillasSumWeightedReconstructor")) {
@@ -200,6 +203,14 @@ int main(int argc, const char *argv[]) {
         if (!event.dl2->energy.empty()) {
           event_data.rec_energy =
               event.dl2->energy.at("EnergyRegressor").estimate_energy;
+          std::vector<int> rec_telescopes = event.dl2->energy.at("EnergyRegressor").telescopes;
+          std::vector<double> rec_energies;
+          std::vector<double> rec_energy_squares;
+          for (const auto &tel_id : event.dl2->geometry.at("HillasReconstructor").telescopes) {
+            rec_energies.push_back(pow(10, event.dl2->tels.at(tel_id).estimate_energy));
+            rec_energy_squares.push_back(pow(10, event.dl2->tels.at(tel_id).estimate_energy) * pow(10, event.dl2->tels.at(tel_id).estimate_energy));
+          }
+          event_data.rec_energy_std = std::sqrt(std::accumulate(rec_energy_squares.begin(), rec_energy_squares.end(), 0.0) / rec_energies.size() - std::pow(std::accumulate(rec_energies.begin(), rec_energies.end(), 0.0) / rec_energies.size(), 2));
           if (event.dl2->energy.contains("TestReconstructor_energy") &&
               event.dl2->energy.at("TestReconstructor_energy").energy_valid) {
             event_data.flow_rec_energy =
@@ -210,6 +221,15 @@ int main(int argc, const char *argv[]) {
           }
         } else {
           event_data.rec_energy = 0;
+        }
+        if (!event.dl2->particle.empty()) {
+          if (event.dl2->particle.contains("LookupTableParticleClassifier") && event.dl2->particle.at("LookupTableParticleClassifier").is_valid) {
+            event_data.mrsl = event.dl2->particle.at("LookupTableParticleClassifier").mrsl;
+            event_data.mrsw = event.dl2->particle.at("LookupTableParticleClassifier").mrsw;
+          } else {
+            event_data.mrsl = -999;
+            event_data.mrsw = -999;
+          }
         }
         eventtree->Fill();
         double average_intensity_sum = 0;
@@ -243,6 +263,7 @@ int main(int argc, const char *argv[]) {
           data.rec_alt = event.dl2->geometry.at("HillasReconstructor").alt;
           data.rec_az = event.dl2->geometry.at("HillasReconstructor").az;
           data.average_intensity = average_intensity;
+          data.tel_rec_energy_std = event_data.rec_energy_std;
           data.hillas_hmax = event.dl2->geometry.at("HillasReconstructor").hmax;
           if (!event.dl2->energy.empty()) {
             data.rec_energy =
