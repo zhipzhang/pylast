@@ -3,10 +3,12 @@ set(RECONSTURCTION_EXT_SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/DispWeightedReconstructor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/TestReconstructor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/EnergyRegressor.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/ParticleClassifier.cpp
     PARENT_SCOPE)
 add_library(reconstructor_ext SHARED 
             LGBMPredictor.cpp
-            ParameterSchema.cpp)
+            ParameterSchema.cpp
+            LGBMModelLoader.cpp)
 find_library(LIGHTGBM_LIBRARY NAMES _lightgbm PATHS ${CMAKE_CURRENT_SOURCE_DIR}/lib NO_DEFAULT_PATH)
 
 if(LIGHTGBM_LIBRARY)

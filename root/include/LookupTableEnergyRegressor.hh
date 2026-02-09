@@ -11,7 +11,7 @@
  * @copyright Copyright (c) 2025
  *
  */
-
+#pragma once
 #include "ReconstructedGeometry.hh"
 #include "Reconstructor.hh"
 #include "TFile.h"

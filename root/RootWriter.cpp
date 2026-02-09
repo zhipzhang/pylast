@@ -578,14 +578,15 @@ void RootWriter::write_dl2(const ArrayEvent &event) {
     if (!particle_tree) {
       TDirectory *dir = get_or_create_directory("/events/dl2/particle");
       dir->cd();
-      auto particle_tree =
+      auto tree =
           new TTree(name.c_str(), "Reconstructed particle parameters");
+      particle_tree = tree;
       helper.root_dl2_rec_particle_map[name] = RootDL2RecParticle();
       helper.root_dl2_rec_particle_map[name]->initialize_write(particle_tree);
       trees[name] = particle_tree;
       directories[name] = dir;
     }
-    auto root_dl2_rec_particle = helper.root_dl2_rec_particle_map[name].value();
+    auto& root_dl2_rec_particle = helper.root_dl2_rec_particle_map[name].value();
     root_dl2_rec_particle.event_id = event.event_id;
     root_dl2_rec_particle = particle;
     particle_tree->Fill();

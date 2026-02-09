@@ -46,9 +46,12 @@ static const field_registry dl1_tel_fields = {
 
 static const field_registry dl2_tel_fields = {
     {"rec_impact_parameter", REGISTER_DL2_TEL_FIELD("rec_impact_parameter", impact_parameters.at("HillasReconstructor").distance)},
-    {"tel_rec_energy", REGISTER_DL2_TEL_FIELD("tel_rec_energy", estimate_energy)},
-    {"rec_energy", REGISTER_DL2_EVENT_FIELD("rec_energy", energy.at("MLEnergyReconstructor").estimate_energy)},
+    {"tel_rec_energy", FieldEntry{"tel_rec_energy", [](const ArrayEvent& event, int tel_id) -> double {
+        return pow(10, event.dl2->tels.at(tel_id).estimate_energy);
+    }}},
+    {"rec_energy", REGISTER_DL2_EVENT_FIELD("rec_energy", energy.at("EnergyRegressor").estimate_energy)},
     {"n_tel", REGISTER_DL2_EVENT_FIELD("n_tel",tels.size())},
+    {"rec_energy_std", REGISTER_DL2_EVENT_FIELD("rec_energy_std", energy.at("EnergyRegressor").estimate_energy_std)},
     
 };
 
@@ -101,7 +104,6 @@ FeatureSchema::FeatureSchema(const json& config) {
         FeatureSpec s;
         s.name = spec.at("name").get<std::string>();
         s.level = ParseDataLevel(spec.at("level").get<std::string>());
-        s.path = spec.at("path").get<std::string>();
         s.description = spec.at("description").get<std::string>();
         specs.push_back(s);
     }

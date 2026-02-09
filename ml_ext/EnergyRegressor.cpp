@@ -36,21 +36,17 @@ void EnergyRegressor::operator()(ArrayEvent &event) {
   Eigen::VectorXd tel_energies = Eigen::VectorXd::Zero(telescopes.size());
   for (int i = 0; i < telescopes.size(); i++) {
     int tel_id = telescopes[i];
-    double energy;
-    if (with_offset) {
-      energy = energy_regressor.predict(
-          rec_offset, const_cast<const ArrayEvent &>(event), tel_id);
-    } else {
-      energy = energy_estimator->predict(const_cast<const ArrayEvent &>(event),
-                                         tel_id);
-    }
-    tel_energies(i) = pow(10, energy);
+    double tel_energy;
+    tel_energy = energy_model_loader->predict(energy_model_loader->extract_features(event, tel_id));
+    tel_energies(i) = pow(10, tel_energy);
     weights(i) =
         event.simulation->tels[tel_id]->image_parameters.hillas.intensity;
-    event.dl2->set_tel_estimate_energy(tel_id, energy);
+    event.dl2->set_tel_estimate_energy(tel_id, tel_energy);
   }
   energy_reco.estimate_energy =
       (tel_energies.array() * weights.array()).sum() / weights.sum();
   energy_reco.energy_valid = true;
+  energy_reco.estimate_energy_std = (tel_energies.array().square().sum()/ tel_energies.array().size() - pow(tel_energies.array().mean(), 2));
+  energy_reco.telescopes = telescopes;
   event.dl2->add_energy(this->name(), energy_reco);
 }

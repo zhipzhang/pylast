@@ -18,7 +18,7 @@ struct InterpResult {
   bool is_valid() const { return inside; }
 };
 
-InterpResult interpolate_histogram(TH2D *histogram, double x, double y,
+inline InterpResult interpolate_histogram(TH2D *histogram, double x, double y,
                                    double fill_value = 0);
 
 InterpResult interpolate_histogram(TH2D *histogram, double x, double y,

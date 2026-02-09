@@ -10,7 +10,6 @@ enum class DataLevel{ Simulation, DL1, DL2};
 struct FeatureSpec{
     std::string name;
     DataLevel level;
-    std::string path;
     std::string description;
 };
 
@@ -39,7 +38,9 @@ struct FeatureSchema{
 
 struct TelFeatureExtractor{
     TelFeatureExtractor(const json& config):schema(config){}
-
+    int GetFeatureNumber() const {
+        return schema.NumFeatures();
+    }
     FeatureSchema schema;
     std::vector<double> extract_tel_features(const ArrayEvent& event, int tel_id);
 };

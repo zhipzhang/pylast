@@ -26,10 +26,10 @@ endif()
 # Hillas reconstruction utility
 
 if(WITH_EXT_REC)
-    add_executable(hillas_reco hillas_reco.cpp ${CMAKE_CURRENT_SOURCE_DIR}/../RootWriter.cpp  ${RECONSTURCTION_EXT_SOURCE_FILES} ${CMAKE_CURRENT_SOURCE_DIR}/../LookupTableEnergyRegressor.cpp)
+    add_executable(hillas_reco hillas_reco.cpp ${CMAKE_CURRENT_SOURCE_DIR}/../RootWriter.cpp  ${RECONSTURCTION_EXT_SOURCE_FILES} ${CMAKE_CURRENT_SOURCE_DIR}/../LookupTableEnergyRegressor.cpp ${CMAKE_CURRENT_SOURCE_DIR}/../LookupTableParticleClassifier.cpp)
     target_link_libraries(hillas_reco PUBLIC root_event root_writer simtel_event calibrator data_writer image_processor reconstructor reconstructor_ext)
 else()
-    add_executable(hillas_reco hillas_reco.cpp ${CMAKE_CURRENT_SOURCE_DIR}/../RootWriter.cpp ${CMAKE_CURRENT_SOURCE_DIR}/../LookupTableEnergyRegressor.cpp)
+    add_executable(hillas_reco hillas_reco.cpp ${CMAKE_CURRENT_SOURCE_DIR}/../RootWriter.cpp ${CMAKE_CURRENT_SOURCE_DIR}/../LookupTableEnergyRegressor.cpp ${CMAKE_CURRENT_SOURCE_DIR}/../LookupTableParticleClassifier.cpp)
     target_link_libraries(hillas_reco PUBLIC root_event root_writer simtel_event calibrator data_writer image_processor reconstructor)
 endif()
 if(SKBUILD)
