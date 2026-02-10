@@ -15,6 +15,8 @@
 #include "SubarrayDescription.hh"
 #include "TFile.h"
 #include "TTree.h"
+#include "TTreeReader.h"
+#include "TTreeReaderValue.h"
 #include <memory>
 
 struct LACT1ChannelData {
@@ -92,17 +94,22 @@ public:
       return ArrayEvent();
     }
   }
-  void load_calibrate_event(ArrayEvent &event, int index);
+  void load_calibrate_event(ArrayEvent &event);
 
 private:
   std::unique_ptr<TFile> file;
   TTree *decode_tree = nullptr;
-  std::unique_ptr<ROOT::RDataFrame> rdf_single_waveform;
   std::string decode_file_name;
   std::string camera_config_file;
-  static constexpr int total_entries_per_event = 1616 * 2;
-  struct LACT1ChannelData channel_data;
   LACT1CameraGeometry camera_geometry;
-  int event_start;
-  int event_end;
+// Temporay value reader for current version 2026.02.10
+  std::unique_ptr<TTreeReaderValue<int>> event_number_reader;
+  std::unique_ptr<TTreeReaderValue<unsigned int>> rabbit_Time_reader;
+  std::unique_ptr<TTreeReaderValue<unsigned int>> rabbit_time_reader;
+  std::unique_ptr<TTreeReaderValue<std::vector<int>>> map_number_reader;
+  std::unique_ptr<TTreeReaderValue<std::vector<bool>>> HG_LG_reader;
+  std::unique_ptr<TTreeReaderValue<std::vector<float>>> base_reader;
+  std::unique_ptr<TTreeReaderValue<std::vector<float>>> peak_reader;
+  std::unique_ptr<TTreeReaderValue<std::vector<float>>> area_reader;
+  std::unique_ptr<TTreeReader> event_tree_reader;
 };
