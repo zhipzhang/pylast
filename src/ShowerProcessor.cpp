@@ -135,7 +135,15 @@ void ShowerProcessor::operator()(ArrayEvent& event)
         auto tilted_frame = TiltedGroundFrame(telescope_frame.pointing_direction);
         auto tilted_core_pos = core_pos.transform_to_tilted(tilted_frame);
         auto tilted_tel_pos = tel_pos.transform_to_tilted(tilted_frame);
-        double true_psi = std::atan2(tilted_core_pos.y() - tilted_tel_pos.y(), tilted_core_pos.x() - tilted_tel_pos.x());
+        double true_psi = 0;
+        if( fabs(tilted_core_pos.x() - tilted_tel_pos.x()) < 1e-6)
+        {
+            true_psi = M_PI/2;
+        }
+        else
+        {
+            true_psi = std::atan((tilted_core_pos.y() - tilted_tel_pos.y())/(tilted_core_pos.x() - tilted_tel_pos.x()));
+        }
         auto cog_point = CameraPoint({image_parameter.hillas.x, image_parameter.hillas.y});
         auto true_line_direction = Line2D({fov_direction->x(), fov_direction->y()}, {cos(true_psi), sin(true_psi)});
         double cog_err = true_line_direction.distance(cog_point);

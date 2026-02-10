@@ -393,6 +393,7 @@ class RootSimulatedCamera: public NewRootDataLevels<SimulatedCamera>
             //tree->Branch("fake_image", &fake_image);
             //tree->Branch("fake_image_mask", &fake_image_mask);
             TTreeSerializer::branch(tree, fake_image_parameters.hillas, "hillas");
+            TTreeSerializer::branch(tree, fake_image_parameters.two_gaussian_fit, "two_gaussian_fit");
             TTreeSerializer::branch(tree, fake_image_parameters.leakage, "leakage");
             TTreeSerializer::branch(tree, fake_image_parameters.concentration, "concentration");
             TTreeSerializer::branch(tree, fake_image_parameters.morphology, "morphology");
@@ -414,6 +415,7 @@ class RootSimulatedCamera: public NewRootDataLevels<SimulatedCamera>
                 tree->SetBranchAddress("fake_image_mask", &fake_image_mask_ptr);
             }
             TTreeSerializer::set_branch_addresses(tree, fake_image_parameters.hillas, "hillas");
+            TTreeSerializer::set_branch_addresses(tree, fake_image_parameters.two_gaussian_fit, "two_gaussian_fit");
             TTreeSerializer::set_branch_addresses(tree, fake_image_parameters.leakage, "leakage");
             TTreeSerializer::set_branch_addresses(tree, fake_image_parameters.concentration, "concentration");
             TTreeSerializer::set_branch_addresses(tree, fake_image_parameters.morphology, "morphology");

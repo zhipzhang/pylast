@@ -26,6 +26,21 @@ public:
   double phi;         // [rad]  angle from the center of the camera
   double scale_ratio; // [] ratio of second level clean to first level clean
 };
+
+class TwoGaussianFitResult {
+public:
+  bool converged;
+  int status;
+  double amplitude;
+  double mean_x;
+  double mean_y;
+  double length;
+  double width;
+  double psi;
+
+  double chi2;
+
+};
 class LeakageParameter {
 public:
   double pixels_width_1;
@@ -70,6 +85,7 @@ public:
 class ImageParameters {
 public:
   HillasParameter hillas;
+  TwoGaussianFitResult two_gaussian_fit;
   LeakageParameter leakage;
   ConcentrationParameter concentration;
   MorphologyParameter morphology;

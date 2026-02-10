@@ -41,9 +41,15 @@ public:
                                       const Eigen::VectorXd &image);
   static HillasParameter hillas_parameter(const CameraGeometry &camera_geometry,
                                           const Eigen::VectorXd &masked_image);
+  
   static LeakageParameter
   leakage_parameter(CameraGeometry &camera_geometry,
                     const Eigen::VectorXd &masked_image);
+  static TwoGaussianFitResult
+  two_gaussian_fit(const CameraGeometry &camera_geometry,
+                   const Eigen::VectorXd &image,
+                   const Eigen::Vector<bool, -1> &image_mask,
+                   const HillasParameter &hillas_parameter);
   static ConcentrationParameter
   concentration_parameter(const CameraGeometry &camera_geometry,
                           const Eigen::VectorXd &masked_image,
@@ -83,4 +89,6 @@ private:
                     int min_pixels_above_threshold = 4);
   Eigen::VectorXd adding_poisson_noise(Eigen::VectorXi true_image,
                                        double poisson_noise);
+
+  
 };

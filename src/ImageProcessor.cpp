@@ -3,6 +3,7 @@
 #include "CameraGeometry.hh"
 #include "Eigen/Dense"
 #include "Eigen/src/Core/Matrix.h"
+#include "Gaussian2DFunctor.hh"
 #include "ImageParameters.hh"
 #include "SubarrayDescription.hh"
 #include "spdlog/spdlog.h"
@@ -126,6 +127,9 @@ void ImageProcessor::operator()(ArrayEvent &event) {
             masked_image, hillas_parameter);
     IntensityParameter intensity_parameter =
         ImageProcessor::intensity_parameter(masked_image);
+    TwoGaussianFitResult two_gaussian_fit = ImageProcessor::two_gaussian_fit(
+        subarray.tels.at(tel_id).camera_description.camera_geometry,
+        masked_image, image_mask, hillas_parameter);
     // Tempory image are copyed from dl0_camera
     Eigen::VectorXf image = dl0_camera->image.cast<float>();
     Eigen::VectorXf peak_time = dl0_camera->peak_time.cast<float>();
@@ -133,7 +137,7 @@ void ImageProcessor::operator()(ArrayEvent &event) {
     event.dl1->add_tel(
         tel_id, DL1Camera{.image_parameters =
                               ImageParameters{
-                                  hillas_parameter, leakage_parameter,
+                                  hillas_parameter, two_gaussian_fit, leakage_parameter,
                                   concentration_parameter, morphology_parameter,
                                   intensity_parameter},
                           .image = std::move(image),
@@ -177,13 +181,10 @@ ImageProcessor::hillas_parameter(const CameraGeometry &camera_geometry,
     length = std::sqrt(eigen_values(1));
     width = std::sqrt(eigen_values(0));
     if (eigen_vectors.col(1)[0] != 0) {
-      psi = std::atan2(eigen_vectors.col(1)[1], eigen_vectors.col(1)[0]);
+      psi = std::atan(eigen_vectors.col(1)[1]/ eigen_vectors.col(1)[0]);
     } else {
       psi = M_PI / 2;
     }
-  }
-  if (psi < 0) {
-    psi += M_PI;
   }
   // Uint vector along the major axis is (cos(psi), sin(psi))
   Eigen::VectorXd longitudinal =
@@ -197,6 +198,75 @@ ImageProcessor::hillas_parameter(const CameraGeometry &camera_geometry,
 
   return HillasParameter{length,   width,    psi,       x, y,
                          skewness, kurtosis, intensity, r, phi};
+}
+TwoGaussianFitResult
+ImageProcessor::two_gaussian_fit(const CameraGeometry &camera_geometry,
+                                 const Eigen::VectorXd &image,
+                                 const Eigen::Vector<bool, -1> &image_mask,
+                                 const HillasParameter &hillas_parameter) {
+      double initial_x = hillas_parameter.x;
+      double initial_y = hillas_parameter.y;
+      double initial_length = hillas_parameter.length;
+      double initial_width = hillas_parameter.width;
+      double initial_psi = hillas_parameter.psi;
+      double initial_amplitude = image.maxCoeff();
+
+      int num_image_pixels = image_mask.count();
+      Eigen::VectorXd pix_x_in_image(num_image_pixels), pix_y_in_image(num_image_pixels), pix_pe_in_image(num_image_pixels);
+      int index = 0;
+      for(int i = 0; i < image_mask.size(); ++i)
+      {
+        if(image_mask[i])
+        {
+          pix_x_in_image[index] = camera_geometry.pix_x_fov[i];
+          pix_y_in_image[index] = camera_geometry.pix_y_fov[i];
+          pix_pe_in_image[index] = image[i];
+          index++;
+        }
+      }
+      Eigen::VectorXd initial_parameters(6);
+      initial_parameters << initial_amplitude, initial_x, initial_y, initial_length, initial_width, initial_psi;
+      Gaussian2DFunctor functor(pix_x_in_image, pix_y_in_image, pix_pe_in_image);
+      Eigen::NumericalDiff<Gaussian2DFunctor> numDiff(functor);
+      Eigen::LevenbergMarquardt<Eigen::NumericalDiff<Gaussian2DFunctor>> lm(numDiff);
+
+      lm.setMaxfev(5000);
+      lm.setFtol(1e-6);
+      lm.setXtol(1e-6);
+      lm.setFactor(20);
+
+      Eigen::LevenbergMarquardtSpace::Status status = lm.minimize(initial_parameters);
+      TwoGaussianFitResult results;
+      results.chi2 = lm.fvec().squaredNorm();
+      results.status = static_cast<int>(status);
+      bool success = (status == Eigen::LevenbergMarquardtSpace::RelativeErrorAndReductionTooSmall || status == Eigen::LevenbergMarquardtSpace::RelativeErrorTooSmall || status == Eigen::LevenbergMarquardtSpace::RelativeReductionTooSmall);
+      if(status == Eigen::LevenbergMarquardtSpace::TooManyFunctionEvaluation)
+      {
+        spdlog::warn("Too many function evaluation");
+      }
+      if(success)
+      {
+        results.converged = true;
+        results.amplitude = initial_parameters[0];
+        results.mean_x = initial_parameters[1];
+        results.mean_y = initial_parameters[2];
+        results.length = initial_parameters[3];
+        results.width = initial_parameters[4];
+        results.psi = initial_parameters[5];
+        if(results.psi < -M_PI/2)
+        {
+          results.psi += M_PI;
+        }
+        if(results.psi > M_PI/2)
+        {
+          results.psi -= M_PI;
+        }
+      }
+      else
+      {
+        results.converged = false;
+      }
+      return results;
 }
 LeakageParameter
 ImageProcessor::leakage_parameter(CameraGeometry &camera_geometry,
@@ -443,6 +513,9 @@ void ImageProcessor::handle_simulation_level(ArrayEvent &event) {
             masked_image, hillas_parameter);
     IntensityParameter intensity_parameter =
         ImageProcessor::intensity_parameter(masked_image);
+
+    // Don't consider second level clean for now
+    /*
     if (use_second_level_clean) {
       if (masked_image.sum() > second_clean_threshold) {
         if (leakage_parameter.intensity_width_2 >=
@@ -464,6 +537,10 @@ void ImageProcessor::handle_simulation_level(ArrayEvent &event) {
         }
       }
     }
+      */
+    TwoGaussianFitResult two_gaussian_fit = ImageProcessor::two_gaussian_fit(
+        subarray.tels.at(tel_id).camera_description.camera_geometry,
+        masked_image, image_mask, hillas_parameter);
     if (use_cut_radius) {
       auto pixel_mask = cut_pixel_distance(
           subarray.tels.at(tel_id).camera_description.camera_geometry,
@@ -482,6 +559,7 @@ void ImageProcessor::handle_simulation_level(ArrayEvent &event) {
       }
     }
     simulated_camera->fake_image_mask = image_mask;
+    simulated_camera->image_parameters.two_gaussian_fit = two_gaussian_fit;
     simulated_camera->image_parameters.hillas = hillas_parameter;
     simulated_camera->image_parameters.leakage = leakage_parameter;
     simulated_camera->image_parameters.concentration = concentration_parameter;
