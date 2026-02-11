@@ -32,7 +32,8 @@
 struct MJDData {
   int mjd_int;
   double mjd_double;
-
+  unsigned int RabitTime;
+  unsigned int Rabbittime;
   MJDData operator+(const MJDData &other) const {
     return MJDData{mjd_int + other.mjd_int, mjd_double + other.mjd_double};
   }

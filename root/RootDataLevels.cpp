@@ -24,8 +24,10 @@ TTree *RootEventIndex::initialize_write(const std::string &name,
   TTree *tree = new TTree(name.c_str(), title.c_str());
   tree->Branch("event_id", &event_id);
   tree->Branch("telescopes", &telescopes);
-  tree->Branch("mjd_int", &mjd_int);
-  tree->Branch("mjd_double", &mjd_double);
+  tree->Branch("mjd_int", &mjd_data.mjd_int);
+  tree->Branch("mjd_double", &mjd_data.mjd_double);
+  tree->Branch("rabbitTime", &mjd_data.RabitTime);
+  tree->Branch("rabbittime", &mjd_data.Rabbittime);
   return tree;
 }
 
@@ -34,8 +36,10 @@ void RootEventIndex::initialize_read(TTree *tree) {
   telescopes_ptr = &telescopes;
   tree->SetBranchAddress("event_id", &event_id);
   tree->SetBranchAddress("telescopes", &telescopes_ptr);
-  tree->SetBranchAddress("mjd_int", &mjd_int);
-  tree->SetBranchAddress("mjd_double", &mjd_double);
+  tree->SetBranchAddress("mjd_int", &mjd_data.mjd_int);
+  tree->SetBranchAddress("mjd_double", &mjd_data.mjd_double);
+  tree->SetBranchAddress("rabbitTime", &mjd_data.RabitTime);
+  tree->SetBranchAddress("rabbittime", &mjd_data.Rabbittime);
 }
 
 ArrayEvent RootEventHelper::get_event() {
@@ -45,7 +49,7 @@ ArrayEvent RootEventHelper::get_event() {
   }
   root_event_index->get_entry(current_entry);
   event.event_id = root_event_index->event_id;
-  event.mjd = MJDData{root_event_index->mjd_int, root_event_index->mjd_double};
+  event.mjd = root_event_index->mjd_data;
   // Process simulation shower data (event-level, not telescope-level)
   process_event_level_data(event);
 

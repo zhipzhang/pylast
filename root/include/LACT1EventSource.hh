@@ -32,18 +32,31 @@ struct LACT1ChannelData {
 };
 constexpr int MJD19700101 = 40587;
 constexpr int TAI2UTC = 37;
-inline MJDData get_mjd(int rabbitTime, double rabbittime) {
-  // 先用整数和分数部分分开计算，避免double累积误差
-  int seconds_in_day = 86400;
-  double total_seconds = (rabbitTime + rabbittime * 8 / 1e9 - TAI2UTC);
-  int days = static_cast<int>(total_seconds / seconds_in_day);
-  int mjd_int = MJD19700101 + days;
-  double mjd_double = (total_seconds - days * seconds_in_day) / seconds_in_day;
-  if (mjd_double < 0) {
-    mjd_int -= 1;
-    mjd_double += 1.0;
+inline MJDData get_mjd(unsigned int rabbitTime, unsigned int rabbittime) {
+  constexpr int64_t SECONDS_PER_DAY = 86400;
+  constexpr int64_t NANOS_PER_SECOND = 1000000000LL;
+  constexpr double NANOS_PER_SECOND_D = 1e9;
+  
+  int64_t nano_fraction = static_cast<int64_t>(rabbittime * 8.0);
+  
+  int64_t total_nanos = rabbitTime * NANOS_PER_SECOND + nano_fraction;
+  
+  int64_t tai_offset_nanos = static_cast<int64_t>(TAI2UTC * NANOS_PER_SECOND);
+  total_nanos -= tai_offset_nanos;
+  
+  int64_t days = total_nanos / (SECONDS_PER_DAY * NANOS_PER_SECOND);
+  int64_t day_nanos = total_nanos % (SECONDS_PER_DAY * NANOS_PER_SECOND);
+  
+  if (day_nanos < 0) {
+      days -= 1;
+      day_nanos += SECONDS_PER_DAY * NANOS_PER_SECOND;
   }
-  return MJDData{mjd_int, mjd_double};
+  
+  int mjd_int = MJD19700101 + static_cast<int>(days);
+  double mjd_double = static_cast<double>(day_nanos) / 
+                     static_cast<double>(SECONDS_PER_DAY * NANOS_PER_SECOND);
+  
+  return MJDData{mjd_int, mjd_double, rabbitTime, rabbittime};
 }
 class LACT1EventSource : public EventSource {
 public:

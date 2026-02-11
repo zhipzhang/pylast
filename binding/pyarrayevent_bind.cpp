@@ -463,6 +463,8 @@ void bind_array_event(nb::module_ &m) {
   nb::class_<MJDData>(m, "MJDData")
       .def_ro("mjd_int", &MJDData::mjd_int)
       .def_ro("mjd_double", &MJDData::mjd_double)
+      .def_ro("rabbitTime", &MJDData::RabitTime)
+      .def_ro("rabbittime", &MJDData::Rabbittime)
       .def("__repr__", [](MJDData &self) {
         std::ostringstream oss;
         oss << std::fixed << std::setprecision(12) << self.mjd_double;

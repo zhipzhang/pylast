@@ -45,7 +45,7 @@ ArrayEvent LACT1EventSource::get_event(int index) {
   if (index < 0 || index >= max_events) {
     throw std::out_of_range("Index out of range: " + std::to_string(index));
   }
-  event_tree_reader->SetEntry(index);
+  event_tree_reader->SetEntry(index - 1);
   event_tree_reader->Next();
   ArrayEvent event;
   event.event_id = *(*event_number_reader);
