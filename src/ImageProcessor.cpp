@@ -110,9 +110,6 @@ void ImageProcessor::operator()(ArrayEvent &event) {
 
     Eigen::VectorXd masked_image = image_mask.select(
         dl0_camera->image, Eigen::VectorXd::Zero(dl0_camera->image.size()));
-    if (masked_image.sum() < 50) {
-      continue;
-    }
     HillasParameter hillas_parameter = ImageProcessor::hillas_parameter(
         subarray.tels.at(tel_id).camera_description.camera_geometry,
         masked_image);

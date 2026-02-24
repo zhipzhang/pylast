@@ -102,7 +102,7 @@ public:
   }
   virtual ArrayEvent get_event() override {
     if (!is_finished()) {
-      return get_event(current_event_index++);
+      return get_event(current_event_index);
     } else {
       return ArrayEvent();
     }
