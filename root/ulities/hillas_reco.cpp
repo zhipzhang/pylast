@@ -278,7 +278,7 @@ int main(int argc, const char *argv[]) {
                                simulated_shower_hist);
 
       // Write statistics and simulation showers
-      data_writer->write_statistics(statistics);
+      data_writer->write_statistics(statistics, true);
       data_writer->write_all_simulation_shower(source->get_shower_array());
       data_writer->close();
       std::cout << "Finished processing " << input_file << std::endl;

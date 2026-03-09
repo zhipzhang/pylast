@@ -98,6 +98,7 @@ int main(int argc, const char *argv[]) {
       }
     }
     // Explicitly close to flush and build indices
+    writer->write_statistics({}, true);
     writer->close();
     spdlog::info("Merged {} file(s) into {}", in_files.size(), out_file);
   } catch (const std::exception &e) {

@@ -49,7 +49,6 @@ void RootWriter::close() {
     tree->Write();
   }
   file->Write();
-  write_statistics({}, true);
   spdlog::info("writing file: {}", filename);
 }
 
@@ -745,7 +744,8 @@ void RootWriter::write_statistics(const Statistics &statistics, bool last) {
     throw std::runtime_error("file not open");
   }
   static Statistics hist;
-  hist += statistics;
+  // We temporarily to just make sure that the statistics is fixed here, not added for next Source.
+  hist = std::move(statistics);
   if (!last) {
     return;
   }

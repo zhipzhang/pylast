@@ -18,6 +18,7 @@ struct TelescopeData
     double rec_az;
     double rec_energy;
     double tel_rec_energy;
+    double tel_rec_hadroness;
     double hillas_hmax;
     int n_tel;
     double average_intensity;
@@ -155,6 +156,22 @@ void initialize_telescope_tree(TTree* tree,  TelescopeData& data)
     tree->Branch("fake_extra_true_psi", &data.fake_params.extra.true_psi);
     tree->Branch("fake_extra_cog_err", &data.fake_params.extra.cog_err);
     tree->Branch("fake_extra_beta_err", &data.fake_params.extra.beta_err);
+
+    tree->Branch("two_gaussian_fit_converged", &data.fake_params.two_gaussian_fit.converged);
+    tree->Branch("two_gaussian_fit_status", &data.fake_params.two_gaussian_fit.status);
+    tree->Branch("two_gaussian_fit_amplitude", &data.fake_params.two_gaussian_fit.amplitude);
+    tree->Branch("two_gaussian_fit_mean_x", &data.fake_params.two_gaussian_fit.mean_x);
+    tree->Branch("two_gaussian_fit_mean_y", &data.fake_params.two_gaussian_fit.mean_y);
+    tree->Branch("two_gaussian_fit_length", &data.fake_params.two_gaussian_fit.length);
+    tree->Branch("two_gaussian_fit_width", &data.fake_params.two_gaussian_fit.width);
+    tree->Branch("two_gaussian_fit_psi", &data.fake_params.two_gaussian_fit.psi);
+    tree->Branch("two_gaussian_fit_beta_err", &data.fake_params.two_gaussian_fit.beta_err);
+    tree->Branch("two_gaussian_fit_use_gaussian_fit", &data.fake_params.two_gaussian_fit.use_gaussian_fit);
+    tree->Branch("two_gaussian_fit_chi2", &data.fake_params.two_gaussian_fit.chi2);
+    tree->Branch("two_gaussian_fit_fit_size", &data.fake_params.two_gaussian_fit.fit_size);
+    tree->Branch("two_gaussian_fit_cog_err", &data.fake_params.two_gaussian_fit.cog_err);
+    tree->Branch("two_gaussian_fit_disp", &data.fake_params.two_gaussian_fit.disp);
+    tree->Branch("tel_rec_hadroness", &data.tel_rec_hadroness);
 }
 
 void initialize_event_tree(TTree* tree,  EventData& data)
