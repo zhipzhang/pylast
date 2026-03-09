@@ -37,7 +37,7 @@ void EnergyRegressor::operator()(ArrayEvent &event) {
   for (int i = 0; i < telescopes.size(); i++) {
     int tel_id = telescopes[i];
     double tel_energy;
-    tel_energy = energy_model_loader->predict(energy_model_loader->extract_features(event, tel_id));
+    tel_energy = energy_offset_estimator->predict(rec_offset, event, tel_id);
     tel_energies(i) = pow(10, tel_energy);
     weights(i) =
         event.simulation->tels[tel_id]->image_parameters.hillas.intensity;
@@ -46,7 +46,7 @@ void EnergyRegressor::operator()(ArrayEvent &event) {
   energy_reco.estimate_energy =
       (tel_energies.array() * weights.array()).sum() / weights.sum();
   energy_reco.energy_valid = true;
-  energy_reco.estimate_energy_std = (tel_energies.array().square().sum()/ tel_energies.array().size() - pow(tel_energies.array().mean(), 2));
+  energy_reco.estimate_energy_std = sqrt(tel_energies.array().square().sum()/ tel_energies.array().size() - pow(tel_energies.array().mean(), 2));
   energy_reco.telescopes = telescopes;
   event.dl2->add_energy(this->name(), energy_reco);
 }

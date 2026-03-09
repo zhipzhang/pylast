@@ -8,7 +8,8 @@ set(RECONSTURCTION_EXT_SOURCE_FILES
 add_library(reconstructor_ext SHARED 
             LGBMPredictor.cpp
             ParameterSchema.cpp
-            LGBMModelLoader.cpp)
+            LGBMModelLoader.cpp
+            LGBMSigmaEstimator.cpp)
 find_library(LIGHTGBM_LIBRARY NAMES _lightgbm PATHS ${CMAKE_CURRENT_SOURCE_DIR}/lib NO_DEFAULT_PATH)
 
 if(LIGHTGBM_LIBRARY)

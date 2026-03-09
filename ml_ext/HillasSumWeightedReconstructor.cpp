@@ -63,8 +63,8 @@ void HillasSumWeightedReconstructor::operator()(ArrayEvent& event)
         
         for(int j = 0; j < telescopes.size(); j++)
         {
-            double beta_err = sbeta_estimator.predict(rec_offset, const_cast<const ArrayEvent&>(event), telescopes[j]);
-            double cog_err = scog_estimator.predict(rec_offset, const_cast<const ArrayEvent&>(event), telescopes[j]);
+            double beta_err = sbeta_estimator->predict(rec_offset, const_cast<const ArrayEvent&>(event), telescopes[j]);
+            double cog_err = scog_estimator->predict(rec_offset, const_cast<const ArrayEvent&>(event), telescopes[j]);
             beta_sigma(j) = beta_err;
             cog_sigma(j) = cog_err;
             disp(j) = sqrt(pow(rec_x - hillas_dicts.at(telescopes[j]).x, 2) + pow(rec_y - hillas_dicts.at(telescopes[j]).y, 2));

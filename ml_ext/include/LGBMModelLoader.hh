@@ -18,6 +18,7 @@
  class LGBMModelLoader {
  public:
     LGBMModelLoader(const std::string& config_file_path);
+    LGBMModelLoader(const std::string& base_directory, const nlohmann::json& config);
     ~LGBMModelLoader() = default;
 
     bool IsRegression() const;
@@ -28,6 +29,7 @@
     int GetFeatureNumber() const;
     std::vector<double> extract_features(const ArrayEvent& event, int tel_id) const;
     double predict(const std::vector<double>& features) const;
+    double predict(const ArrayEvent& event, int tel_id) const;
  private:
     void initialize(const std::string& base_directory, const nlohmann::json& config);
     std::unique_ptr<LGBMPredictor> predictor_;

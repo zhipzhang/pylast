@@ -52,10 +52,10 @@ void DispWeightedReconstructor::operator()(ArrayEvent& event)
         for(int j = 0; j < telescopes.size(); j++)
         {
             int tel_id = telescopes[j];
-            double beta_err = sbeta_estimator.predict(rec_offset, const_cast<const ArrayEvent&>(event), tel_id);
-            double cog_err = scog_estimator.predict(rec_offset, const_cast<const ArrayEvent&>(event), tel_id);
-            double disp_err = sdisp_estimator.predict(rec_offset, const_cast<const ArrayEvent&>(event), tel_id);
-            double disp_value = disp_estimator.predict(rec_offset, const_cast<const ArrayEvent&>(event), tel_id);
+            double beta_err = sbeta_estimator->predict(rec_offset, const_cast<const ArrayEvent&>(event), tel_id);
+            double cog_err = scog_estimator->predict(rec_offset, const_cast<const ArrayEvent&>(event), tel_id);
+            double disp_err = sdisp_estimator->predict(rec_offset, const_cast<const ArrayEvent&>(event), tel_id);
+            double disp_value = disp_estimator->predict(rec_offset, const_cast<const ArrayEvent&>(event), tel_id);
             double disp_distance = sqrt(pow(rec_x - hillas_dicts.at(tel_id).x, 2) + pow(rec_y - hillas_dicts.at(tel_id).y, 2));
             disp_values(j) = disp_value;
             double var_perp = std::pow(disp_distance * beta_err, 2) + std::pow(cog_err, 2); 
