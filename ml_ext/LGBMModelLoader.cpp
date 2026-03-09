@@ -32,6 +32,10 @@ double LGBMModelLoader::predict(const std::vector<double>& features) const {
     return predictor_->predict(features);
 }
 
+double LGBMModelLoader::predict(const ArrayEvent& event, int tel_id) const {
+    std::vector<double> features = extract_features(event, tel_id);
+    return predict(features);
+}
 LGBMModelLoader::LGBMModelLoader(const std::string& config_file_path) {
     std::ifstream file(config_file_path);
     if(!file.is_open()) {
@@ -40,6 +44,9 @@ LGBMModelLoader::LGBMModelLoader(const std::string& config_file_path) {
     config_ = nlohmann::json::parse(file);
     auto base_directory = std::filesystem::path(config_file_path).parent_path().string();
     initialize(base_directory, config_);
+}
+LGBMModelLoader::LGBMModelLoader(const std::string& base_directory, const nlohmann::json& config) {
+    initialize(base_directory, config);
 }
 void LGBMModelLoader::initialize(const std::string& base_directory, const nlohmann::json& config) {
     if(!config.contains("model_path")) {

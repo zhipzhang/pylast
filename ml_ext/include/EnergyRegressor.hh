@@ -2,6 +2,7 @@
 
 #include "GeometryReconstructor.hh"
 #include "LGBMModelLoader.hh"
+#include "OffsetEstimator.hh"
 #include "ReconstructedGeometry.hh"
 #include "Reconstructor.hh"
 
@@ -18,7 +19,7 @@ public:
   ~EnergyRegressor() = default;
   void operator()(ArrayEvent &event) override;
   std::string name() const override { return "EnergyRegressor"; };
-  std::unique_ptr<LGBMModelLoader> energy_model_loader;
+  std::unique_ptr<OffsetEstimator<LGBMModelLoader>> energy_offset_estimator;
   ReconstructedEnergy energy_reco;
 
 private:
@@ -26,10 +27,7 @@ private:
     if (!config.contains("energy_regressor")) {
       throw std::runtime_error("energy_regressor is not set");
     }
-    energy_model_loader = std::make_unique<LGBMModelLoader>(
+    energy_offset_estimator = std::make_unique<OffsetEstimator<LGBMModelLoader>>(
         config["energy_regressor"].get<std::string>());
-    if (!energy_model_loader->IsRegression()) {
-      throw std::runtime_error("energy_regressor is not a regression model");
-    }
   }
 };

@@ -1,6 +1,15 @@
 #include <fstream>
 #include <vector>
 #include "ParameterSchema.hh"
+#include "CoordFrames.hh"
+
+
+double compute_angle_separation(double az1, double alt1, double az2, double alt2)
+{
+    auto direction1 = SkyDirection(AltAzFrame(), az1, alt1);
+    auto direction2 = SkyDirection(AltAzFrame(), az2, alt2);
+    return direction1->angle_separation(direction2.position);
+}
 using field_registry = std::unordered_map<std::string, FieldEntry>; 
 static const field_registry dl1_tel_fields = {
     {"hillas_length", REGISTER_DL1_TEL_FIELD("hillas_length", image_parameters.hillas.length)},
@@ -27,6 +36,9 @@ static const field_registry dl1_tel_fields = {
     {"concentration_core", REGISTER_DL1_TEL_FIELD("concentration_core", image_parameters.concentration.concentration_core)},
     {"concentration_pixel", REGISTER_DL1_TEL_FIELD("concentration_pixel", image_parameters.concentration.concentration_pixel)},
     {"morphology_n_pixels", REGISTER_DL1_TEL_FIELD("morphology_n_pixels", image_parameters.morphology.n_pixels)},
+    {"morphology_num_pixels", FieldEntry{"morphology_num_pixels", [](const ArrayEvent& event, int tel_id) -> int {
+        return static_cast<int>(event.dl1->tels.at(tel_id)->image_parameters.morphology.n_pixels);
+    }}},
     {"morphology_n_islands", REGISTER_DL1_TEL_FIELD("morphology_n_islands", image_parameters.morphology.n_islands)},
     {"morphology_n_small_islands", REGISTER_DL1_TEL_FIELD("morphology_n_small_islands", image_parameters.morphology.n_small_islands)},
     {"morphology_n_medium_islands", REGISTER_DL1_TEL_FIELD("morphology_n_medium_islands", image_parameters.morphology.n_medium_islands)},
@@ -52,7 +64,9 @@ static const field_registry dl2_tel_fields = {
     {"rec_energy", REGISTER_DL2_EVENT_FIELD("rec_energy", energy.at("EnergyRegressor").estimate_energy)},
     {"n_tel", REGISTER_DL2_EVENT_FIELD("n_tel",tels.size())},
     {"rec_energy_std", REGISTER_DL2_EVENT_FIELD("rec_energy_std", energy.at("EnergyRegressor").estimate_energy_std)},
-    
+    {"rec_offset", FieldEntry{"rec_offset", [](const ArrayEvent& event, int tel_id) -> double {
+       return 180 /M_PI * compute_angle_separation(event.dl2->geometry.at("HillasReconstructor").az, event.dl2->geometry.at("HillasReconstructor").alt, event.pointing->array_azimuth, event.pointing->array_altitude);
+    }}},
 };
 
 static const field_registry simulated_fields = {
@@ -80,6 +94,9 @@ static const field_registry simulated_fields = {
     {"concentration_core", REGISTER_SIMULATION_TEL_FIELD("concentration_core", image_parameters.concentration.concentration_core)},
     {"concentration_pixel", REGISTER_SIMULATION_TEL_FIELD("concentration_pixel", image_parameters.concentration.concentration_pixel)},
     {"morphology_n_pixels", REGISTER_SIMULATION_TEL_FIELD("morphology_n_pixels", image_parameters.morphology.n_pixels)},
+    {"morphology_num_pixels", FieldEntry{"morphology_num_pixels", [](const ArrayEvent& event, int tel_id) -> int {
+        return static_cast<int>(event.simulation->tels.at(tel_id)->image_parameters.morphology.n_pixels);
+    }}},
     {"morphology_n_islands", REGISTER_SIMULATION_TEL_FIELD("morphology_n_islands", image_parameters.morphology.n_islands)},
     {"morphology_n_small_islands", REGISTER_SIMULATION_TEL_FIELD("morphology_n_small_islands", image_parameters.morphology.n_small_islands)},
     {"morphology_n_medium_islands", REGISTER_SIMULATION_TEL_FIELD("morphology_n_medium_islands", image_parameters.morphology.n_medium_islands)},
