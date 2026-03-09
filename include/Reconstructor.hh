@@ -28,9 +28,10 @@ class Reconstructor: public config::Configurable
         virtual std::string name() const {return "BaseReconstructor";}
         std::vector<int> telescopes; // Telescopes Pass the Image Query
         SphericalRepresentation array_pointing_direction;
-    protected:
         static double compute_angle_separation(double az1, double alt1, double az2, double alt2);
+    protected:
         std::unique_ptr<ImageQuery> query_;
         std::string image_query_config_;
         bool use_fake_hillas = false;
+        bool use_gaussian_fit = false;
 };

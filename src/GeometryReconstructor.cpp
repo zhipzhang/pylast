@@ -23,7 +23,25 @@ void GeometryReconstructor::operator()(ArrayEvent& event)
         telescope_pointing[tel_id] = SphericalRepresentation(event.pointing->tels[tel_id]->azimuth, event.pointing->tels[tel_id]->altitude);
         if(use_fake_hillas)
         {
-            hillas_dicts[tel_id] = event.simulation->tels[tel_id]->image_parameters.hillas;
+            HillasParameter hillas;
+            hillas = event.simulation->tels[tel_id]->image_parameters.hillas;
+            if(use_gaussian_fit)
+            {
+                if(event.simulation->tels[tel_id]->image_parameters.leakage.intensity_width_2 > 0.1)
+                {
+                    if(event.simulation->tels[tel_id]->image_parameters.two_gaussian_fit.status == 1)
+                    {
+                        if(hillas.intensity/event.simulation->tels[tel_id]->image_parameters.two_gaussian_fit.fit_size >= 0.2)
+                        {
+                            hillas.x = event.simulation->tels[tel_id]->image_parameters.two_gaussian_fit.mean_x;
+                            hillas.y = event.simulation->tels[tel_id]->image_parameters.two_gaussian_fit.mean_y;
+                            hillas.psi = event.simulation->tels[tel_id]->image_parameters.two_gaussian_fit.psi;
+                            event.simulation->tels[tel_id]->image_parameters.two_gaussian_fit.use_gaussian_fit = true;
+                        }
+                    }
+                }
+            }
+            hillas_dicts[tel_id] = hillas;
         }
         else
         {

@@ -58,13 +58,8 @@ void ImageProcessor::registerParams() {
   registerParam<double>("trigger_pe", 8, fake_trigger_pe);
   registerParam<bool>("use_random_gaussian", false, use_random_gaussian);
   registerParam<double>("random_gaussian_level", 0, random_gaussian_level);
-  registerParam<bool>("use_second_level_clean", false, use_second_level_clean);
   registerParam<bool>("only_use_largerst_island", false,
                       only_use_largerst_island);
-  registerParam<double>("second_clean_level", 0, second_clean_level);
-  registerParam<double>("second_clean_threshold", 0, second_clean_threshold);
-  registerParam<double>("second_clean_leakage_threshold", 0,
-                        second_clean_leakage_threshold);
 }
 
 Eigen::Vector<bool, -1>
@@ -127,9 +122,10 @@ void ImageProcessor::operator()(ArrayEvent &event) {
             masked_image, hillas_parameter);
     IntensityParameter intensity_parameter =
         ImageProcessor::intensity_parameter(masked_image);
-    TwoGaussianFitResult two_gaussian_fit = ImageProcessor::two_gaussian_fit(
-        subarray.tels.at(tel_id).camera_description.camera_geometry,
-        masked_image, image_mask, hillas_parameter);
+    TwoGaussianFitResult two_gaussian_fit;
+    //TwoGaussianFitResult two_gaussian_fit = ImageProcessor::two_gaussian_fit(
+    //    subarray.tels.at(tel_id).camera_description.camera_geometry,
+     //   masked_image, image_mask, hillas_parameter);
     // Tempory image are copyed from dl0_camera
     Eigen::VectorXf image = dl0_camera->image.cast<float>();
     Eigen::VectorXf peak_time = dl0_camera->peak_time.cast<float>();
@@ -204,6 +200,7 @@ ImageProcessor::two_gaussian_fit(const CameraGeometry &camera_geometry,
                                  const Eigen::VectorXd &image,
                                  const Eigen::Vector<bool, -1> &image_mask,
                                  const HillasParameter &hillas_parameter) {
+      double pixel_size_fov = camera_geometry.get_pix_width_fov()[0];
       double initial_x = hillas_parameter.x;
       double initial_y = hillas_parameter.y;
       double initial_length = hillas_parameter.length;
@@ -230,9 +227,9 @@ ImageProcessor::two_gaussian_fit(const CameraGeometry &camera_geometry,
       Eigen::NumericalDiff<Gaussian2DFunctor> numDiff(functor);
       Eigen::LevenbergMarquardt<Eigen::NumericalDiff<Gaussian2DFunctor>> lm(numDiff);
 
-      lm.setMaxfev(5000);
-      lm.setFtol(1e-6);
-      lm.setXtol(1e-6);
+      lm.setMaxfev(10000);
+      lm.setFtol(1e-5);
+      lm.setXtol(1e-5);
       lm.setFactor(20);
 
       Eigen::LevenbergMarquardtSpace::Status status = lm.minimize(initial_parameters);
@@ -253,6 +250,7 @@ ImageProcessor::two_gaussian_fit(const CameraGeometry &camera_geometry,
         results.length = initial_parameters[3];
         results.width = initial_parameters[4];
         results.psi = initial_parameters[5];
+        results.fit_size = results.amplitude/(pixel_size_fov*pixel_size_fov) * 2 * M_PI * results.length * results.width;
         if(results.psi < -M_PI/2)
         {
           results.psi += M_PI;
@@ -439,6 +437,7 @@ void ImageProcessor::handle_simulation_level(ArrayEvent &event) {
     spdlog::warn("Simulation data is not available in the event");
     return;
   }
+  event.simulation->triggered_tels.clear();
   for (auto &[tel_id, simulated_camera] : event.simulation->tels) {
     if (simulated_camera->true_image_sum >= 10) {
       if (poisson_noise > 0) {
@@ -469,24 +468,15 @@ void ImageProcessor::handle_simulation_level(ArrayEvent &event) {
 
   for (const auto tel_id : event.simulation->triggered_tels) {
     auto &simulated_camera = event.simulation->tels.at(tel_id);
-    auto first_level_image_mask = (*image_cleaner)(
+    auto image_mask = (*image_cleaner)(
         subarray.tels.at(tel_id).camera_description.camera_geometry,
         simulated_camera->fake_image);
     // Eigen::VectorXd leakage_masked_image =
     // image_mask.select(simulated_camera->fake_image,
     // Eigen::VectorXd::Zero(simulated_camera->fake_image.size()));
-    // if(use_cut_radius)
-    //{
-    //     auto pixel_mask =
-    //     cut_pixel_distance(subarray.tels.at(tel_id).camera_description.camera_geometry,
-    //     subarray.tels.at(tel_id).optics_description.equivalent_focal_length,cut_radius);
-    //     image_mask = image_mask && pixel_mask;
-    // }
-    Eigen::Vector<bool, -1> image_mask = first_level_image_mask;
-    Eigen::VectorXd first_masked_image = first_level_image_mask.select(
+    Eigen::VectorXd masked_image = image_mask.select(
         simulated_camera->fake_image,
         Eigen::VectorXd::Zero(simulated_camera->fake_image.size()));
-    Eigen::VectorXd masked_image = first_masked_image;
     if (masked_image.sum() < 50) {
       simulated_camera->image_parameters = ImageParameters();
       continue;
@@ -495,7 +485,7 @@ void ImageProcessor::handle_simulation_level(ArrayEvent &event) {
         ImageProcessor::morphology_parameter(
             subarray.tels.at(tel_id).camera_description.camera_geometry,
             image_mask, only_use_largerst_island);
-    // Update the masked image
+    // Update the masked image, it's possible that morpgology_parameter can update teh image_mask!
     masked_image = image_mask.select(
         simulated_camera->fake_image,
         Eigen::VectorXd::Zero(simulated_camera->fake_image.size()));
@@ -515,32 +505,10 @@ void ImageProcessor::handle_simulation_level(ArrayEvent &event) {
         ImageProcessor::intensity_parameter(masked_image);
 
     // Don't consider second level clean for now
-    /*
-    if (use_second_level_clean) {
-      if (masked_image.sum() > second_clean_threshold) {
-        if (leakage_parameter.intensity_width_2 >=
-            second_clean_leakage_threshold) {
-          double clean_level = second_clean_level;
-          image_mask = (*image_cleaner)(
-              subarray.tels.at(tel_id).camera_description.camera_geometry,
-              simulated_camera->fake_image, clean_level);
-          auto tmp_masked_image = image_mask.select(
-              simulated_camera->fake_image,
-              Eigen::VectorXd::Zero(simulated_camera->fake_image.size()));
-          if (tmp_masked_image.sum() > 100) {
-            hillas_parameter = ImageProcessor::hillas_parameter(
-                subarray.tels.at(tel_id).camera_description.camera_geometry,
-                tmp_masked_image);
-            hillas_parameter.scale_ratio =
-                tmp_masked_image.sum() / masked_image.sum();
-          }
-        }
-      }
-    }
-      */
-    TwoGaussianFitResult two_gaussian_fit = ImageProcessor::two_gaussian_fit(
-        subarray.tels.at(tel_id).camera_description.camera_geometry,
-        masked_image, image_mask, hillas_parameter);
+    TwoGaussianFitResult two_gaussian_fit;
+    //TwoGaussianFitResult two_gaussian_fit = ImageProcessor::two_gaussian_fit(
+    //    subarray.tels.at(tel_id).camera_description.camera_geometry,
+    //    masked_image, image_mask, hillas_parameter);
     if (use_cut_radius) {
       auto pixel_mask = cut_pixel_distance(
           subarray.tels.at(tel_id).camera_description.camera_geometry,

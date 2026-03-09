@@ -6,6 +6,7 @@ void Reconstructor::registerParams()
 {
     // Register the use_fake_hillas parameter
     registerParam<bool>("use_fake_hillas", true, use_fake_hillas);
+    registerParam<bool>("use_gaussian_fit", false, use_gaussian_fit);
     registerParam<std::string>("ImageQuery",  "hillas_intensity > 100 && leakage_intensity_width_2 < 0.3", image_query_config_);
 }
 

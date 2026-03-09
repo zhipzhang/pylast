@@ -37,9 +37,13 @@ public:
   double length;
   double width;
   double psi;
-
+  double fit_size;
   double chi2;
-
+  bool use_gaussian_fit = false;
+  double beta_err;
+  double cog_err;
+  double miss;
+  double disp;
 };
 class LeakageParameter {
 public:

@@ -79,6 +79,7 @@ void bind_subarray_description(nb::module_ &m)
         .def("__repr__", &CameraReadout::print);
     nb::class_<CameraGeometry>(m, "CameraGeometry")
         .def_ro("camera_name", &CameraGeometry::camera_name)
+        .def("get_border_pixel_mask", &CameraGeometry::get_border_pixel_mask)
         .def_ro("pix_type", &CameraGeometry::pix_type)
         .def_ro("pix_x", &CameraGeometry::pix_x)
         .def_ro("pix_y", &CameraGeometry::pix_y)

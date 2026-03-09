@@ -1,3 +1,4 @@
+#include "ImageParameters.hh"
 #include "R0Event.hh"
 #include "nanobind/nanobind.h"
 #include "ArrayEvent.hh"
@@ -65,6 +66,7 @@ void bind_dl2_event(nb::module_ &m) {
         .def(nb::init<double, bool>())
         .def_rw("estimate_energy", &ReconstructedEnergy::estimate_energy)
         .def_rw("energy_valid", &ReconstructedEnergy::energy_valid)
+        .def_ro("estimate_energy_std", &ReconstructedEnergy::estimate_energy_std)
         .def("__repr__", [](ReconstructedEnergy& self) {
             return fmt::format("ReconstructedEnergy:\n  estimate_energy: {}\n  energy_valid: {}", self.estimate_energy, self.energy_valid);
         });
@@ -115,6 +117,7 @@ void bind_dl2_event(nb::module_ &m) {
         .def_ro("impact_parameters", &TelReconstructedParameter::impact_parameters)
         .def_ro("estimate_disp", &TelReconstructedParameter::estimate_disp)
         .def_ro("estimate_energy", &TelReconstructedParameter::estimate_energy)
+        .def_ro("estimate_hadroness", &TelReconstructedParameter::estimate_hadroness)
         .def_prop_ro("impact", [](TelReconstructedParameter& self) -> nb::object {
             if(self.impact_parameters.size() == 1) {
                 return nb::cast(self.impact_parameters.begin()->second);
@@ -181,6 +184,7 @@ void bind_dl1_event(nb::module_ &m) {
         .def_ro("morphology", &ImageParameters::morphology)
         .def_ro("extra", &ImageParameters::extra)
         .def_ro("intensity", &ImageParameters::intensity)
+        .def_ro("gaussian", &ImageParameters::two_gaussian_fit)
         .def("__repr__", [](ImageParameters& self) {
             return "ImageParameters: contains hillas, leakage, concentration, and morphology parameters";
         });
@@ -246,6 +250,24 @@ void bind_dl1_event(nb::module_ &m) {
         .def_ro("intensity_kurtosis", &IntensityParameter::intensity_kurtosis)
         .def("__repr__", [](IntensityParameter& self) {
             return fmt::format("IntensityParameter:\n  intensity_max: {}\n  intensity_mean: {}\n  intensity_std: {}\n  intensity_skewness: {}\n  intensity_kurtosis: {}", self.intensity_max, self.intensity_mean, self.intensity_std, self.intensity_skewness, self.intensity_kurtosis);
+        });
+    nb::class_<TwoGaussianFitResult>(m, "gaussian")
+        .def_ro("converged", &TwoGaussianFitResult::converged)
+        .def_ro("status", &TwoGaussianFitResult::status)
+        .def_ro("amplitude", &TwoGaussianFitResult::amplitude)
+        .def_ro("mean_x", &TwoGaussianFitResult::mean_x)
+        .def_ro("mean_y", &TwoGaussianFitResult::mean_y)
+        .def_ro("length", &TwoGaussianFitResult::length)
+        .def_ro("width", &TwoGaussianFitResult::width)
+        .def_ro("psi", &TwoGaussianFitResult::psi)
+        .def_ro("fit_size", &TwoGaussianFitResult::fit_size)
+        .def_ro("chi2", &TwoGaussianFitResult::chi2)
+        .def_ro("beta_err", &TwoGaussianFitResult::beta_err)
+        .def_ro("cog_err", &TwoGaussianFitResult::cog_err)
+        .def_ro("miss", &TwoGaussianFitResult::miss)
+        .def_ro("use_gaussian_fit", &TwoGaussianFitResult::use_gaussian_fit)
+        .def("__repr__", [](TwoGaussianFitResult& self) {
+            return fmt::format("TwoGaussianFitResult:\n  converged: {}\n  status: {}\n  amplitude: {}\n  mean_x: {}\n  mean_y: {}\n  length: {}\n  width: {}\n  psi: {}\n  fit_size: {}\n  chi2: {}\n  beta_err: {}\n  cog_err: {}\n  miss: {}", self.converged, self.status, self.amplitude, self.mean_x, self.mean_y, self.length, self.width, self.psi, self.fit_size, self.chi2, self.beta_err, self.cog_err, self.miss);
         });
 }
 void bind_dl0_event(nb::module_ &m) {

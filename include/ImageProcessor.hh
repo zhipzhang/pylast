@@ -77,11 +77,7 @@ private:
   bool use_cut_radius = false;
   bool use_random_gaussian = false;
   double random_gaussian_level = 0;
-  bool use_second_level_clean = false;
   bool only_use_largerst_island = false;
-  double second_clean_level = 0;
-  double second_clean_threshold = 0;
-  double second_clean_leakage_threshold = 0;
 
   void handle_simulation_level(ArrayEvent &event);
   bool fake_trigger(const CameraGeometry &camera_geometry,
