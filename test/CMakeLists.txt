@@ -23,8 +23,12 @@ add_executable(test_interpolation test_interpolation.cpp)
 target_include_directories(test_interpolation PUBLIC ${ROOT_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/../root/include)
 target_link_libraries(test_interpolation PUBLIC root_event)
 
-add_executable(test_lgbm_loader test_LgbmLoader.cpp)
-target_link_libraries(test_lgbm_loader PRIVATE reconstructor_ext)
+add_executable(test_coordinates test_coordinates.cpp)
+target_link_libraries(test_coordinates PRIVATE reconstructor)
+
+
+#add_executable(test_lgbm_loader test_LgbmLoader.cpp)
+#target_link_libraries(test_lgbm_loader PRIVATE reconstructor_ext)
 add_test(NAME test_simtel_filehandler
     COMMAND test_simtel_filehandler
     )
@@ -44,5 +48,7 @@ add_test(NAME test_image_processor
     COMMAND test_image_processor)
 add_test(NAME test_interpolation
     COMMAND test_interpolation)
-add_test(NAME test_lgbm_loader
-    COMMAND test_lgbm_loader)
+add_test(NAME test_coordinates
+    COMMAND test_coordinates)
+#add_test(NAME test_lgbm_loader
+#    COMMAND test_lgbm_loader)

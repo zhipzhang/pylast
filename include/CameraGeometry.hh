@@ -42,7 +42,7 @@ public:
   /** @brief Neighbor matrix  row i is the neighbor of pixel i */
   Eigen::SparseMatrix<int, Eigen::RowMajor> neigh_matrix;
   /** @brief Map from width to border pixel mask */
-  std::unordered_map<int, Eigen::Vector<bool, -1>> border_pixel_mask;
+  mutable std::unordered_map<int, Eigen::Vector<bool, -1>> border_pixel_mask;
   /** @brief Pixel width [m] */
   Eigen::VectorXd pix_width;
   /** @brief Pixel width in the fov frame [rad] */
@@ -61,10 +61,10 @@ public:
    */
   CameraGeometry(std::string camera_name, int num_pixels, double *pix_x,
                  double *pix_y, double *pix_area, int *pix_type,
-                 double cam_rotation);
+                 double cam_rotation, bool diagnal = true);
   CameraGeometry(std::string camera_name, int num_pixels, Eigen::VectorXd pix_x,
                  Eigen::VectorXd pix_y, Eigen::VectorXd pix_area,
-                 Eigen::VectorXi pix_type, double cam_rotation);
+                 Eigen::VectorXi pix_type, double cam_rotation, bool diagnal = true);
 
   const string print() const;
   /**
@@ -73,7 +73,7 @@ public:
    * @param width
    * @return Eigen::Vector<bool, -1>
    */
-  Eigen::Vector<bool, -1> get_border_pixel_mask(int width);
+  Eigen::Vector<bool, -1> get_border_pixel_mask(int width) const ;
   Eigen::VectorXd get_pix_x_fov() const {
     if (pix_x_fov.size() == 0) {
       return pix_x;

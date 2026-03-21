@@ -43,7 +43,7 @@ public:
                                           const Eigen::VectorXd &masked_image);
   
   static LeakageParameter
-  leakage_parameter(CameraGeometry &camera_geometry,
+  leakage_parameter(const CameraGeometry &camera_geometry,
                     const Eigen::VectorXd &masked_image);
   static TwoGaussianFitResult
   two_gaussian_fit(const CameraGeometry &camera_geometry,

@@ -1,16 +1,3 @@
-# Function to set appropriate definitions based on build configuration
-function(set_hessio_definitions config)
-  if(config STREQUAL "LACT_PROD0")
-    add_definitions(
-      -DMAXIMUM_TELESCOPES=32
-      -DMAXIMUM_PIXELS=6000
-      -DMAXIMUM_SECTORS=6000
-      -DMAXIMUM_PIXELSECTORS=19
-      -DMAXIMUM_DRAWERS=6000
-      -DMAXIMUM_SLICES=128
-    )
-  endif()
-endfunction()
 
 # Apply the definitions based on the current BuildConfig
 
@@ -33,7 +20,6 @@ if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/bernlohr/LACT_hessioxxx/CMakeLists.tx
     message(FATAL_ERROR "Git not found, please install git to manage submodules")
   endif()
 endif()
-set_hessio_definitions("LACT_PROD0")
 add_subdirectory(bernlohr/LACT_hessioxxx)
 add_subdirectory(muparser)
 

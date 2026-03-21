@@ -113,8 +113,7 @@ void ImageProcessor::operator()(ArrayEvent &event) {
         subarray.tels.at(tel_id).camera_description.camera_geometry,
         masked_image);
     LeakageParameter leakage_parameter = ImageProcessor::leakage_parameter(
-        const_cast<CameraGeometry &>(
-            subarray.tels.at(tel_id).camera_description.camera_geometry),
+        subarray.tels.at(tel_id).camera_description.camera_geometry,
         masked_image);
     ConcentrationParameter concentration_parameter =
         ImageProcessor::concentration_parameter(
@@ -267,7 +266,7 @@ ImageProcessor::two_gaussian_fit(const CameraGeometry &camera_geometry,
       return results;
 }
 LeakageParameter
-ImageProcessor::leakage_parameter(CameraGeometry &camera_geometry,
+ImageProcessor::leakage_parameter(const CameraGeometry &camera_geometry,
                                   const Eigen::VectorXd &masked_image) {
   // Use the mask to get the image
   auto outermost_pixel_mask = camera_geometry.get_border_pixel_mask(1);
@@ -494,8 +493,7 @@ void ImageProcessor::handle_simulation_level(ArrayEvent &event) {
         masked_image);
     hillas_parameter.scale_ratio = 1.0;
     LeakageParameter leakage_parameter = ImageProcessor::leakage_parameter(
-        const_cast<CameraGeometry &>(
-            subarray.tels.at(tel_id).camera_description.camera_geometry),
+        subarray.tels.at(tel_id).camera_description.camera_geometry,
         masked_image);
     ConcentrationParameter concentration_parameter =
         ImageProcessor::concentration_parameter(
@@ -505,10 +503,10 @@ void ImageProcessor::handle_simulation_level(ArrayEvent &event) {
         ImageProcessor::intensity_parameter(masked_image);
 
     // Don't consider second level clean for now
-    TwoGaussianFitResult two_gaussian_fit;
-    //TwoGaussianFitResult two_gaussian_fit = ImageProcessor::two_gaussian_fit(
-    //    subarray.tels.at(tel_id).camera_description.camera_geometry,
-    //    masked_image, image_mask, hillas_parameter);
+    //TwoGaussianFitResult two_gaussian_fit;
+    TwoGaussianFitResult two_gaussian_fit = ImageProcessor::two_gaussian_fit(
+        subarray.tels.at(tel_id).camera_description.camera_geometry,
+        masked_image, image_mask, hillas_parameter);
     if (use_cut_radius) {
       auto pixel_mask = cut_pixel_distance(
           subarray.tels.at(tel_id).camera_description.camera_geometry,

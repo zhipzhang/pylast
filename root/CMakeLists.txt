@@ -1,12 +1,4 @@
 message(STATUS "Initialize root part of pylast")
-add_definitions(
-    -DMAXIMUM_TELESCOPES=32
-    -DMAXIMUM_PIXELS=3000
-    -DMAXIMUM_SECTORS=6000
-    -DMAXIMUM_PIXELSECTORS=19
-    -DMAXIMUM_DRAWERS=3000
-    -DMAXIMUM_SLICES=128
-)
 
 find_package(ROOT REQUIRED COMPONENTS Core)
 add_library(root_writer SHARED RootWriter.cpp RootDataLevels.cpp)
