@@ -44,7 +44,7 @@ public:
         double likelihood = reconstructor_->total_likelihood(par[0], par[1], par[2], par[3], par[4], par[5], *event_);
         
         // Log each iteration
-        //spdlog::info("Minuit iteration {}: rec_x={:.6f}, rec_y={:.6f}, core_x={:.2f}, core_y={:.2f}, xmax={:.2f}, energy={:.2f}, -logL={:.4f}", 
+       // spdlog::info("Minuit iteration {}: rec_x={:.6f}, rec_y={:.6f}, core_x={:.2f}, core_y={:.2f}, xmax={:.2f}, energy={:.2f}, -logL={:.4f}", 
         //            iteration_++, par[0], par[1], par[2], par[3], par[4], std::pow(10, par[5]), likelihood);
         
         return likelihood;
@@ -133,8 +133,8 @@ void TestReconstructor::operator()(ArrayEvent& event)
     ROOT::Minuit2::MnUserParameters upar;
     upar.Add("rec_x", initial_x * 1, 0.01/57.3 * 1);              // step: 0.01 degrees
     upar.Add("rec_y", initial_y * 1, 0.01/57.3 * 1);              // step: 0.01 degrees
-    upar.Add("tilted_core_x", tilted_core_x, 30);   // step: 1 meter
-    upar.Add("tilted_core_y", tilted_core_y, 30);   // step: 1 meter
+    upar.Add("tilted_core_x", tilted_core_x, 15);   // step: 1 meter
+    upar.Add("tilted_core_y", tilted_core_y, 15);   // step: 1 meter
     upar.Add("xmax", diff_xmax, 60.0);                    // step: 30 g/cm²
     upar.Add("log10_energy", log10_energy, 0.1);      // step: 0.1
     
@@ -150,10 +150,11 @@ void TestReconstructor::operator()(ArrayEvent& event)
     upar.Fix("rec_y");
     upar.Fix("tilted_core_x");
     upar.Fix("tilted_core_y");
+    upar.Fix("log10_energy");
 
     spdlog::info("=== Step1: Running Simplex Minimization ===");
     ROOT::Minuit2::MnSimplex simplex(fcn, upar, strategy);
-    ROOT::Minuit2::FunctionMinimum min_simplex = simplex(10000, 800);
+    ROOT::Minuit2::FunctionMinimum min_simplex = simplex(10000, 2000);
     // 准备最终结果容器
     ROOT::Minuit2::MnUserParameters best_params = upar; // 默认回退到 Hillas (初始值)
     double best_fval = 1e9; // 一个很大的初始 Likelihood
@@ -177,7 +178,7 @@ void TestReconstructor::operator()(ArrayEvent& event)
         best_params.Release("tilted_core_x");
         best_params.Release("tilted_core_y");
         ROOT::Minuit2::MnMigrad migrad(fcn, best_params, strategy);
-        ROOT::Minuit2::FunctionMinimum min_migrad = migrad(40000, 1000);
+        ROOT::Minuit2::FunctionMinimum min_migrad = migrad(40000, 10000);
         if(min_migrad.IsValid())
         {
             best_params = min_migrad.UserParameters();
@@ -256,11 +257,6 @@ double TestReconstructor::get_log_likelihood( const Eigen::VectorXf& charge, con
 
     for(int i = 0; i < pix_prob.size(); i++)
     {
-        if(pix_prob[i] > 5)
-        {
-            res += std::log(5);
-        }
-        else
         {
             res += std::log(pix_prob[i]);
         }
@@ -317,7 +313,7 @@ double TestReconstructor::total_likelihood(double rec_x, double rec_y,
             {
                 /// log(charge)
                 //scalecleaned_image[k] = std::pow(image[i], 1.0/3);
-                scalecleaned_image[k] = std::log(image[i]);
+                scalecleaned_image[k] = image[i];
 
                 /// rotated pixel coordinates
                 double dx = pix_x[i] - rec_x;

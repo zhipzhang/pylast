@@ -35,7 +35,7 @@ public:
         session_ = std::make_unique<Ort::Session>(env_, model_path.c_str(), session_options_);
 
         // 如果你在导出时就指定了名字，这里可以直接写死：
-        input_name_charge_ = "charge";
+        input_name_charge_ = "pe";
         input_name_phys_   = "phys";
         input_name_pos_    = "pos";
 
@@ -211,7 +211,7 @@ public:
                 const float* out_data = out.GetTensorData<float>();
                 if (out_shape[1] == 1) {
                     for (size_t i = 0; i < batch_size; ++i) {
-                        probs.push_back(std::exp(out_data[i]));
+                        probs.push_back(out_data[i]/(1 - out_data[i]));
                     }
                 } else {
                     throw std::runtime_error(
@@ -223,7 +223,7 @@ public:
                 const double* out_data = out.GetTensorData<double>();
                 if (out_shape[1] == 1) {
                     for (size_t i = 0; i < batch_size; ++i) {
-                        probs.push_back(static_cast<float>(std::exp(out_data[i])));
+                        probs.push_back(static_cast<float>(out_data[i]/(1 - out_data[i])));
                     }
                 } else {
                     throw std::runtime_error(
@@ -238,7 +238,7 @@ public:
                 const double* out_data = out.GetTensorData<double>();
                 if (out_shape[1] == 1) {
                     for (size_t i = 0; i < batch_size; ++i) {
-                        probs.push_back(std::exp(out_data[i]));
+                        probs.push_back(out_data[i]/(1 - out_data[i]));
                     }
                 } else {
                     throw std::runtime_error(
@@ -249,7 +249,7 @@ public:
                 const float* out_data = out.GetTensorData<float>();
                 if (out_shape[1] == 1) {
                     for (size_t i = 0; i < batch_size; ++i) {
-                        probs.push_back(std::exp(static_cast<double>(out_data[i])));
+                        probs.push_back(static_cast<double>(out_data[i]/(1 - out_data[i])));
                     }
                 } else {
                     throw std::runtime_error(
