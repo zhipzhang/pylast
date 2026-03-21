@@ -10,7 +10,6 @@
 #include "ShowerProcessor.hh"
 #include "nanobind/stl/unique_ptr.h"
 #include "Reconstructor.hh"
-#include "TestReconstructor.hh"
 #include "Coordinates.hh"
 #include "nanobind/eigen/dense.h"
 namespace nb = nanobind;
@@ -57,27 +56,6 @@ void bind_showerprocessor(nb::module_ &m) {
         .def("convert_to_sky", &PublicList::convert_to_sky)
         .def("convert_to_fov", &PublicList::convert_to_fov)
         .def("get_tiled_tel_position", &GeometryReconstructor::get_tiled_tel_position);
-    nb::class_<TestReconstructor, GeometryReconstructor>(m, "TestReconstructor")
-        .def(nb::init<const SubarrayDescription&, const std::string&>(), 
-             nb::arg("subarray"), nb::arg("config_str"))
-        .def("__call__", [](TestReconstructor& self, ArrayEvent& event) {
-            self(event);
-        })
-      // .def("total_likelihood", &TestReconstructor::total_likelihood,
-      //        nb::arg("rec_x"), nb::arg("rec_y"), 
-      //        nb::arg("rec_tilted_core_x"), nb::arg("rec_tilted_core_y"), 
-      //        nb::arg("xmax"), nb::arg("event"),
-      //        "Compute total likelihood for given parameters")
-        .def("profile_direction", &TestReconstructor::profile_direction,
-             nb::arg("rec_x_array"), nb::arg("rec_y_array"),
-             nb::arg("initial_core_x"), nb::arg("initial_core_y"), 
-             nb::arg("initial_xmax"), nb::arg("event"),
-             "Profile likelihood over angular direction grid (optimizing core and xmax)")
-        .def("profile_core", &TestReconstructor::profile_core,
-             nb::arg("core_x_array"), nb::arg("core_y_array"),
-             nb::arg("initial_rec_x"), nb::arg("initial_rec_y"), 
-             nb::arg("initial_xmax"), nb::arg("event"),
-             "Profile likelihood over core position grid (optimizing direction and xmax)");
 }
 
 void bind_coordinates(nb::module_ &m) {
