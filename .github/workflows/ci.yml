@@ -39,7 +39,7 @@ jobs:
       - name: Build and test
         run: |
           source ${{github.workspace}}/root_install/bin/thisroot.sh
-          cmake -S . -B build -DWITH_TEST=ON
+          cmake -S . -B build -DWITH_TEST=ON -DWITH_ROOT=ON
           cmake --build build -j 5
           cmake --install build --prefix install
           cd build && ctest --extra-verbose --output-on-failure

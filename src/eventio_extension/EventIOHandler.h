@@ -28,6 +28,7 @@ class EventIOHandler {
     size_t read(unsigned char* buffer, size_t bytes);
     size_t write(unsigned char* buffer, size_t bytes);
     int seek_current(size_t bytes);
+    bool is_file_end();
     static bool endsWith(const std::string& str, const std::string& suffix);
     std::unique_ptr<FileHandler> fileHandler_;
     std::unique_ptr<CompressionHandler> compressionHandler_;

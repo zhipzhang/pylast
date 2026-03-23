@@ -16,8 +16,10 @@ void bind_datawriter(nb::module_ &m)
         .def("__call__", [](DataWriter& self, ArrayEvent& event) {
             self(event);
         })
-        .def("__repr__", [](DataWriter& self) {
-            return "DataWriter:\n  Config: " + self.get_config_str();
+        .def("__enter__", [](DataWriter& self) {
+        })
+        .def("__exit__", [](DataWriter& self, const std::exception& exc_type, const std::exception& exc_value, const std::exception& traceback) {
+            self.close();
         })
         .def("close", &DataWriter::close)
         .def("write_all_simulation_shower", &DataWriter::write_all_simulation_shower)

@@ -38,6 +38,7 @@ class ReconstructedEnergy
     public:
         bool energy_valid = false;
         double estimate_energy = 0;
+        double estimate_energy_std = 0;
         std::vector<int> telescopes;
 };
 
@@ -45,6 +46,8 @@ class ReconstructedParticle
 {
     public:
         double hadroness = 0;
+        double mrsl = -999;
+        double mrsw = -999;
         bool is_valid = false;
         std::vector<int> telescopes;
 };

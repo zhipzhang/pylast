@@ -16,7 +16,6 @@ except ImportError:
 import numpy as np
 
 
-
 def compute_angle_separation(rec_alt, rec_az, true_alt, true_az):
     sin_alt1 = np.sin(rec_alt)
     sin_alt2 = np.sin(true_alt)
@@ -26,8 +25,12 @@ def compute_angle_separation(rec_alt, rec_az, true_alt, true_az):
     cos_angle = sin_alt1 * sin_alt2 + cos_alt1 * cos_alt2 * cos_az_diff
     # Use np.clip for vectorized min/max operations
     cos_angle = np.clip(cos_angle, -1.0, 1.0)
-    return np.degrees(np.arccos(cos_angle))
-
+    return np.arccos(cos_angle)
+def convert_to_fov(alt, az, pointing_alt, pointing_az):
+    sky_direction = SkyDirection(azimuth = az, altitude = alt)
+    telescope_frame = TelescopeFrame(azimuth = pointing_az, altitude = pointing_alt)
+    fov_direction = sky_direction.transform_to(telescope_frame)
+    return np.degrees(fov_direction.x_off), np.degrees(fov_direction.y_off)
 def register_exe(exename):
     # Get the path to the C++ executable
     # This assumes the executable is installed alongside the Python package

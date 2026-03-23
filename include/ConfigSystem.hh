@@ -133,8 +133,10 @@ public:
             (*current)[parts.back()] = std::any_cast<bool>(value);
         } else if (value.type() == typeid(std::string)) {
             (*current)[parts.back()] = std::any_cast<std::string>(value);
-        } else if (value.type() == typeid(json))
-        {
+        } else if (value.type() == typeid(std::vector<std::string>)) {
+            auto vec = std::any_cast<std::vector<std::string>>(value);
+            (*current)[parts.back()] = json(vec);
+        } else if (value.type() == typeid(json)) {
             (*current)[parts.back()] = std::any_cast<json>(value);
         }
     }
@@ -169,14 +171,14 @@ public:
             result = (*current)[parts.back()].get<bool>();
         } else if (defaultValue.type() == typeid(std::string)) {
             result = (*current)[parts.back()].get<std::string>();
-        }else if(defaultValue.type() == typeid(json))
-        {
+        } else if (defaultValue.type() == typeid(std::vector<std::string>)) {
+            result = (*current)[parts.back()].get<std::vector<std::string>>();
+        } else if(defaultValue.type() == typeid(json)) {
             result = (*current)[parts.back()].get<json>();
         } else {
             result = defaultValue;
             return false;
         }
-        
         return true;
     }
     
@@ -209,6 +211,14 @@ public:
         if (j.is_number_integer())   return std::any(j.get<int>());
         if (j.is_number_float())     return std::any(j.get<double>());
         if (j.is_string())    return std::any(j.get<std::string>());
+        if (j.is_array()) {
+            // Try to convert to vector<string>
+            if (!j.empty() && j[0].is_string()) {
+                return std::any(j.get<std::vector<std::string>>());
+            }
+            // Otherwise return as json
+            return std::any(j);
+        }
         return std::any(j);   
     }
     

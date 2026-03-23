@@ -24,10 +24,15 @@ endif()
 
 
 # Hillas reconstruction utility
-add_executable(hillas_reco hillas_reco.cpp ${CMAKE_CURRENT_SOURCE_DIR}/../RootWriter.cpp)
-target_link_libraries(hillas_reco PUBLIC root_event root_writer simtel_event calibrator data_writer image_processor reconstructor)
+
+if(WITH_EXT_REC)
+    add_executable(hillas_reco hillas_reco.cpp ${CMAKE_CURRENT_SOURCE_DIR}/../RootWriter.cpp  ${RECONSTURCTION_EXT_SOURCE_FILES} ${CMAKE_CURRENT_SOURCE_DIR}/../LookupTableEnergyRegressor.cpp ${CMAKE_CURRENT_SOURCE_DIR}/../LookupTableParticleClassifier.cpp)
+    target_link_libraries(hillas_reco PUBLIC root_event root_writer simtel_event calibrator data_writer image_processor reconstructor reconstructor_ext)
+else()
+    add_executable(hillas_reco hillas_reco.cpp ${CMAKE_CURRENT_SOURCE_DIR}/../RootWriter.cpp ${CMAKE_CURRENT_SOURCE_DIR}/../LookupTableEnergyRegressor.cpp ${CMAKE_CURRENT_SOURCE_DIR}/../LookupTableParticleClassifier.cpp)
+    target_link_libraries(hillas_reco PUBLIC root_event root_writer simtel_event calibrator data_writer image_processor reconstructor)
+endif()
 if(SKBUILD)
     MESSAGE(STATUS "Installing hillas_reco")
     install(TARGETS hillas_reco DESTINATION pylast)
 endif()
-

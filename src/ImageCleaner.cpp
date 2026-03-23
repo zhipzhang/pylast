@@ -24,16 +24,16 @@ void TailcutsCleaner::setUp()
 {
 }
 
-Eigen::Vector<bool, -1> TailcutsCleaner::operator()(const CameraGeometry& camera_geometry, const Eigen::VectorXd& image) const
+Eigen::Vector<bool, -1> TailcutsCleaner::operator()(const CameraGeometry& camera_geometry, const Eigen::VectorXd& image, double level) const
 {
-    return tailcuts_clean(camera_geometry, image, picture_thresh, boundary_thresh, keep_isolated_pixels, min_number_picture_neighbors);
+    return tailcuts_clean(camera_geometry, image, picture_thresh * level, boundary_thresh * level, keep_isolated_pixels, min_number_picture_neighbors);
 }
 
 Eigen::Vector<bool, -1> TailcutsCleaner::tailcuts_clean(const CameraGeometry& camera_geometry, const Eigen::VectorXd& image, double picture_thresh, double boundary_thresh, bool keep_isolated_pixels, int min_number_picture_neighbors)
 {
     Eigen::Vector<bool, -1> pixel_above_picture = (image.array() >= picture_thresh);
     Eigen::Vector<bool, -1> pixel_in_picture;
-    if(keep_isolated_pixels or min_number_picture_neighbors == 0)
+    if(keep_isolated_pixels || min_number_picture_neighbors == 0)
     {
         pixel_in_picture = pixel_above_picture;
     }

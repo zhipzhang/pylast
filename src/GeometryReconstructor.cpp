@@ -3,59 +3,63 @@
 #include "GeometryReconstructor.hh"
 #include "ImageParameters.hh"
 #include <unordered_map>
+#include <stdexcept>
 
 
 
-void GeometryReconstructor::registerParams()
-{
-    // Register the use_fake_hillas parameter
-    registerParam<bool>("use_fake_hillas", false, use_fake_hillas);
-    registerParam<std::string>("ImageQuery", R"({
-        "100p.e.": "hillas_intensity > 100",
-        "less leakage": "leakage_intensity_width_2 < 0.3"
-    })", image_query_config_);
-}
-
-void GeometryReconstructor::setUp()
-{
-    query_ = std::make_unique<ImageQuery>(image_query_config_);
-}
 void GeometryReconstructor::operator()(ArrayEvent& event)
 {
-    if(!event.dl1.has_value())
-    {
-        throw std::runtime_error("dl1  level event not found");
-    }
-    if(!event.dl2.has_value())
-    {
-        event.dl2 = DL2Event();
-    }
     hillas_dicts.clear();
-    telescopes.clear();
-    array_pointing_direction = SphericalRepresentation(event.pointing->array_azimuth, event.pointing->array_altitude);
-    nominal_frame = std::make_unique<TelescopeFrame>(SphericalRepresentation(event.pointing->array_azimuth, event.pointing->array_altitude));
-    if(use_fake_hillas)
+    rounded_hillas_dicts.clear();
+    rounded_telescopes.clear();
+    Reconstructor::operator()(event);
+    nominal_frame = std::make_unique<TelescopeFrame>(array_pointing_direction.azimuth, array_pointing_direction.altitude);
+    for(auto tel_id: telescopes)
     {
-        for(const auto tel_id: event.simulation->triggered_tels)
+        if(!event.pointing->tels.contains(tel_id))
         {
-            if((*query_)(event.simulation->tels[tel_id]->image_parameters))
+            throw std::runtime_error("telescope " + std::to_string(tel_id) + " not found in pointing");
+        }
+        telescope_pointing[tel_id] = SphericalRepresentation(event.pointing->tels[tel_id]->azimuth, event.pointing->tels[tel_id]->altitude);
+        if(use_fake_hillas)
+        {
+            HillasParameter hillas;
+            hillas = event.simulation->tels[tel_id]->image_parameters.hillas;
+            if(use_gaussian_fit)
             {
-                hillas_dicts[tel_id] = event.simulation->tels[tel_id]->image_parameters.hillas;
-                telescope_pointing[tel_id] = SphericalRepresentation(event.pointing->tels[tel_id]->azimuth, event.pointing->tels[tel_id]->altitude);
-                telescopes.push_back(tel_id);
+                if(event.simulation->tels[tel_id]->image_parameters.leakage.intensity_width_2 > 0.1)
+                {
+                    if(event.simulation->tels[tel_id]->image_parameters.two_gaussian_fit.status == 1)
+                    {
+                        if(hillas.intensity/event.simulation->tels[tel_id]->image_parameters.two_gaussian_fit.fit_size >= 0.2)
+                        {
+                            hillas.x = event.simulation->tels[tel_id]->image_parameters.two_gaussian_fit.mean_x;
+                            hillas.y = event.simulation->tels[tel_id]->image_parameters.two_gaussian_fit.mean_y;
+                            hillas.psi = event.simulation->tels[tel_id]->image_parameters.two_gaussian_fit.psi;
+                            event.simulation->tels[tel_id]->image_parameters.two_gaussian_fit.use_gaussian_fit = true;
+                        }
+                    }
+                }
+            }
+            hillas_dicts[tel_id] = hillas;
+        }
+        else
+        {
+            hillas_dicts[tel_id] = event.dl1->tels[tel_id]->image_parameters.hillas;
+        }
+    }
+    if(event.rounded_tel_hillas.size() > 0)
+    {
+        for(auto& [tel_id, rounded_hillas]: event.rounded_tel_hillas)
+        {
+            if(hillas_dicts.contains(tel_id))
+            {
+                rounded_hillas_dicts[tel_id] = rounded_hillas;
+                rounded_telescopes.push_back(tel_id);
             }
         }
-        return;
     }
-    for(const auto& [tel_id, dl1]: event.dl1->tels)
-    {
-        if((*query_)(dl1->image_parameters))
-        {
-            hillas_dicts[tel_id] = dl1->image_parameters.hillas;
-            telescope_pointing[tel_id] = SphericalRepresentation(event.pointing->tels[tel_id]->azimuth, event.pointing->tels[tel_id]->altitude);
-            telescopes.push_back(tel_id);
-        }
-    }
+    return;
 }
 std::pair<double, double> GeometryReconstructor::convert_to_sky(double fov_x, double fov_y)
 {
@@ -68,9 +72,33 @@ std::pair<double, double> GeometryReconstructor::convert_to_fov(double alt, doub
     auto camera_position = SkyDirection(AltAzFrame(), az, alt).transform_to(*nominal_frame);
     return std::make_pair(camera_position->x(), camera_position->y());
 }
-double GeometryReconstructor::compute_angle_separation(double az1, double alt1, double az2, double alt2)
+std::unordered_map<int, Point2D> GeometryReconstructor::get_tiled_tel_position(const TiltedGroundFrame& tilted_frame)
 {
-    auto direction1 = SkyDirection(AltAzFrame(), az1, alt1);
-    auto direction2 = SkyDirection(AltAzFrame(), az2, alt2);
-    return direction1->angle_separation(direction2.position);
+    std::unordered_map<int, Point2D> tiled_tel_positions;
+    for(const auto tel_id: telescopes)
+    {
+        auto tel_pos = CartesianPoint(subarray.tel_positions.at(tel_id));
+        auto tilted_tel_pos = tel_pos.transform_to_tilted(tilted_frame);
+        tiled_tel_positions.emplace(tel_id, Point2D(tilted_tel_pos.x(), tilted_tel_pos.y()));
+    }
+    return tiled_tel_positions;
+}
+
+std::pair<double, double> GeometryReconstructor::project_to_ground(const Eigen::Vector3d& intersection_position, const SkyDirection<AltAzFrame>& direction)
+{
+    auto direction_vector = direction->transform_to_cartesian();
+    // Calculate the intersection point with the ground (z=0)
+    // If the direction is parallel to the ground, return the current position
+    if (std::abs(direction_vector.direction.z()) < 1e-10) {
+        return {intersection_position.x(), intersection_position.y()};
+    }
+    
+    // Calculate how far we need to go to reach z=0
+    double t = -intersection_position.z() / direction_vector.direction.z();
+    
+    // Calculate the ground intersection point
+    double ground_x = intersection_position.x() + t * direction_vector.direction.x();
+    double ground_y = intersection_position.y() + t * direction_vector.direction.y();
+    
+    return {ground_x, ground_y};
 }

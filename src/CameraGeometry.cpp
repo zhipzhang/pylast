@@ -4,7 +4,7 @@
 #include "nanoflann.hpp"
 #include <cstddef>
 #include <algorithm>
-CameraGeometry::CameraGeometry(std::string camera_name, int num_pixels, double* pix_x, double* pix_y, double* pix_area, int* pix_type, double cam_rotation):
+CameraGeometry::CameraGeometry(std::string camera_name, int num_pixels, double* pix_x, double* pix_y, double* pix_area, int* pix_type, double cam_rotation, bool diagnal):
     camera_name(camera_name), num_pixels(num_pixels), cam_rotation(cam_rotation)
 {
     this->pix_id = Eigen::VectorXi::LinSpaced(num_pixels, 0, num_pixels-1);
@@ -28,9 +28,9 @@ CameraGeometry::CameraGeometry(std::string camera_name, int num_pixels, double* 
     {
         throw std::runtime_error("Invalid pixel type");
     }
-    compute_neighbor_matrix(false);
+    compute_neighbor_matrix(diagnal);
 }
-CameraGeometry::CameraGeometry(std::string camera_name, int num_pixels, Eigen::VectorXd pix_x, Eigen::VectorXd pix_y, Eigen::VectorXd pix_area, Eigen::VectorXi pix_type, double cam_rotation):
+CameraGeometry::CameraGeometry(std::string camera_name, int num_pixels, Eigen::VectorXd pix_x, Eigen::VectorXd pix_y, Eigen::VectorXd pix_area, Eigen::VectorXi pix_type, double cam_rotation, bool diagnal):
     camera_name(camera_name), num_pixels(num_pixels), cam_rotation(cam_rotation), pix_x(std::move(pix_x)), pix_y(std::move(pix_y)), pix_area(std::move(pix_area)), pix_type(std::move(pix_type))
 {
     this->pix_id = Eigen::VectorXi::LinSpaced(num_pixels, 0, num_pixels-1);
@@ -50,7 +50,7 @@ CameraGeometry::CameraGeometry(std::string camera_name, int num_pixels, Eigen::V
     {
         throw std::runtime_error("Invalid pixel type");
     }
-    compute_neighbor_matrix(true);
+    compute_neighbor_matrix(diagnal);
 }
 void CameraGeometry::compute_neighbor_matrix(bool diagnal )
 {
@@ -110,7 +110,7 @@ void CameraGeometry::compute_neighbor_matrix(bool diagnal )
     }
     neigh_matrix.makeCompressed();
 }
-Eigen::Vector<bool, -1> CameraGeometry::get_border_pixel_mask(int width)
+Eigen::Vector<bool, -1> CameraGeometry::get_border_pixel_mask(int width) const
 {
     try{
         return border_pixel_mask.at(width);

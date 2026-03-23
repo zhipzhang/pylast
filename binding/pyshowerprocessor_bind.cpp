@@ -9,7 +9,7 @@
 #include "nanobind/stl/optional.h"
 #include "ShowerProcessor.hh"
 #include "nanobind/stl/unique_ptr.h"
-#include "MLReconstructor.hh"
+#include "Reconstructor.hh"
 #include "Coordinates.hh"
 #include "nanobind/eigen/dense.h"
 namespace nb = nanobind;
@@ -32,15 +32,20 @@ void bind_showerprocessor(nb::module_ &m) {
         .def("__call__", [](ShowerProcessor& self, ArrayEvent& event) {
             self(event);
         })
-        .def("__repr__", [](ShowerProcessor& self) {
-            return "ShowerProcessor:\n  Config: " + self.get_config_str();
-        });
+        ;
     nb::class_<ImageQuery>(m, "ImageQuery")
         .def(nb::init<const std::string&>(), nb::arg("config"))
         .def("__call__", [](ImageQuery& self, const ImageParameters& image_parameters) {
             return self(image_parameters);
         });
-    nb::class_<GeometryReconstructor>(m, "GeometryReconstructor")
+    nb::class_<Reconstructor>(m, "Reconstructor")
+        .def(nb::init<const std::string&>(), nb::arg("config_str"))
+        .def_ro("telescopes", &Reconstructor::telescopes)
+        .def_ro("array_pointing_direction", &Reconstructor::array_pointing_direction)
+        .def("__call__", [](Reconstructor& self, ArrayEvent& event) {
+            self(event);
+        });
+    nb::class_<GeometryReconstructor, Reconstructor>(m, "GeometryReconstructor")
         .def(nb::init<const SubarrayDescription&>(), nb::arg("subarray"))
         .def(nb::init<const SubarrayDescription&, const std::string&>(), nb::arg("subarray"), nb::arg("config_str"))
         .def("__call__", [](GeometryReconstructor& self, ArrayEvent& event) {
@@ -48,19 +53,9 @@ void bind_showerprocessor(nb::module_ &m) {
         })
         .def_rw("geometry", &PublicList::geometry)
         .def_ro("hillas_dicts", &PublicList::hillas_dicts)
-        .def_ro("telescopes", &PublicList::telescopes)
-        .def_ro("array_pointing_direction", &PublicList::array_pointing_direction)
-        .def_static("compute_angle_separation", &PublicList::compute_angle_separation)
         .def("convert_to_sky", &PublicList::convert_to_sky)
-        .def("convert_to_fov", &PublicList::convert_to_fov);
-    nb::class_<MLReconstructor>(m, "MLReconstructor")
-        .def(nb::init<const std::string&>(), nb::arg("config_str"))
-        .def_ro("telescopes", &MLReconstructor::telescopes)
-        .def_ro("tel_rec_params", &MLReconstructor::tel_rec_params)
-        .def_ro("array_pointing_direction", &MLReconstructor::array_pointing_direction)
-        .def("__call__", [](MLReconstructor& self, ArrayEvent& event) {
-            self(event);
-        });
+        .def("convert_to_fov", &PublicList::convert_to_fov)
+        .def("get_tiled_tel_position", &GeometryReconstructor::get_tiled_tel_position);
 }
 
 void bind_coordinates(nb::module_ &m) {
@@ -82,7 +77,8 @@ void bind_coordinates(nb::module_ &m) {
     nb::class_<CartesianPoint>(m, "CartesianPoint")
         .def(nb::init<double, double, double>(), nb::arg("x"), nb::arg("y"), nb::arg("z"))
         .def("transform_to_tilted", [](CartesianPoint& self, const TiltedGroundFrame& target) {
-            return self.transform_to_tilted(target);
+            auto point = self.transform_to_tilted(target);
+            return std::make_pair(point.x(), point.y());
         })
         .def("transform_to_ground", [](CartesianPoint& self, const TiltedGroundFrame& target) {
             return self.transform_to_ground(target);

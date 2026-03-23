@@ -15,6 +15,7 @@ void ImageQuery::init_hillas_parameter()
     parser_.DefineVar("hillas_psi", &hillas_parameter_.psi);
     parser_.DefineVar("hillas_x", &hillas_parameter_.x);
     parser_.DefineVar("hillas_y", &hillas_parameter_.y);
+    parser_.DefineVar("hillas_r", &hillas_parameter_.r);
     parser_.DefineVar("hillas_intensity", &hillas_parameter_.intensity);
 }
 void ImageQuery::init_leakage_parameter()

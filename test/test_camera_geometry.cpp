@@ -20,7 +20,7 @@ TEST_CASE("test_neighbor_matrix")
             pix_type.push_back(2);
         }
     }
-    CameraGeometry camera("test", num_pixels, pix_x.data(), pix_y.data(), pix_area.data(), pix_type.data(), 0);
+    CameraGeometry camera("test", num_pixels, pix_x.data(), pix_y.data(), pix_area.data(), pix_type.data(), 0, false);
     // Test center pixel (5) should have 4 neighbors
     CHECK(camera.neigh_matrix.row(5).sum() == 4);  // not includes self due to KNN search
     
@@ -61,7 +61,7 @@ TEST_CASE("test_get_border_pixel_mask")
             pix_type.push_back(2);
         }
     }
-    CameraGeometry camera("test", num_pixels, pix_x.data(), pix_y.data(), pix_area.data(), pix_type.data(), 0);
+    CameraGeometry camera("test", num_pixels, pix_x.data(), pix_y.data(), pix_area.data(), pix_type.data(), 0, false);
     auto border_mask = camera.get_border_pixel_mask(1);
     CHECK(border_mask.size() == 25);
     CHECK(border_mask.count() == 16);
