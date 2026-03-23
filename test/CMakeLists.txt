@@ -26,6 +26,9 @@ target_link_libraries(test_interpolation PUBLIC root_event)
 add_executable(test_coordinates test_coordinates.cpp)
 target_link_libraries(test_coordinates PRIVATE reconstructor)
 
+add_executable(test_build_index test_build_index.cpp)
+target_link_libraries(test_build_index PUBLIC root_event)
+
 
 #add_executable(test_lgbm_loader test_LgbmLoader.cpp)
 #target_link_libraries(test_lgbm_loader PRIVATE reconstructor_ext)
@@ -50,5 +53,7 @@ add_test(NAME test_interpolation
     COMMAND test_interpolation)
 add_test(NAME test_coordinates
     COMMAND test_coordinates)
+add_test(NAME test_build_index
+    COMMAND test_build_index)
 #add_test(NAME test_lgbm_loader
 #    COMMAND test_lgbm_loader)

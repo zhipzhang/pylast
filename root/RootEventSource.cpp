@@ -4,10 +4,14 @@
 #include "RootDataLevels.hh"
 #include "SubarrayDescription.hh"
 #include "TDirectory.h"
+#include "TLeaf.h"
+#include "TVirtualIndex.h"
 #include "spdlog/spdlog.h"
 #include <cassert>
 #include "TKey.h"
 #include <iostream>
+#include <sstream>
+#include <unordered_set>
 #include "TH1F.h"
 #include "TH2F.h"
 RootEventSource::RootEventSource(const std::string& filename, int64_t max_events, std::vector<int> subarray, bool load_subarray_from_env)
@@ -208,6 +212,105 @@ void RootEventSource::initialize_array_event()
     
 }
 
+void RootEventSource::initialize_event_index(TTree* tree, const std::string& tree_path)
+{
+    if(tree == nullptr)
+    {
+        throw std::runtime_error("tree is null while initializing event index: " + tree_path);
+    }
+
+    bool needs_rebuild = false;
+    const auto tree_entries = tree->GetEntries();
+    auto count_unique_event_tel_keys = [&](TTree* input_tree) {
+        auto* event_id_leaf = input_tree->GetLeaf("event_id");
+        auto* tel_id_leaf = input_tree->GetLeaf("tel_id");
+        if(event_id_leaf == nullptr || tel_id_leaf == nullptr)
+        {
+            throw std::runtime_error(
+                "tree " + tree_path + " must contain event_id and tel_id leaves for BuildIndex validation"
+            );
+        }
+
+        std::unordered_set<unsigned long long> unique_keys;
+        unique_keys.reserve(static_cast<size_t>(tree_entries));
+        for(Long64_t ientry = 0; ientry < tree_entries; ++ientry)
+        {
+            input_tree->GetEntry(ientry);
+            const auto event_id = static_cast<unsigned int>(event_id_leaf->GetValueLong64());
+            const auto tel_id = static_cast<unsigned int>(tel_id_leaf->GetValueLong64());
+            const unsigned long long packed_key =
+                (static_cast<unsigned long long>(event_id) << 32ULL) |
+                static_cast<unsigned long long>(tel_id);
+            unique_keys.insert(packed_key);
+        }
+        return static_cast<Long64_t>(unique_keys.size());
+    };
+    auto* tree_index = tree->GetTreeIndex();
+
+    if(tree_index == nullptr)
+    {
+        spdlog::warn("tree {} has no BuildIndex; rebuilding with (event_id, tel_id)", tree_path);
+        needs_rebuild = true;
+    }
+    else if(tree_index->GetN() != tree_entries)
+    {
+        spdlog::warn(
+            "tree {} index size mismatch (index={}, entries={}), duplicate keys may exist; rebuilding index",
+            tree_path,
+            tree_index->GetN(),
+            tree_entries
+        );
+        needs_rebuild = true;
+    }
+    else
+    {
+        const auto unique_keys = count_unique_event_tel_keys(tree);
+        if(unique_keys != tree_entries)
+        {
+            spdlog::warn(
+                "tree {} has duplicate (event_id, tel_id) keys (unique_keys={}, entries={}); rebuilding index",
+                tree_path,
+                unique_keys,
+                tree_entries
+            );
+            needs_rebuild = true;
+        }
+    }
+
+    if(!needs_rebuild)
+    {
+        return;
+    }
+
+    const auto build_ret = tree->BuildIndex("event_id", "tel_id");
+    if(build_ret < 0)
+    {
+        throw std::runtime_error("failed to build index for tree: " + tree_path);
+    }
+
+    tree_index = tree->GetTreeIndex();
+    if(tree_index == nullptr)
+    {
+        throw std::runtime_error("index missing after BuildIndex for tree: " + tree_path);
+    }
+    if(tree_index->GetN() != tree_entries)
+    {
+        std::ostringstream oss;
+        oss << "index size still mismatches after rebuild for tree " << tree_path
+            << " (index=" << tree_index->GetN() << ", entries=" << tree_entries
+            << "). This usually indicates duplicate (event_id, tel_id) keys.";
+        throw std::runtime_error(oss.str());
+    }
+    const auto unique_keys_after_rebuild = count_unique_event_tel_keys(tree);
+    if(unique_keys_after_rebuild < tree_entries)
+    {
+        std::ostringstream oss;
+        oss << "duplicate (event_id, tel_id) keys detected after BuildIndex for tree " << tree_path
+            << " (unique_keys=" << unique_keys_after_rebuild << ", entries=" << tree_entries << ")";
+        throw std::runtime_error(oss.str());
+    }
+}
+
 template<typename T>
 void RootEventSource::initialize_data_level(const std::string& level_name, std::optional<T>& data_level)
     {
@@ -227,6 +330,7 @@ void RootEventSource::initialize_data_level(const std::string& level_name, std::
         
         data_level = T();
         data_level->initialize_read(tree);
+        initialize_event_index(tree, "/events/" + level_name + "/tels");
     }
 
 template<typename T>
