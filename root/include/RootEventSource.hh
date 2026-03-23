@@ -53,7 +53,7 @@
         template<typename T>
         void initialize_dir(const std::string& subdir, const std::string& tree_name, std::optional<T>& structure);
 
-        void initialize_event_index();
+        void initialize_event_index(TTree* tree, const std::string& tree_path);
         RootEventHelper event_helper;
         RootConfigHelper config_helper;
         void initialize_statistics();
