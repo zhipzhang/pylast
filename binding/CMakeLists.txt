@@ -51,6 +51,12 @@ set(DATAWRITER_SOURCES
 set(EVENTSOURCE_LIBRARIES basic_event simtel_event root_event)
 add_python_binding(_pystatistic pystatistic_bind.cpp "" "")
 add_python_binding(_pyeventsource "${PYEVENTSOURCE_SOURCES}" "${EVENTSOURCE_LIBRARIES}" _pylast_arrayevent)
+
+# ak_ext is header-only (INTERFACE); link it after the macro to avoid
+# passing it to install(TARGETS … LIBRARY …) which only applies to real libs.
+set(AKARRAY_LIBRARIES basic_event simtel_event root_event)
+add_python_binding(_pylast_akarray pyakarray_bind.cpp "${AKARRAY_LIBRARIES}" _pyeventsource)
+target_link_libraries(_pylast_akarray PRIVATE ak_ext)
 if(WITH_EXT_REC)
     set(RECONSTRUCTOR_LIBRARIES reconstructor reconstructor_ext)
 else()
