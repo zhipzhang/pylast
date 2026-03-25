@@ -13,6 +13,11 @@ try:
     from ._pylast_databasewriter import DatabaseWriter as CDataBaseWriter
 except ImportError:
     CDataBaseWriter = None
+
+try:
+    from ._pylast_akarray import get_ak_array
+except ImportError:
+    pass
 import numpy as np
 
 

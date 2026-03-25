@@ -76,6 +76,7 @@ if(FAST)
 endif()
 
 add_subdirectory(src)
+add_subdirectory(ak_ext)
 if(WITH_EXT_REC)
     message("Adding support for advanced reconstructor")
     add_subdirectory(ml_ext)
