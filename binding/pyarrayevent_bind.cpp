@@ -17,6 +17,8 @@
 #include "DL1Event.hh"
 #include "DL2Event.hh"
 #include "spdlog/spdlog.h"
+#include "C0Event.hh"
+#include "C1Event.hh"
 namespace nb = nanobind;
 
 void bind_dl2_event(nb::module_ &m) {
@@ -63,7 +65,6 @@ void bind_dl2_event(nb::module_ &m) {
         });
     nb::class_<ReconstructedEnergy>(m, "ReconstructedEnergy")
         .def(nb::init<>())
-        .def(nb::init<double, bool>())
         .def_rw("estimate_energy", &ReconstructedEnergy::estimate_energy)
         .def_rw("energy_valid", &ReconstructedEnergy::energy_valid)
         .def_ro("estimate_energy_std", &ReconstructedEnergy::estimate_energy_std)
@@ -439,6 +440,8 @@ void bind_array_event(nb::module_ &m) {
     nb::class_<ArrayEvent>(m, "ArrayEvent")
         .def_ro("simulation", &ArrayEvent::simulation)
         .def_ro("r0", &ArrayEvent::r0)
+        .def_ro("c0", &ArrayEvent::c0)
+        .def_ro("c1", &ArrayEvent::c1)
         .def_ro("monitor", &ArrayEvent::monitor)
         .def_ro("r1", &ArrayEvent::r1)
         .def_ro("dl0", &ArrayEvent::dl0)
@@ -478,6 +481,14 @@ void bind_array_event(nb::module_ &m) {
                 repr += "  Monitor Data: Available\n";
             }
             
+            if(self.c0.has_value()) {
+                repr += "  C0 Data: Available\n";
+            }
+            
+            if(self.c1.has_value()) {
+                repr += "  C1 Data: Available\n";
+            }
+            
             return repr;
         });
 }
@@ -498,7 +509,75 @@ void bind_simulated_shower_array(nb::module_ &m) {
         .def("__getitem__", &SimulatedShowerArray::operator[])
         .def("__len__", &SimulatedShowerArray::size);
 }
+void bind_c0_event(nb::module_ &m) {
+    nb::class_<C0Event>(m, "C0Event")
+        .def_prop_ro("tels", &C0Event::get_tels)
+        .def("__repr__", [](C0Event& self) {
+            std::string repr = "C0Event:\n";
+            auto tels = self.get_tels();
+            if (!tels.empty()) {
+                repr += "  Telescope IDs: ";
+                bool first = true;
+                for (const auto& [tel_id, _] : tels) {
+                    if (!first) repr += ", ";
+                    repr += std::to_string(tel_id);
+                    first = false;
+                }
+                repr += "\n";
+            }
+            return repr;
+        });
+    nb::class_<C0Camera>(m, "C0Camera")
+        .def_ro("low_gain_waveform", &C0Camera::low_gain_waveform)
+        .def_ro("high_gain_waveform", &C0Camera::high_gain_waveform)
+        .def("__repr__", [](C0Camera& self) {
+            return fmt::format("C0Camera:\n  low_gain_waveform shape: {}x{}\n  high_gain_waveform shape: {}x{}", 
+                              self.low_gain_waveform.rows(), self.low_gain_waveform.cols(),
+                              self.high_gain_waveform.rows(), self.high_gain_waveform.cols());
+        });
+}
+void bind_c1_event(nb::module_ &m) {
+    nb::class_<C1Event>(m, "C1Event")
+        .def_prop_ro("tels", &C1Event::get_tels)
+        .def("__repr__", [](C1Event& self) {
+            std::string repr = "C1Event:\n";
+            auto tels = self.get_tels();
+            if (!tels.empty()) {
+                repr += "  Telescope IDs: ";
+                bool first = true;
+                for (const auto& [tel_id, _] : tels) {
+                    if (!first) repr += ", ";
+                    repr += std::to_string(tel_id);
+                    first = false;
+                }
+                repr += "\n";
+            }
+            return repr;
+        });
+    nb::class_<C1Camera>(m, "C1Camera")
+        .def_ro("low_gain_base", &C1Camera::low_gain_base)
+        .def_ro("high_gain_base", &C1Camera::high_gain_base)
+        .def_ro("low_gain_peak", &C1Camera::low_gain_peak)
+        .def_ro("high_gain_peak", &C1Camera::high_gain_peak)
+        .def_ro("low_gain_area", &C1Camera::low_gain_area)
+        .def_ro("high_gain_area", &C1Camera::high_gain_area)
+        .def_ro("low_gain_peak_time", &C1Camera::low_gain_peak_time)
+        .def_ro("high_gain_peak_time", &C1Camera::high_gain_peak_time)
+        .def("__repr__", [](C1Camera& self) {
+            return fmt::format("C1Camera:\n  low_gain_base shape: {}x{}\n  high_gain_base shape: {}x{}\n  low_gain_peak shape: {}x{}\n  high_gain_peak shape: {}x{}\n  low_gain_area shape: {}x{}\n  high_gain_area shape: {}x{}\n  low_gain_peak_time shape: {}x{}\n  high_gain_peak_time shape: {}x{}", 
+                              self.low_gain_base.rows(), self.low_gain_base.cols(),
+                              self.high_gain_base.rows(), self.high_gain_base.cols(),
+                              self.low_gain_peak.rows(), self.low_gain_peak.cols(),
+                              self.high_gain_peak.rows(), self.high_gain_peak.cols(),
+                              self.low_gain_area.rows(), self.low_gain_area.cols(),
+                              self.high_gain_area.rows(), self.high_gain_area.cols(),
+                              self.low_gain_peak_time.rows(), self.low_gain_peak_time.cols(),
+                              self.high_gain_peak_time.rows(), self.high_gain_peak_time.cols());
+        });
+}
 NB_MODULE(_pylast_arrayevent, m) {
+    bind_c0_event(m);
+    bind_c1_event(m);
     bind_dl0_event(m);
     bind_dl1_event(m);
     bind_r0_event(m);

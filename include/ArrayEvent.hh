@@ -24,6 +24,7 @@
 #include "DL2Event.hh"
 #include "Pointing.hh"
 #include "C0Event.hh"
+#include "C1Event.hh"
 /**
  * @brief Main class to describe an array event
  * 
@@ -34,6 +35,7 @@ public:
     std::optional<SimulatedEvent> simulation;
     std::optional<R0Event> r0;
     std::optional<C0Event> c0;
+    std::optional<C1Event> c1;
     std::optional<R1Event> r1;
     std::optional<EventMonitor> monitor;
     std::optional<DL0Event> dl0;

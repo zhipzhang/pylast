@@ -10,7 +10,28 @@
 #include "LoggerInitialize.hh"
 #include "RootEventSource.hh"
 #include "SimtelEventSource.hh"
+#include "PrototypeEventSource.hh"
+#include "nanobind/eigen/dense.h"
+#include "spdlog/fmt/fmt.h"
+#include "PrototypeCalibrator.hh"
 namespace nb = nanobind;
+
+void bind_prototype_calibrator(nb::module_ &m) {
+    nb::class_<PrototypeCalibrator>(m, "PrototypeCalibrator")
+        .def(nb::init<>())
+        .def("__call__", [](PrototypeCalibrator& self, ArrayEvent& event) {
+            self(event);
+        })
+        .def("extract_waveform_base", &PrototypeCalibrator::extract_waveform_base)
+        .def("integrate_waveform", &PrototypeCalibrator::integrate_waveform)
+        .def("extract_waveform_peak", &PrototypeCalibrator::extract_waveform_peak)
+        .def("__call__", [](PrototypeCalibrator& self, ArrayEvent& event) {
+            self(event);
+        })
+        .def("__repr__", [](PrototypeCalibrator& self) {
+            return "PrototypeCalibrator";
+        });
+}
 
 NB_MODULE(_pyeventsource, m){
     nb::class_<EventSource>(m, "EventSource")
@@ -103,6 +124,22 @@ NB_MODULE(_pyeventsource, m){
         .def("__repr__", [](SimtelEventSource& self) {
             return fmt::format("SimtelEventSource(filename={})", self.input_filename);
         });
-    
+    nb::class_<PrototypeEventSource, EventSource>(m, "PrototypeEventSource")
+        .def(nb::init<const std::string&, const std::string&>(), nb::arg("filename"),
+             nb::arg("camera_config_file") = std::string("camera_geometry.root"))
+        .def("initialize_source", &PrototypeEventSource::initialize_source)
+        .def("load_all_events", &PrototypeEventSource::load_all_events)
+        .def("mapping_fee_channel_to_pixels", &PrototypeEventSource::mapping_fee_channel_to_pixels,
+             nb::arg("fee_id"), nb::arg("channel"))
+        .def_static("set_config_path", &PrototypeEventSource::set_config_path, nb::arg("path"))
+        .def("get_event", [](PrototypeEventSource& self, int index = -1) { return self.get_event(index); })
+        .def("__getitem__",&PrototypeEventSource::operator[])
+        .def("read_camera_geometry", &PrototypeEventSource::read_camera_geometry)
+        .def("__repr__", [](PrototypeEventSource& self) {
+            return fmt::format("PrototypeEventSource(filename={})", self.input_filename);
+        });
+
+
     m.def("write_statistics", RootHistogram::write_statistics, nb::arg("statistics"), nb::arg("filename"));
+    bind_prototype_calibrator(m);
 }

@@ -89,6 +89,7 @@ if(WITH_TEST)
 endif()
 if(WITH_ROOT)
     add_subdirectory(root)
+    add_subdirectory(calibration)
 endif()
 
 if(ENABLE_DB_FEATURES)
