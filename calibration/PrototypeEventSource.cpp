@@ -139,6 +139,9 @@ CameraGeometry PrototypeEventSource::read_camera_geometry()
         camera_pix_y(ipix_number - 1) = ipix_y;
     }
     auto camera_geometry = CameraGeometry("prototype_geometry", NUM_PIXELS, std::move(camera_pix_x), std::move(camera_pix_y), std::move(camera_pix_area), std::move(camera_pix_type), 0);
+    camera_geometry.pix_x_fov = camera_geometry.pix_x / 8;
+    camera_geometry.pix_y_fov = camera_geometry.pix_y / 8;
+    camera_geometry.pix_width_fov = camera_geometry.pix_width / 8;
     std::cout << "Finish reading camera geometry" << std::endl;
     return camera_geometry;
 }

@@ -66,10 +66,6 @@ endif()
 set(RECONSTRUCTOR_SOURCES pyshowerprocessor_bind.cpp ${RECONSTURCTION_EXT_SOURCE_FILES})
 add_python_binding(_pylast_showerprocessor "${RECONSTRUCTOR_SOURCES}" "${RECONSTRUCTOR_LIBRARIES}" "")
 add_python_binding(_pylast_datawriter "${DATAWRITER_SOURCES}" "${DATAWRITER_LIBRARIES}" "")
-if(ENABLE_DB_FEATURES)
-add_python_binding(_pylast_databasewriter pydatabase_bind.cpp database_supporter _pyeventsource)
-install(FILES ${DUCKDB_LIBRARY} DESTINATION pylast)
-endif()
 
 
 install(TARGETS query LIBRARY DESTINATION pylast)

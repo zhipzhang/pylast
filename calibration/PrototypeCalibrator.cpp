@@ -67,9 +67,14 @@ void PrototypeCalibrator::operator()(ArrayEvent& event)
         {
             DL0Camera dl0camera;
             dl0camera.image = Eigen::VectorXd::Zero(c1_camera->n_pixels);
+            dl0camera.peak_time = Eigen::VectorXd::Zero(c1_camera->n_pixels);
             for(int ipix = 0; ipix < c1_camera->n_pixels; ipix++)
             {
                 dl0camera.image(ipix) = c1_camera->low_gain_area(ipix) / 10;
+            }
+            for(int ipix = 0; ipix < c1_camera->n_pixels; ipix++)
+            {
+                dl0camera.peak_time(ipix) = c1_camera->low_gain_peak_time(ipix);
             }
             event.dl0->add_tel(tel_id, std::move(dl0camera));
         }

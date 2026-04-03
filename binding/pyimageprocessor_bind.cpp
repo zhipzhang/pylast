@@ -24,6 +24,7 @@ void bind_imageprocessor(nb::module_ &m)
         .def_static("dilate_image", [](const CameraGeometry& camera_geometry, Eigen::Vector<bool, -1>& image_mask) {
             ImageProcessor::dilate_image(camera_geometry, image_mask);
         });
+    m.def("tailcuts_clean", &ImageProcessor::tailcuts_clean);
 }
 
 NB_MODULE(_pylast_imageprocessor, m){

@@ -15,6 +15,6 @@ class PrototypeCalibrator
 
 
     static constexpr int ALL_SAMPLES = 256;
-    static constexpr int BASE_WINDOW = 40;
+    static constexpr int BASE_WINDOW = 50;
 };
 
