@@ -407,6 +407,29 @@ void RootWriter::write_simulation_shower(const ArrayEvent &event) {
   shower_tree->Fill();
 }
 
+void RootWriter::write_c0(const ArrayEvent &event) {
+  if (!file) {
+    throw std::runtime_error("file not open");
+  }
+  if (!event.c0.has_value()) {
+    return;
+  }
+  auto c0_tree = get_tree("c0");
+  if (!c0_tree) {
+    spdlog::debug("initialize c0");
+    initialize_data_level("c0", helper.root_c0_camera);
+    c0_tree = get_tree("c0");
+  }
+  const auto &c0 = event.c0.value();
+  auto &root_c0_camera = helper.root_c0_camera.value();
+  root_c0_camera.event_id = event.event_id;
+  for (const auto &[tel_id, camera] : c0.tels) {
+    root_c0_camera.tel_id = tel_id;
+    root_c0_camera = std::move(*camera);
+    c0_tree->Fill();
+  }
+}
+
 void RootWriter::write_r0(const ArrayEvent &event) {
   if (!file) {
     throw std::runtime_error("file not open");

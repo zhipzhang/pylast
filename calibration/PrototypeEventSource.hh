@@ -6,6 +6,7 @@
 #include "TTreeReader.h"
 #include "TTreeReaderValue.h"
 #include "TTreeReaderArray.h"
+#include "mjd.hh"
 #include <memory>
 #include <string>
 
@@ -57,5 +58,7 @@ private:
     constexpr static int NUM_SAMPLES = 256;
     static std::string configpath;
     std::string configfile;
+
+    bool warn_board_change = false;
 
 };

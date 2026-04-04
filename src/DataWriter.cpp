@@ -10,6 +10,8 @@ void DataWriter::registerParams()
     registerParam<bool>("write_simulation_shower", true, write_simulation_shower_enabled);
     registerParam<bool>("write_simulated_camera", true, write_simulated_camera_enabled);
     registerParam<bool>("write_simulated_camera_image", false, write_simulated_camera_image_enabled);
+    registerParam<bool>("write_c0", false, write_c0_enabled);
+    registerParam<bool>("write_c1", false, write_c1_enabled);
     registerParam<bool>("write_r0", false, write_r0_enabled);
     registerParam<bool>("write_r1", false, write_r1_enabled);
     registerParam<bool>("write_dl0", false, write_dl0_enabled);
@@ -64,7 +66,14 @@ void DataWriter::operator()(const ArrayEvent& event)
     {
         file_writer->write_r0(event);
     }
-    
+    if(write_c0_enabled && event.c0.has_value())
+    {
+        file_writer->write_c0(event);
+    }
+    if(write_c1_enabled && event.c1.has_value())
+    {
+        file_writer->write_c1(event);
+    }
     if(write_r1_enabled && event.r1.has_value())
     {
         file_writer->write_r1(event);
@@ -109,6 +118,20 @@ void DataWriter::write_simulated_camera(const ArrayEvent& event)
     if(file_writer)
     {
         file_writer->write_simulated_camera(event);
+    }
+}
+void DataWriter::write_c0(const ArrayEvent& event)
+{
+    if(file_writer)
+    {
+        file_writer->write_c0(event);
+    }
+}
+void DataWriter::write_c1(const ArrayEvent& event)
+{
+    if(file_writer)
+    {
+        file_writer->write_c1(event);
     }
 }
 void DataWriter::write_r0(const ArrayEvent& event)

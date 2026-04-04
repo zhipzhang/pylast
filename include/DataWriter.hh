@@ -35,6 +35,8 @@ public:
   virtual void write_simulation_shower(const ArrayEvent &event) = 0;
   virtual void write_simulated_camera(const ArrayEvent &event,
                                       bool write_image = false) = 0;
+  virtual void write_c0(const ArrayEvent &event) = 0;
+  virtual void write_c1(const ArrayEvent &event) = 0;
   virtual void write_r0(const ArrayEvent &event) = 0;
   virtual void write_r1(const ArrayEvent &event) = 0;
   virtual void write_dl0(const ArrayEvent &event) = 0;
@@ -76,6 +78,8 @@ public:
   void write_simulation_shower(const ArrayEvent &event);
   void write_simulated_camera(const ArrayEvent &event);
   void write_r0(const ArrayEvent &event);
+  void write_c0(const ArrayEvent &event);
+  void write_c1(const ArrayEvent &event);
   void write_r1(const ArrayEvent &event);
   void write_dl0(const ArrayEvent &event);
   void write_dl1(const ArrayEvent &event);
@@ -96,6 +100,8 @@ protected:
   bool write_simulation_shower_enabled;
   bool write_simulated_camera_enabled;
   bool write_simulated_camera_image_enabled;
+  bool write_c0_enabled;
+  bool write_c1_enabled;
   bool write_r0_enabled;
   bool write_r1_enabled;
   bool write_dl0_enabled;

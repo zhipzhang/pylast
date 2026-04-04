@@ -25,6 +25,7 @@
 #include "Pointing.hh"
 #include "C0Event.hh"
 #include "C1Event.hh"
+#include "mjd.hh"
 /**
  * @brief Main class to describe an array event
  * 
@@ -43,6 +44,7 @@ public:
     std::optional<Pointing> pointing;
     std::optional<DL2Event> dl2;
     std::unordered_map<int, HillasParameter> rounded_tel_hillas;
+    std::optional<MJD> mjd;
     int event_id;
     int run_id;
 };

@@ -48,6 +48,8 @@ class RootWriter: public FileWriter
         // Methods for writing specific parts of an ArrayEvent
         void write_simulation_shower(const ArrayEvent& event) override;
         void write_simulated_camera(const ArrayEvent& event, bool write_image = false) override;
+        void write_c0(const ArrayEvent& event) override;
+        void write_c1(const ArrayEvent& event) override;
         void write_r0(const ArrayEvent& event) override;
         void write_r1(const ArrayEvent& event) override;
         void write_dl0(const ArrayEvent& event) override;

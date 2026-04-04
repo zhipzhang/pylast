@@ -445,6 +445,44 @@ class RootSimulatedCamera: public NewRootDataLevels<SimulatedCamera>
         RVecB* fake_image_mask_ptr = nullptr;
 
 };
+class RootC0Camera: public NewRootDataLevels<C0Camera>
+{
+    public:
+        RVec<float> low_gain_waveform;
+        RVec<float> high_gain_waveform;
+        RootC0Camera& operator=(C0Camera&& other) noexcept
+        {
+            datalevels = std::move(other);
+            low_gain_waveform = std::move(RVec<float>(datalevels.low_gain_waveform.data(), datalevels.n_pixels * datalevels.n_samples));
+            high_gain_waveform = std::move(RVec<float>(datalevels.high_gain_waveform.data(), datalevels.n_pixels * datalevels.n_samples));
+            return *this;
+        }
+        void initialize_internal_structure(TTree* tree) override
+        {
+            tree->Branch("low_gain_waveform", &low_gain_waveform);
+            tree->Branch("high_gain_waveform", &high_gain_waveform);
+        }
+        void initialize_read_pointer(TTree* tree) override
+        {
+            tree->SetBranchAddress("low_gain_waveform", &low_gain_waveform_ptr);
+            tree->SetBranchAddress("high_gain_waveform", &high_gain_waveform_ptr);
+        }
+        void update_after_get_entry() override
+        {
+            if(low_gain_waveform_ptr)
+            {
+                datalevels.low_gain_waveform = Eigen::Map<Eigen::Matrix<float, -1, -1, Eigen::RowMajor>>(low_gain_waveform_ptr->data(), datalevels.n_pixels, datalevels.n_samples);
+            }
+            if(high_gain_waveform_ptr)
+            {
+                datalevels.high_gain_waveform = Eigen::Map<Eigen::Matrix<float, -1, -1, Eigen::RowMajor>>(high_gain_waveform_ptr->data(), datalevels.n_pixels, datalevels.n_samples);
+            }
+        }
+    private:
+        RVec<float>* low_gain_waveform_ptr = nullptr;
+        RVec<float>* high_gain_waveform_ptr = nullptr;
+};
+
 class RootR0Camera: public NewRootDataLevels<R0Camera>
 {
     public:
@@ -911,6 +949,7 @@ class RootEventHelper
     public:
         std::optional<RootSimulationShower> root_simulation_shower;
         std::optional<RootSimulatedCamera> root_simulation_camera;
+        std::optional<RootC0Camera> root_c0_camera;
         std::optional<RootR0Camera> root_r0_camera;
         std::optional<RootR1Camera> root_r1_camera;
         std::optional<RootDL0Camera> root_dl0_camera;

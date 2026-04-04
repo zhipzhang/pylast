@@ -13,6 +13,7 @@ namespace {
 const std::string kIhepEosUrl = "root://eos01.ihep.ac.cn:/";
 }
 
+constexpr double TIME_2026_01_28_MJD = 61068.41667;
 std::string PrototypeEventSource::configpath = "./config";
 
 void PrototypeEventSource::open_file()
@@ -69,8 +70,14 @@ void PrototypeEventSource::load_all_events()
             C0Event c0_event;
             c0_event.add_tel(1, std::move(c0_camera));
             new_event->c0 = std::move(c0_event);
-            
             event_map[event_id] = std::move(new_event);
+            auto mjd = std::make_optional<MJD>(MJD::from_rabbit_time(**rv_rabbit_time, **rv_rabbittime));
+            if(mjd > TIME_2026_01_28_MJD)
+            {
+                spdlog::warn("Be careful that here we have a board change after 2026-01-28");
+                warn_board_change = true;
+            }
+            event_map[event_id]->mjd = mjd;
         }
 
         // 获取并填充当前条目的波形
@@ -167,9 +174,23 @@ void PrototypeEventSource::load_all_simulated_showers()
 
 int PrototypeEventSource::mapping_fee_channel_to_pixels(short fee_id, unsigned char channel)
 {
+
+
+    if(warn_board_change)
+    {
+        if(fee_id == 76)
+        {
+            fee_id = 80;
+        }
+        if (fee_id == 80)
+        {
+            fee_id = 76;
+        }
+    }
+
     if(fee_id == 220)
     {
-        fee_id =80;
+        fee_id = 76 ;
     }
     if(fee_id == 219)
     {
