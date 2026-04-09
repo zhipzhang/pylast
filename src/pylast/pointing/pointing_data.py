@@ -51,7 +51,7 @@ class PointingData:
 
         if isinstance(time, float):
             if time < self.mjd_float.min() or time > self.mjd_float.max():
-                raise ValueError("Time is out of range")
+                raise ValueError(f"Time {time} is out of range {self.mjd_float.min()} to {self.mjd_float.max()}")
 
             az_interp = np.interp(time, self.mjd_float, self.data["azimuth"])
             alt_interp = np.interp(time, self.mjd_float, self.data["altitude"])
