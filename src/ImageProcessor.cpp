@@ -60,6 +60,7 @@ void ImageProcessor::registerParams() {
   registerParam<double>("random_gaussian_level", 0, random_gaussian_level);
   registerParam<bool>("only_use_largerst_island", false,
                       only_use_largerst_island);
+  registerParam<bool>("use_gaussian_fit", false, use_gaussian_fit);
 }
 
 Eigen::Vector<bool, -1>
@@ -95,7 +96,7 @@ void ImageProcessor::operator()(ArrayEvent &event) {
     if (use_cut_radius) {
       auto masked_radius = ImageProcessor::cut_pixel_distance(
           subarray.tels.at(tel_id).camera_description.camera_geometry,
-          subarray.tels.at(tel_id).optics_description.equivalent_focal_length,
+          subarray.tels.at(tel_id).optics_description.effective_focal_length,
           cut_radius);
       image_mask = image_mask.array() && masked_radius.array();
     }
@@ -504,13 +505,17 @@ void ImageProcessor::handle_simulation_level(ArrayEvent &event) {
 
     // Don't consider second level clean for now
     //TwoGaussianFitResult two_gaussian_fit;
-    TwoGaussianFitResult two_gaussian_fit = ImageProcessor::two_gaussian_fit(
-        subarray.tels.at(tel_id).camera_description.camera_geometry,
-        masked_image, image_mask, hillas_parameter);
+    TwoGaussianFitResult two_gaussian_fit;
+    if(use_gaussian_fit)
+    {
+      two_gaussian_fit = ImageProcessor::two_gaussian_fit(
+          subarray.tels.at(tel_id).camera_description.camera_geometry,
+          masked_image, image_mask, hillas_parameter);
+    }
     if (use_cut_radius) {
       auto pixel_mask = cut_pixel_distance(
           subarray.tels.at(tel_id).camera_description.camera_geometry,
-          subarray.tels.at(tel_id).optics_description.equivalent_focal_length,
+          subarray.tels.at(tel_id).optics_description.effective_focal_length,
           cut_radius);
       pixel_mask = pixel_mask && image_mask;
       Eigen::VectorXd rounded_masked_image =

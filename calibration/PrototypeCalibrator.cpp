@@ -4,7 +4,12 @@
 #include "spdlog/spdlog.h"
 
 
-
+void PrototypeCalibrator::registerParams()
+{
+    registerParam<int>("baseline_interval_window", 50, baseline_interval_window);
+    registerParam<int>("sum_before_peak_window", 10, sum_before_peak_window);
+    registerParam<int>("sum_after_peak_window", 30, sum_after_peak_window);
+}
 
 double PrototypeCalibrator::extract_waveform_base(const Eigen::VectorXf& waveform, int window)
 {
@@ -46,14 +51,14 @@ void PrototypeCalibrator::operator()(ArrayEvent& event)
         Eigen::VectorXi high_gain_peak_time{c0_camera->n_pixels};
         for(int ipix = 0; ipix < c0_camera->n_pixels; ipix++)
         {
-            low_gain_base(ipix) = extract_waveform_base(c0_camera->low_gain_waveform.row(ipix), BASE_WINDOW);
-            high_gain_base(ipix) = extract_waveform_base(c0_camera->high_gain_waveform.row(ipix), BASE_WINDOW);
+            low_gain_base(ipix) = extract_waveform_base(c0_camera->low_gain_waveform.row(ipix), baseline_interval_window);
+            high_gain_base(ipix) = extract_waveform_base(c0_camera->high_gain_waveform.row(ipix), baseline_interval_window);
             auto [low_gain_peak_value, low_gain_peak_index] = extract_waveform_peak(c0_camera->low_gain_waveform.row(ipix));
             low_gain_peak(ipix) = low_gain_peak_value;
             auto [high_gain_peak_value, high_gain_peak_index] = extract_waveform_peak(c0_camera->high_gain_waveform.row(ipix));
             high_gain_peak(ipix) = high_gain_peak_value;
-            low_gain_area(ipix) = integrate_waveform(c0_camera->low_gain_waveform.row(ipix), BASE_WINDOW, ALL_SAMPLES) - low_gain_base(ipix) * (ALL_SAMPLES - BASE_WINDOW);
-            high_gain_area(ipix) = integrate_waveform(c0_camera->high_gain_waveform.row(ipix), BASE_WINDOW, ALL_SAMPLES) - high_gain_base(ipix) * (ALL_SAMPLES - BASE_WINDOW);
+            low_gain_area(ipix) = integrate_waveform(c0_camera->low_gain_waveform.row(ipix), low_gain_peak_index - sum_before_peak_window, low_gain_peak_index + sum_after_peak_window) - low_gain_base(ipix) * (sum_before_peak_window + sum_after_peak_window);
+            high_gain_area(ipix) = integrate_waveform(c0_camera->high_gain_waveform.row(ipix), high_gain_peak_index - sum_before_peak_window, high_gain_peak_index + sum_after_peak_window) - high_gain_base(ipix) * (sum_before_peak_window + sum_after_peak_window);
             low_gain_peak_time(ipix) = low_gain_peak_index;
             high_gain_peak_time(ipix) = high_gain_peak_index ;
 

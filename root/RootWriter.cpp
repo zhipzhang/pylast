@@ -325,7 +325,7 @@ void RootWriter::write_event_index(const ArrayEvent &event) {
   }
 
   // Check for any available data level to index
-  if (!event.r0.has_value() && !event.r1.has_value() &&
+  if ( !event.c0.has_value() && !event.c1.has_value() && !event.r0.has_value() && !event.r1.has_value() &&
       !event.dl0.has_value() && !event.dl1.has_value() &&
       !event.dl2.has_value()) {
     return;
@@ -348,6 +348,16 @@ void RootWriter::write_event_index(const ArrayEvent &event) {
   // Get telescopes from the first available data level
   if (event.simulation.has_value()) {
     for (const auto tel_id : event.simulation->get_ordered_tels()) {
+      unique_telescopes.insert(tel_id);
+    }
+  }
+  if (event.c0.has_value()) {
+    for (const auto tel_id : event.c0->get_ordered_tels()) {
+      unique_telescopes.insert(tel_id);
+    }
+  }
+  if (event.c1.has_value()) {
+    for (const auto tel_id : event.c1->get_ordered_tels()) {
       unique_telescopes.insert(tel_id);
     }
   }
@@ -412,6 +422,7 @@ void RootWriter::write_c0(const ArrayEvent &event) {
     throw std::runtime_error("file not open");
   }
   if (!event.c0.has_value()) {
+    spdlog::warn("c0 not found, skipping writing c0");
     return;
   }
   auto c0_tree = get_tree("c0");
@@ -430,6 +441,14 @@ void RootWriter::write_c0(const ArrayEvent &event) {
   }
 }
 
+void RootWriter::write_c1(const ArrayEvent &event) {
+  if (!file) {
+    throw std::runtime_error("file not open");
+  }
+  if (!event.c1.has_value()) {
+    return;
+  }
+}
 void RootWriter::write_r0(const ArrayEvent &event) {
   if (!file) {
     throw std::runtime_error("file not open");

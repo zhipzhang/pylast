@@ -19,6 +19,7 @@
 #include "spdlog/spdlog.h"
 #include "C0Event.hh"
 #include "C1Event.hh"
+#include "mjd.hh"
 namespace nb = nanobind;
 
 void bind_dl2_event(nb::module_ &m) {
@@ -430,10 +431,21 @@ void bind_tel_monitor(nb::module_ &m) {
         
 void bind_pointing_event(nb::module_ &m) {
     nb::class_<Pointing>(m, "Pointing")
-        .def_ro("array_azimuth", &Pointing::array_azimuth)
-        .def_ro("array_altitude", &Pointing::array_altitude)
+        .def_rw("array_azimuth", &Pointing::array_azimuth)
+        .def_rw("array_altitude", &Pointing::array_altitude)
+        .def_prop_ro("tels", &Pointing::get_tels)
+        .def("add_tel", [](Pointing& self, int tel_id, PointingTelescope telescope) {
+            self.add_tel(tel_id, telescope);
+        })
         .def("__repr__", [](Pointing& self) {
             return fmt::format("Pointing:\n  array_azimuth: {}\n  array_altitude: {}", self.array_azimuth, self.array_altitude);
+        });
+    nb::class_<PointingTelescope>(m, "PointingTelescope")
+        .def(nb::init<double, double>(), nb::arg("azimuth"), nb::arg("altitude"))
+        .def_rw("azimuth", &PointingTelescope::azimuth)
+        .def_rw("altitude", &PointingTelescope::altitude)
+        .def("__repr__", [](PointingTelescope& self) {
+            return fmt::format("PointingTelescope:\n  azimuth: {}\n  altitude: {}", self.azimuth, self.altitude);
         });
 }
 void bind_array_event(nb::module_ &m) {
@@ -450,6 +462,7 @@ void bind_array_event(nb::module_ &m) {
         .def_ro("pointing", &ArrayEvent::pointing)
         .def_ro("event_id", &ArrayEvent::event_id)
         .def_ro("run_id", &ArrayEvent::run_id)
+        .def_ro("mjd", &ArrayEvent::mjd)
         .def("__repr__", [](ArrayEvent& self) {
             std::string repr = "ArrayEvent:\n";
             
@@ -575,6 +588,14 @@ void bind_c1_event(nb::module_ &m) {
                               self.high_gain_peak_time.rows(), self.high_gain_peak_time.cols());
         });
 }
+void bind_mjd(nb::module_ &m) {
+    nb::class_<MJD>(m, "MJD")
+        .def_static("from_rabbit_time", &MJD::from_rabbit_time)
+        .def("to_float", &MJD::to_float)
+        .def("__repr__", [](MJD& self) {
+            return fmt::format("MJD:\n  mjd_float: {}", self.to_float());
+        });
+}
 NB_MODULE(_pylast_arrayevent, m) {
     bind_c0_event(m);
     bind_c1_event(m);
@@ -588,5 +609,6 @@ NB_MODULE(_pylast_arrayevent, m) {
     bind_tel_monitor(m);
     bind_array_event(m);
     bind_simulated_shower_array(m);
+    bind_mjd(m);
     
 }

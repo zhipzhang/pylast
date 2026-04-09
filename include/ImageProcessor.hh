@@ -78,7 +78,7 @@ private:
   bool use_random_gaussian = false;
   double random_gaussian_level = 0;
   bool only_use_largerst_island = false;
-
+  bool use_gaussian_fit = false;
   void handle_simulation_level(ArrayEvent &event);
   bool fake_trigger(const CameraGeometry &camera_geometry,
                     const Eigen::VectorXd &image, double threshold,

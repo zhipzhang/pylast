@@ -16,9 +16,10 @@ void bind_datawriter(nb::module_ &m)
         .def("__call__", [](DataWriter& self, ArrayEvent& event) {
             self(event);
         })
-        .def("__enter__", [](DataWriter& self) {
-        })
-        .def("__exit__", [](DataWriter& self, const std::exception& exc_type, const std::exception& exc_value, const std::exception& traceback) {
+        .def("__enter__", [](DataWriter& self) -> DataWriter& {
+            return self; 
+        }, nb::rv_policy::reference_internal)
+        .def("__exit__", [](DataWriter& self, nb::args) {
             self.close();
         })
         .def("close", &DataWriter::close)

@@ -76,6 +76,7 @@ void RootEventHelper::process_tel_level_data(ArrayEvent &event, int tel_id) {
   // Process different telescope data levels using template function
   process_tel_data_level(root_r0_camera, event.r0, tel_id);
   process_tel_data_level(root_simulation_camera, event.simulation, tel_id);
+  process_tel_data_level(root_c0_camera, event.c0, tel_id);
   process_tel_data_level(root_r1_camera, event.r1, tel_id);
   process_tel_data_level(root_dl0_camera, event.dl0, tel_id);
   process_tel_data_level(root_dl1_camera, event.dl1, tel_id);
@@ -86,7 +87,7 @@ void RootEventHelper::process_tel_level_data(ArrayEvent &event, int tel_id) {
 void RootEventHelper::process_dl2_rec_data(ArrayEvent &event) {
   // Ensure DL2Event exists before processing reconstruction data
   if (!event.dl2.has_value()) {
-    event.dl2 = DL2Event();
+    return;
   }
 
   // Process DL2 reconstruction data using template function

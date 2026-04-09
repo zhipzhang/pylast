@@ -188,6 +188,7 @@ void RootEventSource::initialize_array_event()
     initialize_dir("/events", "event_index", event_helper.root_event_index);
     // Initialize R0 data level
     initialize_data_level("simulation", event_helper.root_simulation_camera);
+    initialize_data_level("c0", event_helper.root_c0_camera);
     initialize_data_level("r0", event_helper.root_r0_camera);
     initialize_data_level("r1", event_helper.root_r1_camera);
     initialize_data_level("dl0", event_helper.root_dl0_camera);

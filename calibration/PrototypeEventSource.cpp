@@ -78,6 +78,7 @@ void PrototypeEventSource::load_all_events()
                 warn_board_change = true;
             }
             event_map[event_id]->mjd = mjd;
+            event_map[event_id]->pointing = Pointing();
         }
 
         // 获取并填充当前条目的波形

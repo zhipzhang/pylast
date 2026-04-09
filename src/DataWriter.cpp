@@ -45,6 +45,47 @@ void DataWriter::setUp()
     {
         file_writer->write_simulation_config();
     }
+    spdlog::info("DataWriter setUp completed");
+    if(write_c0_enabled)
+    {
+        spdlog::info("option write_c0 is enabled, will write c0");
+    }
+    if(write_c1_enabled)
+    {
+        spdlog::info("option write_c1 is enabled, will write c1");
+    }
+    if(write_r0_enabled)
+    {
+        spdlog::info("option write_r0 is enabled, will write r0");
+    }
+    if(write_r1_enabled)
+    {
+        spdlog::info("option write_r1 is enabled, will write r1");
+    }
+    if(write_dl0_enabled)
+    {
+        spdlog::info("option write_dl0 is enabled, will write dl0");
+    }
+    if(write_dl1_enabled)
+    {
+        spdlog::info("option write_dl1 is enabled, will write dl1");
+    }
+    if(write_dl1_enabled)
+    {
+        spdlog::info("option write_dl2 is enabled, will write dl2");
+    }
+    if(write_dl2_enabled)
+    {
+        spdlog::info("option write_monitor is enabled, will write monitor");
+    }
+    if(write_monitor_enabled)
+    {
+        spdlog::info("option write_pointing is enabled, will write pointing");
+    }
+    if(write_pointing_enabled)
+    {
+        spdlog::info("option write_simulation_shower is enabled, will write simulation shower");
+    }
 }
 
 void DataWriter::operator()(const ArrayEvent& event)
