@@ -14,6 +14,7 @@
 #include "TelMonitor.hh"
 #include "EventMonitor.hh"
 #include "DL0Event.hh"
+#include "nanobind/stl/pair.h"
 #include "DL1Event.hh"
 #include "DL2Event.hh"
 #include "spdlog/spdlog.h"
@@ -230,6 +231,7 @@ void bind_dl1_event(nb::module_ &m) {
         .def_ro("concentration_cog", &ConcentrationParameter::concentration_cog)
         .def_ro("concentration_core", &ConcentrationParameter::concentration_core)
         .def_ro("concentration_pixel", &ConcentrationParameter::concentration_pixel)
+        .def_ro("concentration_frac2", &ConcentrationParameter::concentration_frac2)
         .def("__repr__", [](ConcentrationParameter& self) {
             return fmt::format("ConcentrationParameter:\n  concentration_cog: {}\n  concentration_core: {}\n  concentration_pixel: {}", 
                               self.concentration_cog, self.concentration_core, self.concentration_pixel);
@@ -274,7 +276,11 @@ void bind_dl1_event(nb::module_ &m) {
 }
 void bind_dl0_event(nb::module_ &m) {
     nb::class_<DL0Event>(m, "DL0Event")
+        .def(nb::init<>()) // Expose the default constructor
         .def_prop_ro("tels", &DL0Event::get_tels)
+        .def("add_tel", [](DL0Event& self, int tel_id, DL0Camera& dl0camera) {
+            self.add_tel(tel_id, std::move(dl0camera));
+        })
         .def("__repr__", [](DL0Event& self) {
             std::string repr = "DL0Event:\n";
             auto tels = self.get_tels();
@@ -291,12 +297,16 @@ void bind_dl0_event(nb::module_ &m) {
             return repr;
         });
     nb::class_<DL0Camera>(m, "DL0Camera")
-        .def_ro("image", &DL0Camera::image)
-        .def_ro("peak_time", &DL0Camera::peak_time)
+        .def(nb::init<>()) // Expose the default constructor
+        .def(nb::init<const Eigen::VectorXd&, const Eigen::VectorXd&>(), 
+             nb::arg("image"), nb::arg("peak_time"),
+             "Constructor with image and peak_time")
+        .def_rw("image", &DL0Camera::image)
+        .def_rw("peak_time", &DL0Camera::peak_time)
         .def("__repr__", [](DL0Camera& self) {
-            return fmt::format("DL0Camera:\n  image shape: {}x{}\n  peak_time shape: {}x{}", 
-                              self.image.rows(), self.image.cols(),
-                              self.peak_time.rows(), self.peak_time.cols());
+            return fmt::format("DL0Camera:\n  image shape: [{}]\n  peak_time shape: [{}]", 
+                              self.image.size(),
+                              self.peak_time.size());
         });
 }
 void bind_r1_event(nb::module_ &m) {
@@ -457,6 +467,9 @@ void bind_array_event(nb::module_ &m) {
         .def_ro("monitor", &ArrayEvent::monitor)
         .def_ro("r1", &ArrayEvent::r1)
         .def_ro("dl0", &ArrayEvent::dl0)
+        .def("initialize_dl0", [](ArrayEvent& self) {
+            self.dl0 = DL0Event();
+        })
         .def_ro("dl1", &ArrayEvent::dl1)
         .def_ro("dl2", &ArrayEvent::dl2, nb::rv_policy::reference_internal)
         .def_ro("pointing", &ArrayEvent::pointing)
@@ -592,6 +605,7 @@ void bind_mjd(nb::module_ &m) {
     nb::class_<MJD>(m, "MJD")
         .def_static("from_rabbit_time", &MJD::from_rabbit_time)
         .def("to_float", &MJD::to_float)
+        .def("to_rabbit_time", &MJD::to_rabbit_time)
         .def("__repr__", [](MJD& self) {
             return fmt::format("MJD:\n  mjd_float: {}", self.to_float());
         });

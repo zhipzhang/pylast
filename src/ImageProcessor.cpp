@@ -15,6 +15,15 @@
 std::random_device rd;
 std::mt19937 gen(rd());
 
+double sumOfTopTwo(const Eigen::VectorXd& vec) {
+  std::vector<double> copy(vec.data(), vec.data() + vec.size());
+  
+  // 将第2大的元素放到第1个位置，左边都是比它大的
+  std::nth_element(copy.begin(), copy.begin() + 1, copy.end(), std::greater<double>());
+  
+  // 前两个就是最大的两个（虽然顺序不一定有序）
+  return copy[0] + copy[1];
+}
 Eigen::Vector<bool, -1> ImageProcessor::tailcuts_clean(
     const CameraGeometry &camera_geometry, const Eigen::VectorXd &image,
     double picture_thresh, double boundary_thresh, bool keep_isolated_pixels,
@@ -302,6 +311,7 @@ ConcentrationParameter ImageProcessor::concentration_parameter(
     const HillasParameter &hillas_parameter) {
   double concentration_pixel =
       masked_image.maxCoeff() / hillas_parameter.intensity;
+  double concentration_frac2 =  sumOfTopTwo(masked_image)/hillas_parameter.intensity;
   auto delta_x = camera_geometry.pix_x_fov.array() - hillas_parameter.x;
   auto delta_y = camera_geometry.pix_y_fov.array() - hillas_parameter.y;
   Eigen::ArrayXd distance =
@@ -330,7 +340,7 @@ ConcentrationParameter ImageProcessor::concentration_parameter(
       masked_image.dot(mask_core.cast<double>().matrix()) /
       hillas_parameter.intensity;
   return ConcentrationParameter{concentration_cog, concentration_core,
-                                concentration_pixel};
+                                concentration_pixel, concentration_frac2};
 }
 MorphologyParameter
 ImageProcessor::morphology_parameter(const CameraGeometry &camera_geometry,
@@ -340,7 +350,7 @@ ImageProcessor::morphology_parameter(const CameraGeometry &camera_geometry,
   Eigen::Vector<bool, -1> pixel_in_island =
       Eigen::Vector<bool, -1>::Zero(image_mask.size());
   size_t island_id = 0;
-  for (size_t i = 0; i < image_mask.size(); ++i) {
+  for (auto i = 0; i < image_mask.size(); ++i) {
     std::queue<size_t> queue;
     if (image_mask[i] && !pixel_in_island[i]) {
       queue.push(i);

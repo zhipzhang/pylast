@@ -8,6 +8,7 @@
  *  --------------------
  *  events (N)
  *    event_id, run_id
+ *    mjd
  *    simulation: option<{
  *      energy/alt/az/core_x/y/h_first_int/x_max/h_max/starting_grammage/shower_primary_id
  *      triggered_tels : list<int32>
@@ -171,12 +172,14 @@ using LeakageRecord = RecordBuilder<
 
 // --- ConcentrationParameter ---
 enum ConcField : std::size_t {
-    conc_cog = 0, conc_core, conc_pixel
+    conc_cog = 0, conc_core, conc_pixel,
+    conc_frac2
 };
 using ConcentrationRecord = RecordBuilder<
     Field<conc_cog,   DoubleListBuilder>,
     Field<conc_core,  DoubleListBuilder>,
-    Field<conc_pixel, DoubleListBuilder>
+    Field<conc_pixel, DoubleListBuilder>,
+    Field<conc_frac2, DoubleListBuilder>
 >;
 
 // --- MorphologyParameter  (integer counts) ---
@@ -418,6 +421,7 @@ using SimRecord = RecordBuilder<
 enum TopField : std::size_t {
     ev_event_id = 0,
     ev_run_id,
+    ev_mjd,
     ev_simulation,
     ev_pointing,
     ev_dl0,
@@ -427,6 +431,7 @@ enum TopField : std::size_t {
 using TopRecordBuilder = RecordBuilder<
     Field<ev_event_id,   NumpyBuilder<int32_t>>,
     Field<ev_run_id,     NumpyBuilder<int32_t>>,
+    Field<ev_mjd,        NumpyBuilder<double>>,
     Field<ev_simulation, IndexedOptionBuilder<int64_t, SimRecord>>,
     Field<ev_pointing,   IndexedOptionBuilder<int64_t, PtRecord>>,
     Field<ev_dl0,        IndexedOptionBuilder<int64_t, DL0Record>>,
@@ -559,16 +564,19 @@ inline void begin_concentration_lists(ConcentrationRecord& r) {
     r.content<conc_cog>().begin_list();
     r.content<conc_core>().begin_list();
     r.content<conc_pixel>().begin_list();
+    r.content<conc_frac2>().begin_list();
 }
 inline void append_concentration(ConcentrationRecord& r, const ConcentrationParameter& c) {
     r.content<conc_cog>().content().append(c.concentration_cog);
     r.content<conc_core>().content().append(c.concentration_core);
     r.content<conc_pixel>().content().append(c.concentration_pixel);
+    r.content<conc_frac2>().content().append(c.concentration_frac2);
 }
 inline void end_concentration_lists(ConcentrationRecord& r) {
     r.content<conc_cog>().end_list();
     r.content<conc_core>().end_list();
     r.content<conc_pixel>().end_list();
+    r.content<conc_frac2>().end_list();
 }
 
 inline void begin_morphology_lists(MorphologyRecord& r) {
@@ -955,6 +963,7 @@ public:
         builder.set_fields(Map{
             {ev_event_id,   "event_id"},
             {ev_run_id,     "run_id"},
+            {ev_mjd,        "mjd"},
             {ev_simulation, "simulation"},
             {ev_pointing,   "pointing"},
             {ev_dl0,        "dl0"},
@@ -1003,7 +1012,7 @@ public:
             {leak_intensity_w1, "intensity_width_1"}, {leak_intensity_w2, "intensity_width_2"}
         });
         simtels_rec.content<simtel_concentration>().set_fields(Map{
-            {conc_cog, "cog"}, {conc_core, "core"}, {conc_pixel, "pixel"}
+            {conc_cog, "cog"}, {conc_core, "core"}, {conc_pixel, "pixel"}, {conc_frac2, "frac2"}
         });
         simtels_rec.content<simtel_morphology>().set_fields(Map{
             {morph_n_pixels, "n_pixels"}, {morph_n_islands, "n_islands"},
@@ -1059,7 +1068,8 @@ public:
             {leak_intensity_w1, "intensity_width_1"}, {leak_intensity_w2, "intensity_width_2"}
         });
         dl1_rec.content<dl1_concentration>().set_fields(Map{
-            {conc_cog, "cog"}, {conc_core, "core"}, {conc_pixel, "pixel"}
+            {conc_cog, "cog"}, {conc_core, "core"}, {conc_pixel, "pixel"},
+            {conc_frac2, "frac2"}
         });
         dl1_rec.content<dl1_morphology>().set_fields(Map{
             {morph_n_pixels, "n_pixels"}, {morph_n_islands, "n_islands"},
@@ -1144,6 +1154,9 @@ public:
 
         builder.content<ev_event_id>().append(static_cast<int32_t>(event.event_id));
         builder.content<ev_run_id>().append(static_cast<int32_t>(event.run_id));
+
+        // mjd
+        builder.content<ev_mjd>().append(event.mjd->to_float());
 
         // simulation
         if (event.simulation.has_value()) {

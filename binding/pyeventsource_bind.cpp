@@ -13,25 +13,7 @@
 #include "PrototypeEventSource.hh"
 #include "nanobind/eigen/dense.h"
 #include "spdlog/fmt/fmt.h"
-#include "PrototypeCalibrator.hh"
 namespace nb = nanobind;
-
-void bind_prototype_calibrator(nb::module_ &m) {
-    nb::class_<PrototypeCalibrator>(m, "PrototypeCalibrator")
-        .def(nb::init<>())
-        .def("__call__", [](PrototypeCalibrator& self, ArrayEvent& event) {
-            self(event);
-        })
-        .def("extract_waveform_base", &PrototypeCalibrator::extract_waveform_base)
-        .def("integrate_waveform", &PrototypeCalibrator::integrate_waveform)
-        .def("extract_waveform_peak", &PrototypeCalibrator::extract_waveform_peak)
-        .def("__call__", [](PrototypeCalibrator& self, ArrayEvent& event) {
-            self(event);
-        })
-        .def("__repr__", [](PrototypeCalibrator& self) {
-            return "PrototypeCalibrator";
-        });
-}
 
 NB_MODULE(_pyeventsource, m){
     nb::class_<EventSource>(m, "EventSource")
@@ -141,5 +123,4 @@ NB_MODULE(_pyeventsource, m){
 
 
     m.def("write_statistics", RootHistogram::write_statistics, nb::arg("statistics"), nb::arg("filename"));
-    bind_prototype_calibrator(m);
 }

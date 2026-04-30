@@ -58,6 +58,7 @@ public:
   double concentration_core;  // all_pixels inside the hillas ellipse,
                               // transformed to the hillas ellipse
   double concentration_pixel; // brightest pixel
+  double concentration_frac2;
 };
 
 class MorphologyParameter {
