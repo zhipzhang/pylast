@@ -64,6 +64,7 @@ class RootWriter: public FileWriter
         void unique_write_method(const ArrayEvent& event) override
         {
             write_event_index(event);
+            write_mjd(event);
         }
         //void write_simulation_config() override;
     private:
@@ -73,7 +74,7 @@ class RootWriter: public FileWriter
         RootEventHelper helper;
         RootConfigHelper config_helper;
         void write_event_index(const ArrayEvent& event);
-        
+        void write_mjd(const ArrayEvent& event);
         template<typename T>
         void initialize_data_level(const std::string& level_name, std::optional<T>& data_level);
         // Helper methods for initializing branches

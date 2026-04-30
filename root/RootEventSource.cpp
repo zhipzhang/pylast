@@ -186,9 +186,11 @@ void RootEventSource::initialize_array_event()
     // Test What we have in the root file
     initialize_dir("/events/simulation", "shower", event_helper.root_simulation_shower);
     initialize_dir("/events", "event_index", event_helper.root_event_index);
+    initialize_dir("/events", "event_mjd", event_helper.root_event_mjd);
     // Initialize R0 data level
     initialize_data_level("simulation", event_helper.root_simulation_camera);
     initialize_data_level("c0", event_helper.root_c0_camera);
+    initialize_data_level("c1", event_helper.root_c1_camera);
     initialize_data_level("r0", event_helper.root_r0_camera);
     initialize_data_level("r1", event_helper.root_r1_camera);
     initialize_data_level("dl0", event_helper.root_dl0_camera);
@@ -220,7 +222,8 @@ void RootEventSource::initialize_event_index(TTree* tree, const std::string& tre
         throw std::runtime_error("tree is null while initializing event index: " + tree_path);
     }
 
-    bool needs_rebuild = false;
+    return;
+    //bool needs_rebuild = false;
     const auto tree_entries = tree->GetEntries();
     auto count_unique_event_tel_keys = [&](TTree* input_tree) {
         auto* event_id_leaf = input_tree->GetLeaf("event_id");
@@ -250,8 +253,9 @@ void RootEventSource::initialize_event_index(TTree* tree, const std::string& tre
 
     if(tree_index == nullptr)
     {
-        spdlog::warn("tree {} has no BuildIndex; rebuilding with (event_id, tel_id)", tree_path);
-        needs_rebuild = true;
+        throw std::runtime_error("tree " + tree_path + " has no BuildIndex");
+        //spdlog::warn("tree {} has no BuildIndex; rebuilding with (event_id, tel_id)", tree_path);
+        //needs_rebuild = true;
     }
     else if(tree_index->GetN() != tree_entries)
     {
@@ -261,7 +265,7 @@ void RootEventSource::initialize_event_index(TTree* tree, const std::string& tre
             tree_index->GetN(),
             tree_entries
         );
-        needs_rebuild = true;
+        throw std::runtime_error("tree " + tree_path + " index size mismatch (index=" + std::to_string(tree_index->GetN()) + ", entries=" + std::to_string(tree_entries) + "), duplicate keys may exist");
     }
     else
     {
@@ -274,10 +278,11 @@ void RootEventSource::initialize_event_index(TTree* tree, const std::string& tre
                 unique_keys,
                 tree_entries
             );
-            needs_rebuild = true;
+            throw std::runtime_error("tree " + tree_path + " has duplicate (event_id, tel_id) keys (unique_keys=" + std::to_string(unique_keys) + ", entries=" + std::to_string(tree_entries) + ")");
         }
     }
-
+    return;
+    /*
     if(!needs_rebuild)
     {
         return;
@@ -310,6 +315,7 @@ void RootEventSource::initialize_event_index(TTree* tree, const std::string& tre
             << " (unique_keys=" << unique_keys_after_rebuild << ", entries=" << tree_entries << ")";
         throw std::runtime_error(oss.str());
     }
+    */
 }
 
 template<typename T>

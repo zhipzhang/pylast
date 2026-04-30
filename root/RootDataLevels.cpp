@@ -41,7 +41,10 @@ ArrayEvent RootEventHelper::get_event() {
   }
   root_event_index->get_entry(current_entry);
   event.event_id = root_event_index->event_id;
-
+  if(root_event_mjd.has_value())
+  {
+    event.mjd = root_event_mjd->get_entry(current_entry);
+  }
   // Process simulation shower data (event-level, not telescope-level)
   process_event_level_data(event);
 
@@ -70,6 +73,10 @@ void RootEventHelper::process_event_level_data(ArrayEvent &event) {
   if (root_pointing.has_value()) {
     event.pointing = root_pointing->get_entry(current_entry);
   }
+  if(root_dl2_camera.has_value())
+  {
+    event.dl2 = DL2Event();
+  }
 }
 
 void RootEventHelper::process_tel_level_data(ArrayEvent &event, int tel_id) {
@@ -77,6 +84,7 @@ void RootEventHelper::process_tel_level_data(ArrayEvent &event, int tel_id) {
   process_tel_data_level(root_r0_camera, event.r0, tel_id);
   process_tel_data_level(root_simulation_camera, event.simulation, tel_id);
   process_tel_data_level(root_c0_camera, event.c0, tel_id);
+  process_tel_data_level(root_c1_camera, event.c1, tel_id);
   process_tel_data_level(root_r1_camera, event.r1, tel_id);
   process_tel_data_level(root_dl0_camera, event.dl0, tel_id);
   process_tel_data_level(root_dl1_camera, event.dl1, tel_id);
@@ -100,6 +108,9 @@ TelescopeDescription RootConfigHelper::get_telescope_description(int ientry) {
   auto root_optics_description_entry =
       root_optics_description->get_entry(ientry);
   auto root_camera_geometry_entry = root_camera_geometry->get_entry(ientry);
+  root_camera_geometry_entry.pix_x_fov = root_camera_geometry_entry.pix_x/8;
+  root_camera_geometry_entry.pix_y_fov = root_camera_geometry_entry.pix_y/8;
+  root_camera_geometry_entry.pix_width_fov = root_camera_geometry_entry.pix_width/8;
   auto root_camera_readout_entry = root_camera_readout->get_entry(ientry);
 
   return TelescopeDescription{

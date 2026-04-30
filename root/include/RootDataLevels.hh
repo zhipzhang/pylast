@@ -66,6 +66,47 @@ class RootEventIndex
         RVecI* telescopes_ptr = nullptr;
 };
 
+class RootEventMJD
+{
+    public:
+        // Be careful about the precision of the mjd_double
+        int event_id;
+        double mjd_double;
+        unsigned int rabbitTime;
+        unsigned int rabbittime;
+        void initialize_write(TTree* tree)
+        {
+            tree->Branch("event_id", &event_id);
+            tree->Branch("mjd", &mjd_double);
+            tree->Branch("rabbitTime", &rabbitTime);
+            tree->Branch("rabbittime", &rabbittime);
+        }
+        void initialize_read(TTree* tree)
+        {
+            read_tree = tree;
+            tree->SetBranchAddress("event_id", &event_id);
+            tree->SetBranchAddress("mjd", &mjd_double);
+            tree->SetBranchAddress("rabbitTime", &rabbitTime);
+            tree->SetBranchAddress("rabbittime", &rabbittime);
+        }
+        MJD get_entry(int ientry)
+        {
+            if(!read_tree)
+            {
+                throw std::runtime_error("read_tree is not initialized");
+            }
+            read_tree->GetEntry(ientry);
+            return MJD::from_rabbit_time(rabbitTime, rabbittime);
+        }
+        RootEventMJD& operator=(const MJD& other) noexcept
+        {
+            mjd_double = other.to_float();
+            rabbitTime = other.to_rabbit_time().first;
+            rabbittime = other.to_rabbit_time().second;
+            return *this;
+        }
+        TTree* read_tree = nullptr;
+};
 /**
  * @brief Structure for simulation shower data
  */
@@ -381,9 +422,9 @@ class RootSimulatedCamera: public NewRootDataLevels<SimulatedCamera>
         RootSimulatedCamera& operator=(SimulatedCamera&& other) noexcept
         {
             datalevels = std::move(other);
-            true_image = std::move(RVecI(datalevels.true_image.data(), datalevels.true_image.size()));
-            fake_image = std::move(RVecD(datalevels.fake_image.data(), datalevels.fake_image.size()));
-            fake_image_mask = std::move(RVecB(datalevels.fake_image_mask.data(), datalevels.fake_image_mask.size()));
+            true_image = RVecI(datalevels.true_image.data(), datalevels.true_image.size());
+            fake_image = RVecD(datalevels.fake_image.data(), datalevels.fake_image.size());
+            fake_image_mask = RVecB(datalevels.fake_image_mask.data(), datalevels.fake_image_mask.size());
             fake_image_parameters = datalevels.image_parameters;
             return *this;
         }
@@ -453,8 +494,8 @@ class RootC0Camera: public NewRootDataLevels<C0Camera>
         RootC0Camera& operator=(C0Camera&& other) noexcept
         {
             datalevels = std::move(other);
-            low_gain_waveform = std::move(RVec<float>(datalevels.low_gain_waveform.data(), datalevels.n_pixels * datalevels.n_samples));
-            high_gain_waveform = std::move(RVec<float>(datalevels.high_gain_waveform.data(), datalevels.n_pixels * datalevels.n_samples));
+            low_gain_waveform = RVec<float>(datalevels.low_gain_waveform.data(), datalevels.n_pixels * datalevels.n_samples);
+            high_gain_waveform = RVec<float>(datalevels.high_gain_waveform.data(), datalevels.n_pixels * datalevels.n_samples);
             return *this;
         }
         void initialize_internal_structure(TTree* tree) override
@@ -482,7 +523,106 @@ class RootC0Camera: public NewRootDataLevels<C0Camera>
         RVec<float>* low_gain_waveform_ptr = nullptr;
         RVec<float>* high_gain_waveform_ptr = nullptr;
 };
+class RootC1Camera: public NewRootDataLevels<C1Camera>
+{
+    public:
+        RVec<float> low_gain_base;
+        RVec<float> high_gain_base;
+        RVec<float> low_gain_peak;
+        RVec<float> high_gain_peak;
+        RVec<float> low_gain_area;
+        RVec<float> high_gain_area;
+        RVec<int> low_gain_peak_time;
+        RVec<int> high_gain_peak_time;
 
+        RootC1Camera& operator=(C1Camera&& other) noexcept
+        {
+            datalevels = std::move(other);
+            low_gain_base = RVec<float>(datalevels.low_gain_base.data(), datalevels.n_pixels);
+            high_gain_base = RVec<float>(datalevels.high_gain_base.data(), datalevels.n_pixels);
+            low_gain_peak = RVec<float>(datalevels.low_gain_peak.data(), datalevels.n_pixels);
+            high_gain_peak = RVec<float>(datalevels.high_gain_peak.data(), datalevels.n_pixels);
+            low_gain_area = RVec<float>(datalevels.low_gain_area.data(), datalevels.n_pixels);
+            high_gain_area = RVec<float>(datalevels.high_gain_area.data(), datalevels.n_pixels);
+            low_gain_peak_time = RVec<int>(datalevels.low_gain_peak_time.data(), datalevels.n_pixels);
+            high_gain_peak_time = RVec<int>(datalevels.high_gain_peak_time.data(), datalevels.n_pixels);
+            return *this;
+        }
+        void initialize_internal_structure(TTree* tree) override
+        {
+            tree->Branch("low_gain_base", &low_gain_base);
+            tree->Branch("high_gain_base", &high_gain_base);
+            tree->Branch("low_gain_peak", &low_gain_peak);
+            tree->Branch("high_gain_peak", &high_gain_peak);
+            tree->Branch("low_gain_area", &low_gain_area);
+            tree->Branch("high_gain_area", &high_gain_area);
+            tree->Branch("low_gain_peak_time", &low_gain_peak_time);
+            tree->Branch("high_gain_peak_time", &high_gain_peak_time);
+        }
+        void initialize_read_pointer(TTree* tree) override
+        {
+            tree->SetBranchAddress("low_gain_base", &low_gain_base_ptr);
+            tree->SetBranchAddress("high_gain_base", &high_gain_base_ptr);
+            tree->SetBranchAddress("low_gain_peak", &low_gain_peak_ptr);
+            tree->SetBranchAddress("high_gain_peak", &high_gain_peak_ptr);
+            tree->SetBranchAddress("low_gain_area", &low_gain_area_ptr);
+            tree->SetBranchAddress("high_gain_area", &high_gain_area_ptr);
+            tree->SetBranchAddress("low_gain_peak_time", &low_gain_peak_time_ptr);
+            tree->SetBranchAddress("high_gain_peak_time", &high_gain_peak_time_ptr);
+            }
+        void update_after_get_entry() override
+        {
+            if(low_gain_base_ptr)
+            {
+                datalevels.low_gain_base = Eigen::Map<Eigen::VectorXf>(low_gain_base_ptr->data(), low_gain_base_ptr->size());
+            }
+            if(high_gain_base_ptr)
+            {
+                datalevels.high_gain_base = Eigen::Map<Eigen::VectorXf>(high_gain_base_ptr->data(), high_gain_base_ptr->size());
+            }
+            if(low_gain_peak_ptr)
+            {
+                datalevels.low_gain_peak = Eigen::Map<Eigen::VectorXf>(low_gain_peak_ptr->data(), low_gain_peak_ptr->size());
+            }
+            if(high_gain_peak_ptr)
+            {
+                datalevels.high_gain_peak = Eigen::Map<Eigen::VectorXf>(high_gain_peak_ptr->data(), high_gain_peak_ptr->size());
+            }
+            if(low_gain_area_ptr)
+            {
+                datalevels.low_gain_area = Eigen::Map<Eigen::VectorXf>(low_gain_area_ptr->data(), low_gain_area_ptr->size());
+            }
+            if(high_gain_area_ptr)
+            {
+                datalevels.high_gain_area = Eigen::Map<Eigen::VectorXf>(high_gain_area_ptr->data(), high_gain_area_ptr->size());
+            }
+            if(low_gain_peak_time_ptr)
+            {
+                datalevels.low_gain_peak_time = Eigen::Map<Eigen::VectorXi>(low_gain_peak_time_ptr->data(), low_gain_peak_time_ptr->size());
+            }
+            if(high_gain_peak_time_ptr)
+            {
+                datalevels.high_gain_peak_time = Eigen::Map<Eigen::VectorXi>(high_gain_peak_time_ptr->data(), high_gain_peak_time_ptr->size());
+            }
+            if(low_gain_peak_time_ptr)
+            {
+                datalevels.low_gain_peak_time = Eigen::Map<Eigen::VectorXi>(low_gain_peak_time_ptr->data(), low_gain_peak_time_ptr->size());
+            }
+            if(high_gain_peak_time_ptr)
+            {
+                datalevels.high_gain_peak_time = Eigen::Map<Eigen::VectorXi>(high_gain_peak_time_ptr->data(), high_gain_peak_time_ptr->size());
+            }
+        }
+    private:
+        RVec<float>* low_gain_base_ptr = nullptr;
+        RVec<float>* high_gain_base_ptr = nullptr;
+        RVec<float>* low_gain_peak_ptr = nullptr;
+        RVec<float>* high_gain_peak_ptr = nullptr;
+        RVec<float>* low_gain_area_ptr = nullptr;
+        RVec<float>* high_gain_area_ptr = nullptr;
+        RVec<int>* low_gain_peak_time_ptr = nullptr;
+        RVec<int>* high_gain_peak_time_ptr = nullptr;
+};
 class RootR0Camera: public NewRootDataLevels<R0Camera>
 {
     public:
@@ -494,10 +634,10 @@ class RootR0Camera: public NewRootDataLevels<R0Camera>
         RootR0Camera& operator=(R0Camera&& other) noexcept
         {
             datalevels = std::move(other);
-            low_gain_waveform = std::move(RVec<uint16_t>(datalevels.waveform[0].data(), datalevels.n_pixels * datalevels.n_samples));
-            high_gain_waveform = std::move(RVec<uint16_t>(datalevels.waveform[1].data(), datalevels.n_pixels * datalevels.n_samples));
-            low_gain_waveform_sum = std::move(RVec<uint32_t>(datalevels.waveform_sum[0].data(), datalevels.n_pixels));
-            high_gain_waveform_sum = std::move(RVec<uint32_t>(datalevels.waveform_sum[1].data(), datalevels.n_pixels));
+            low_gain_waveform = RVec<uint16_t>(datalevels.waveform[0].data(), datalevels.n_pixels * datalevels.n_samples);
+            high_gain_waveform = RVec<uint16_t>(datalevels.waveform[1].data(), datalevels.n_pixels * datalevels.n_samples);
+            low_gain_waveform_sum = RVec<uint32_t>(datalevels.waveform_sum[0].data(), datalevels.n_pixels);
+            high_gain_waveform_sum = RVec<uint32_t>(datalevels.waveform_sum[1].data(), datalevels.n_pixels);
             return *this;
         }
         void initialize_internal_structure(TTree* tree) override
@@ -563,8 +703,8 @@ class RootR1Camera: public NewRootDataLevels<R1Camera>
         RootR1Camera& operator=(R1Camera&& other) noexcept
         {
             datalevels = std::move(other);
-            waveform = std::move(RVecD(datalevels.waveform.data(), datalevels.n_pixels * datalevels.n_samples));
-            gain_selection = std::move(RVecI(datalevels.gain_selection.data(), datalevels.n_pixels));
+            waveform = RVecD(datalevels.waveform.data(), datalevels.n_pixels * datalevels.n_samples);
+            gain_selection = RVecI(datalevels.gain_selection.data(), datalevels.n_pixels);
             return *this;
         }
         void initialize_internal_structure(TTree* tree) override
@@ -608,8 +748,8 @@ class RootDL0Camera: public NewRootDataLevels<DL0Camera>
         RootDL0Camera& operator=(DL0Camera&& other) noexcept
         {
             datalevels = std::move(other);
-            image = std::move(RVecD(datalevels.image.data(), datalevels.image.size()));
-            peak_time = std::move(RVecD(datalevels.peak_time.data(), datalevels.peak_time.size()));
+            image = RVecD(datalevels.image.data(), datalevels.image.size());
+            peak_time = RVecD(datalevels.peak_time.data(), datalevels.peak_time.size());
             return *this;
         }
         void initialize_internal_structure(TTree* tree) override
@@ -653,9 +793,9 @@ class RootDL1Camera: public NewRootDataLevels<DL1Camera>
         RootDL1Camera& operator=(DL1Camera&& other) noexcept
         {
             datalevels = std::move(other);
-            image = std::move(RVecF(datalevels.image.data(), datalevels.image.size()));
-            peak_time = std::move(RVecF(datalevels.peak_time.data(), datalevels.peak_time.size()));
-            mask = std::move(RVecB(datalevels.mask.data(), datalevels.mask.size()));
+            image = RVecF(datalevels.image.data(), datalevels.image.size());
+            peak_time = RVecF(datalevels.peak_time.data(), datalevels.peak_time.size());
+            mask = RVecB(datalevels.mask.data(), datalevels.mask.size());
             return *this;
         }
         void initialize_internal_structure(TTree* tree) override
@@ -838,8 +978,8 @@ class RootTelMonitor: public NewRootDataLevels<TelMonitor>
         RootTelMonitor& operator=(TelMonitor&& other) noexcept
         {
             datalevels = std::move(other);
-            dc_to_pe = std::move(RVecD(datalevels.dc_to_pe.data(), datalevels.n_channels * datalevels.n_pixels));
-            pedestals = std::move(RVecD(datalevels.pedestal_per_sample.data(), datalevels.n_channels * datalevels.n_pixels));
+            dc_to_pe = RVecD(datalevels.dc_to_pe.data(), datalevels.n_channels * datalevels.n_pixels);
+            pedestals = RVecD(datalevels.pedestal_per_sample.data(), datalevels.n_channels * datalevels.n_pixels);
             return *this;
         }
         void initialize_internal_structure(TTree* tree) override
@@ -950,6 +1090,7 @@ class RootEventHelper
         std::optional<RootSimulationShower> root_simulation_shower;
         std::optional<RootSimulatedCamera> root_simulation_camera;
         std::optional<RootC0Camera> root_c0_camera;
+        std::optional<RootC1Camera> root_c1_camera;
         std::optional<RootR0Camera> root_r0_camera;
         std::optional<RootR1Camera> root_r1_camera;
         std::optional<RootDL0Camera> root_dl0_camera;
@@ -961,6 +1102,7 @@ class RootEventHelper
         std::optional<RootTelMonitor> root_tel_monitor;
         std::optional<RootPointing> root_pointing;
         std::optional<RootEventIndex> root_event_index;
+        std::optional<RootEventMJD> root_event_mjd;
 
 
         ArrayEvent get_event();

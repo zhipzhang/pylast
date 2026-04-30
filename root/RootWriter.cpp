@@ -390,6 +390,31 @@ void RootWriter::write_event_index(const ArrayEvent &event) {
       RVecI(unique_telescopes.begin(), unique_telescopes.end());
   index_tree->Fill();
 }
+void RootWriter::write_mjd(const ArrayEvent &event) {
+  if (!file) {
+    throw std::runtime_error("file not open");
+  }
+  if (!event.mjd.has_value()) {
+    return;
+  }
+  // Using the 
+  auto mjd_tree = get_tree("event_mjd");
+  if (!mjd_tree) {
+    TDirectory *dir = get_or_create_directory("/events/");
+    dir->cd();
+    auto tree = new TTree("event_mjd", "Event MJD");
+    mjd_tree = tree;
+    helper.root_event_mjd = RootEventMJD();
+    helper.root_event_mjd->initialize_write(mjd_tree);
+    trees["event_mjd"] = mjd_tree;
+    directories["event_mjd"] = dir;
+  }
+
+  auto &root_event_mjd = helper.root_event_mjd.value();
+  root_event_mjd.event_id = event.event_id;
+  root_event_mjd = event.mjd.value();
+  mjd_tree->Fill();
+}
 void RootWriter::write_simulation_shower(const ArrayEvent &event) {
   if (!file) {
     throw std::runtime_error("file not open");
@@ -447,6 +472,20 @@ void RootWriter::write_c1(const ArrayEvent &event) {
   }
   if (!event.c1.has_value()) {
     return;
+  }
+  auto c1_tree = get_tree("c1");
+  if (!c1_tree) {
+    spdlog::debug("initialize c1");
+    initialize_data_level("c1", helper.root_c1_camera);
+    c1_tree = get_tree("c1");
+  }
+  const auto &c1 = event.c1.value();
+  auto &root_c1_camera = helper.root_c1_camera.value();
+  root_c1_camera.event_id = event.event_id;
+  for (const auto &[tel_id, camera] : c1.tels) {
+    root_c1_camera.tel_id = tel_id;
+    root_c1_camera = std::move(*camera);
+    c1_tree->Fill();
   }
 }
 void RootWriter::write_r0(const ArrayEvent &event) {
@@ -556,11 +595,11 @@ void RootWriter::write_dl1(const ArrayEvent &event, bool write_image) {
     root_dl1_camera.tel_id = tid;
     if (write_image) {
       root_dl1_camera.image =
-          std::move(RVecF(camera->image.data(), camera->image.size()));
+          RVecF(camera->image.data(), camera->image.size());
       root_dl1_camera.peak_time =
-          std::move(RVecF(camera->peak_time.data(), camera->peak_time.size()));
+          RVecF(camera->peak_time.data(), camera->peak_time.size());
       root_dl1_camera.mask =
-          std::move(RVecB(camera->mask.data(), camera->mask.size()));
+          RVecB(camera->mask.data(), camera->mask.size());
     }
     root_dl1_camera.datalevels.image_parameters = camera->image_parameters;
     dl1_tree->Fill();
@@ -724,6 +763,7 @@ void RootWriter::write_event(const ArrayEvent &event) {
     write_simulation_shower(event);
   }
   write_event_index(event);
+  write_mjd(event);
   if (event.r0.has_value()) {
     write_r0(event);
   }

@@ -26,6 +26,12 @@ class BaseTelContainer{
         BaseTelContainer(BaseTelContainer&& other) noexcept = default;
         BaseTelContainer& operator=(BaseTelContainer&& other) noexcept = default;
         std::unordered_map<int, std::unique_ptr<TelData>> tels;
+
+        template<typename... Args>
+        TelData* add_tel_replace(int tel_id, Args&&... args) {
+            tels.insert_or_assign(tel_id, std::make_unique<TelData>(std::forward<Args>(args)...));
+            return tels[tel_id].get();
+        }
         template<typename... Args>
         TelData* add_tel(int tel_id, Args&&... args) {
             if (tels.find(tel_id) != tels.end()) {
