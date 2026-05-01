@@ -91,7 +91,7 @@ bool HillasReconstructor::reconstruct(const std::unordered_map<int, HillasParame
     auto [fov_x, fov_y, sigma_x, sigma_y] = reconstruction_nominal_intersection();
     auto [rec_az, rec_alt] = convert_to_sky(fov_x, fov_y);
     double rec_offset = compute_angle_separation(rec_az, rec_alt, array_pointing_direction.azimuth, array_pointing_direction.altitude) * 180.0 / M_PI;
-    if((rec_offset < rounded_hillas_radius_threshold) && (rounded_hillas_dicts.size() > 0))
+    if( (rounded_hillas_dicts.size() > 0))
     {
         // Use rounded hillas, and refill the telescopes
         rounded_used = true;
@@ -210,7 +210,7 @@ double HillasReconstructor::reconstruction_hmax(double fov_x, double fov_y,doubl
     
     Eigen::VectorXd hmax_v = Eigen::VectorXd::Zero(telescopes.size());
     Eigen::VectorXd weights = Eigen::VectorXd::Zero(telescopes.size());
-    for(int i = 0; i < telescopes.size(); i++)
+    for(size_t i = 0; i < telescopes.size(); i++)
     {
         int tel_id = telescopes[i];
         double r = sqrt(pow(fov_x - hillas_dicts[tel_id].x, 2) + pow(fov_y - hillas_dicts[tel_id].y, 2));

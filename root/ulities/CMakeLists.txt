@@ -15,8 +15,8 @@ endif()
 #endif()
 
 
-add_executable(merge_source merge_source.cpp)
-target_link_libraries(merge_source PUBLIC root_event root_writer)
+add_executable(merge_source merge_source.cpp ${CMAKE_CURRENT_SOURCE_DIR}/../SourceMerger.cpp)
+target_link_libraries(merge_source PUBLIC root_event)
 if(SKBUILD)
     MESSAGE(STATUS "Installing merge_source")
     install(TARGETS merge_source DESTINATION pylast)

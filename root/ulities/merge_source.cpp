@@ -1,30 +1,46 @@
 /**
  * @file merge_source.cpp
- * @brief Merge multiple ROOT input files into a single output using DataWriter
+ * @brief Merge multiple ROOT input files into a single output using SourceMerger.
+ *        Supports multiple -i flags and wildcard patterns (e.g. -i "sim_*.root").
+ *        Only ROOT files are accepted; SimtelEventSource is not supported.
  */
 
-#include "DataWriter.hh"
-#include "RootEventSource.hh"
+#include "SourceMerger.hh"
+#include "TFile.h"
 #include "args.hxx"
 #include "spdlog/spdlog.h"
-#include <fstream>
+#include <glob.h>
 #include <iostream>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
+
+static std::vector<std::string> expand_glob(const std::string &pattern) {
+  glob_t result;
+  std::vector<std::string> files;
+  int rc = glob(pattern.c_str(), GLOB_TILDE | GLOB_BRACE, nullptr, &result);
+  if (rc == 0) {
+    for (size_t i = 0; i < result.gl_pathc; ++i)
+      files.emplace_back(result.gl_pathv[i]);
+  } else if (rc != GLOB_NOMATCH) {
+    globfree(&result);
+    throw std::runtime_error("glob() failed for pattern: " + pattern);
+  }
+  globfree(&result);
+  return files;
+}
 
 int main(int argc, const char *argv[]) {
   args::ArgumentParser parser(
       "Merge multiple ROOT event files into one output file");
   args::HelpFlag help(parser, "help", "Show help", {'h', "help"});
   args::ValueFlagList<std::string> inputs(
-      parser, "input", "Input ROOT file (-i/--input, repeatable)",
+      parser, "input",
+      "Input ROOT file or glob pattern (-i/--input, repeatable)",
       {'i', "input"});
   args::ValueFlag<std::string> output(
       parser, "output", "Output ROOT file (-o/--output)", {'o', "output"});
-  args::ValueFlag<std::string> config(parser, "config",
-                                      "JSON configuration file (-c/--config)",
-                                      {'c', "config"});
 
   try {
     parser.ParseCLI(argc, argv);
@@ -32,75 +48,59 @@ int main(int argc, const char *argv[]) {
     std::cout << parser;
     return 0;
   } catch (const args::ParseError &e) {
-    std::cerr << e.what() << std::endl;
-    std::cerr << parser;
+    std::cerr << e.what() << "\n" << parser;
     return 1;
   } catch (const args::ValidationError &e) {
-    std::cerr << e.what() << std::endl;
-    std::cerr << parser;
+    std::cerr << e.what() << "\n" << parser;
     return 1;
   }
 
-  const auto in_files = inputs.Get();
-  const auto out_file = output.Get();
-  const auto config_file = config.Get();
-
-  if (in_files.empty()) {
-    std::cerr << "Error: At least one -i/--input is required" << std::endl;
+  if (!inputs) {
+    std::cerr << "Error: At least one -i/--input is required\n";
     return 1;
   }
   if (!output) {
-    std::cerr << "Error: -o/--output is required" << std::endl;
+    std::cerr << "Error: -o/--output is required\n";
     return 1;
   }
 
-  json cfg;
-  if (config) {
-    // Read external JSON config file
-    std::ifstream config_stream(config_file);
-    if (!config_stream.is_open()) {
-      throw std::runtime_error("Cannot open config file: " + config_file);
-    }
-    config_stream >> cfg;
-    spdlog::info("Loaded configuration from {}", config_file);
-  }
-  try {
-    // Open first source to initialize writer and static metadata (subarray,
-    // configs, etc.)
-    auto first_source = std::make_unique<RootEventSource>(
-        in_files.front(), -1, std::vector<int>{}, true);
+  const auto &patterns = inputs.Get();
+  const auto &out_file = output.Get();
 
-    // Configure DataWriter once; it will own and keep the output file open
-    DataWriter *writer = nullptr;
-    if (cfg.contains("data_writer")) {
-      writer = new DataWriter(*first_source, out_file, cfg["data_writer"]);
+  // Expand all patterns / literal paths into a flat file list
+  std::vector<std::string> all_files;
+  for (const auto &pat : patterns) {
+    auto expanded = expand_glob(pat);
+    if (expanded.empty()) {
+      // Treat as a literal path (no match / no wildcards)
+      all_files.push_back(pat);
     } else {
-      writer = new DataWriter(*first_source, out_file);
+      all_files.insert(all_files.end(), expanded.begin(), expanded.end());
     }
+  }
 
-    // Load configuration
+  if (all_files.empty()) {
+    std::cerr << "Error: No input files found after expanding patterns\n";
+    return 1;
+  }
 
-    writer->write_all_simulation_shower(first_source->get_shower_array());
-    writer->write_statistics(first_source->statistics.value(), false);
-    for (const auto &ev : *first_source) {
-      (*writer)(ev);
-    }
-
-    // Process remaining sources: reuse the same writer, just feed events
-    for (size_t i = 1; i < in_files.size(); ++i) {
-      spdlog::info("Merging from {}", in_files[i]);
-      auto src = std::make_unique<RootEventSource>(in_files[i], -1,
-                                                   std::vector<int>{}, false);
-      writer->write_all_simulation_shower(src->get_shower_array());
-      writer->write_statistics(src->statistics.value());
-      for (const auto &ev : *src) {
-        (*writer)(ev);
+  try {
+    // Validate that every file is a proper ROOT file
+    for (const auto &f : all_files) {
+      TFile tf(f.c_str(), "READ");
+      if (tf.IsZombie()) {
+        throw std::runtime_error(
+            "File is not a valid ROOT file "
+            "(SimtelEventSource format is not supported): " +
+            f);
       }
+      tf.Close();
     }
-    // Explicitly close to flush and build indices
-    writer->write_statistics({}, true);
-    writer->close();
-    spdlog::info("Merged {} file(s) into {}", in_files.size(), out_file);
+
+    spdlog::info("Merging {} file(s) into {}", all_files.size(), out_file);
+    SourceMerger merger(out_file);
+    merger(all_files, /*is_root=*/true);
+    spdlog::info("Merge complete -> {}", out_file);
   } catch (const std::exception &e) {
     spdlog::error("Merge failed: {}", e.what());
     return 2;

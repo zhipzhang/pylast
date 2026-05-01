@@ -53,7 +53,9 @@ namespace {
                      model_val = A * std::exp(exponent);
                 }
     
-                fvec(i) = image(i) - model_val;
+                // 5 is the poisson noise i added here
+                fvec(i) = (image(i) - model_val)/sqrt(model_val + 5);
+                //fvec(i) = image(i) - model_val;
             }
             return 0;
         }

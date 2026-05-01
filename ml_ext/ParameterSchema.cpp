@@ -112,6 +112,12 @@ static const field_registry simulated_fields = {
     {"extra_true_psi", REGISTER_SIMULATION_TEL_FIELD("extra_true_psi", image_parameters.extra.true_psi)},
     {"extra_cog_err", REGISTER_SIMULATION_TEL_FIELD("extra_cog_err", image_parameters.extra.cog_err)},
     {"extra_beta_err", REGISTER_SIMULATION_TEL_FIELD("extra_beta_err", image_parameters.extra.beta_err)},
+    {"gaussian_fit_size", REGISTER_SIMULATION_TEL_FIELD("gaussian_fit_size", image_parameters.two_gaussian_fit.fit_size)},
+    {"use_gaussian_fit", FieldEntry{
+        "use_gaussian_fit", [](const ArrayEvent& event, int tel_id) -> int {
+            return static_cast<int>(event.simulation->tels.at(tel_id)->image_parameters.two_gaussian_fit.use_gaussian_fit);
+        }
+    }},
 };
 
 

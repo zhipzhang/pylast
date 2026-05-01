@@ -35,7 +35,7 @@ def convert_to_fov(alt, az, pointing_alt, pointing_az):
     sky_direction = SkyDirection(azimuth = az, altitude = alt)
     telescope_frame = TelescopeFrame(azimuth = pointing_az, altitude = pointing_alt)
     fov_direction = sky_direction.transform_to(telescope_frame)
-    return np.degrees(fov_direction.x_off), np.degrees(fov_direction.y_off)
+    return fov_direction.x_off, fov_direction.y_off
 def register_exe(exename):
     # Get the path to the C++ executable
     # This assumes the executable is installed alongside the Python package

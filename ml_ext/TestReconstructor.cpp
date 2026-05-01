@@ -44,8 +44,8 @@ public:
         double likelihood = reconstructor_->total_likelihood(par[0], par[1], par[2], par[3], par[4], par[5], *event_);
         
         // Log each iteration
-       // spdlog::info("Minuit iteration {}: rec_x={:.6f}, rec_y={:.6f}, core_x={:.2f}, core_y={:.2f}, xmax={:.2f}, energy={:.2f}, -logL={:.4f}", 
-        //            iteration_++, par[0], par[1], par[2], par[3], par[4], std::pow(10, par[5]), likelihood);
+     //  spdlog::info("Minuit iteration {}: rec_x={:.6f}, rec_y={:.6f}, core_x={:.2f}, core_y={:.2f}, xmax={:.2f}, energy={:.2f}, -logL={:.4f}", 
+     //               iteration_++, par[0], par[1], par[2], par[3], par[4], std::pow(10, par[5]), likelihood);
         
         return likelihood;
     }
@@ -90,13 +90,17 @@ void TestReconstructor::operator()(ArrayEvent& event)
     double tilted_core_y = event.dl2->geometry["HillasReconstructor"].tilted_core_y;
     double xmax = event.dl2->geometry["HillasReconstructor"].xmax;
     double log10_energy = log10(event.dl2->energy["EnergyRegressor"].estimate_energy);
-
-    double mean_xmax = (300 + 93 * log10_energy)/std::cos(20 * M_PI / 180 );
+    double mean_xmax = (300 + 93 * std::log10(event.dl2->energy["EnergyRegressor"].estimate_energy))/std::cos(20 * M_PI / 180 );
     double diff_xmax = xmax - mean_xmax;
     if(diff_xmax < -200)
+    {
         diff_xmax = -200;
+    }
     if(diff_xmax > 250)
+    {
         diff_xmax = 250;
+    }
+
 
     tilted_frame = std::make_unique<TiltedGroundFrame>(array_pointing_direction.azimuth, array_pointing_direction.altitude);
     tiled_tel_pos = get_tiled_tel_position(*tilted_frame);
@@ -106,12 +110,7 @@ void TestReconstructor::operator()(ArrayEvent& event)
     double true_core_x = event.simulation->shower.core_x;
     double true_core_y = event.simulation->shower.core_y;
     double true_xmax = event.simulation->shower.x_max;
-
     double true_diff_xmax = true_xmax - true_mean_xmax;
-    if(true_diff_xmax < -200)
-        true_diff_xmax = -200;
-    if(true_diff_xmax > 250)
-        true_diff_xmax = 250;
 
     auto core_pos = CartesianPoint(true_core_x, true_core_y, 0);
     auto tilted_core_pos = core_pos.transform_to_tilted(*tilted_frame);
@@ -131,8 +130,8 @@ void TestReconstructor::operator()(ArrayEvent& event)
     // Create MnUserParameters with initial values and step sizes
     ROOT::Minuit2::MnStrategy strategy(1);
     ROOT::Minuit2::MnUserParameters upar;
-    upar.Add("rec_x", initial_x * 1, 0.01/57.3 * 1);              // step: 0.01 degrees
-    upar.Add("rec_y", initial_y * 1, 0.01/57.3 * 1);              // step: 0.01 degrees
+    upar.Add("rec_x", initial_x * 1, 0.03/57.3 * 1);              // step: 0.01 degrees
+    upar.Add("rec_y", initial_y * 1, 0.03/57.3 * 1);              // step: 0.01 degrees
     upar.Add("tilted_core_x", tilted_core_x, 15);   // step: 1 meter
     upar.Add("tilted_core_y", tilted_core_y, 15);   // step: 1 meter
     upar.Add("xmax", diff_xmax, 60.0);                    // step: 30 g/cm²
@@ -143,7 +142,7 @@ void TestReconstructor::operator()(ArrayEvent& event)
     upar.SetLimits("rec_y", (initial_y - 0.5/57.3) * 1, (initial_y + 0.5/57.3) * 1);      // ±1 degrees
     upar.SetLimits("tilted_core_x", tilted_core_x - 50, tilted_core_x + 50);  // ±50 meters
     upar.SetLimits("tilted_core_y", tilted_core_y - 50, tilted_core_y + 50);  // ±50 meters
-    upar.SetLimits("xmax",  -200, 250);                               // 200-1200 g/cm²
+    upar.SetLimits("xmax", -200, 250);                               // 200-1200 g/cm²
     upar.SetLimits("log10_energy", log10_energy - 0.2, log10_energy + 0.2);                           // 1-2
 
     upar.Fix("rec_x");
@@ -214,7 +213,7 @@ void TestReconstructor::operator()(ArrayEvent& event)
     // Log final results
     spdlog::info("=== Minimization Completed Successfully ===");
     spdlog::info("Final values:   rec_x={:.6f}, rec_y={:.6f}, core_x={:.2f}, core_y={:.2f}, xmax={:.2f}, energy={:.2f}", 
-                 final_rec_x, final_rec_y, final_tilted_core_x, final_tilted_core_y, final_mean_xmax, final_energy);
+                 final_rec_x, final_rec_y, final_tilted_core_x, final_tilted_core_y, final_mean_xmax + final_xmax, final_energy);
     spdlog::info("True values:    rec_x={:.6f}, rec_y={:.6f}", true_x, true_y);
     //spdlog::info("Delta from true: dx={:.6f}, dy={:.6f}", final_rec_x - true_x, final_rec_y - true_y);
     //spdlog::info("Final -logL = {:.4f}", min.Fval());
@@ -232,7 +231,7 @@ void TestReconstructor::operator()(ArrayEvent& event)
     geometry.tilted_core_x = final_tilted_core_x;
     geometry.tilted_core_y = final_tilted_core_y;
     geometry.is_valid = true;
-    geometry.xmax = mean_xmax + final_xmax;
+    geometry.xmax = final_xmax + final_mean_xmax;
     geometry.direction_error = compute_angle_separation(final_az, final_alt, event.simulation->shower.az, event.simulation->shower.alt);
     geometry.telescopes = telescopes;
     

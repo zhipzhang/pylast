@@ -63,6 +63,8 @@ TableAtmosphereModel::TableAtmosphereModel(int n_alt, double* alt_km, double* rh
 
 Eigen::VectorXd TableAtmosphereModel::convert_hmax_to_xmax(const Eigen::VectorXd& hmax)
 {
+    printf("convert_hmax_to_xmax\n");
+    return Eigen::VectorXd::Zero(hmax.size());
 }
 
 double TableAtmosphereModel::convert_hmax_to_xmax(double hmax)
