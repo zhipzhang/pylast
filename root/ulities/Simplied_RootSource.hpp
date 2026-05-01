@@ -112,6 +112,7 @@ void initialize_telescope_tree(TTree* tree,  TelescopeData& data)
     tree->Branch("fake_concentration_cog", &data.fake_params.concentration.concentration_cog);
     tree->Branch("fake_concentration_core", &data.fake_params.concentration.concentration_core);
     tree->Branch("fake_concentration_pixel", &data.fake_params.concentration.concentration_pixel);
+    tree->Branch("fake_concentration_frac2", &data.fake_params.concentration.concentration_frac2);
     tree->Branch("fake_morphology_num_pixels", &data.fake_params.morphology.n_pixels);
     tree->Branch("fake_morphology_num_islands", &data.fake_params.morphology.n_islands);
     tree->Branch("fake_morphology_num_small_islands", &data.fake_params.morphology.n_small_islands);
@@ -166,6 +167,7 @@ void initialize_telescope_tree(TTree* tree,  TelescopeData& data)
     tree->Branch("two_gaussian_fit_width", &data.fake_params.two_gaussian_fit.width);
     tree->Branch("two_gaussian_fit_psi", &data.fake_params.two_gaussian_fit.psi);
     tree->Branch("two_gaussian_fit_beta_err", &data.fake_params.two_gaussian_fit.beta_err);
+    tree->Branch("two_gaussian_fit_miss", &data.fake_params.two_gaussian_fit.miss);
     tree->Branch("two_gaussian_fit_use_gaussian_fit", &data.fake_params.two_gaussian_fit.use_gaussian_fit);
     tree->Branch("two_gaussian_fit_chi2", &data.fake_params.two_gaussian_fit.chi2);
     tree->Branch("two_gaussian_fit_fit_size", &data.fake_params.two_gaussian_fit.fit_size);

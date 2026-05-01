@@ -283,7 +283,6 @@ int main(int argc, const char *argv[]) {
                 eventtree->Fill();
                 process_telescope_data(event, teldata, event_data, teltree);
             }
-
             // Write any histograms if present
             write_histograms(*source, output_root.get());
             output_root->Write();
