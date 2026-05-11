@@ -12,7 +12,7 @@ find_package(ROOT REQUIRED COMPONENTS Core)
 add_library(root_writer SHARED RootWriter.cpp RootDataLevels.cpp)
 target_include_directories(root_writer PUBLIC ${ROOT_INCLUDE_DIRS} include)
 target_link_libraries(root_writer PUBLIC data_writer ${ROOT_LIBRARIES})
-add_library(root_event SHARED RootEventSource.cpp LACT1EventSource.cpp)
+add_library(root_event SHARED RootEventSource.cpp LACT1EventSource.cpp LACT1Calibrator.cpp)
 target_include_directories(root_event PUBLIC ${ROOT_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(root_event PUBLIC ${ROOT_LIBRARIES} basic_event root_writer)
 

@@ -71,7 +71,7 @@ set(SIMTEL_SOURCE_FILES
 set(CALIBRATION_SOURCE_FILES
     Calibration.cpp
     ImageExtractor.cpp
-    LACT1Calibrator.cpp)
+    )
 add_library(calibrator  SHARED ${CALIBRATION_SOURCE_FILES})
 set(IMAGE_PROCESSOR_SOURCE_FILES
     ImageProcessor.cpp

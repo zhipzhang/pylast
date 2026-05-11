@@ -11,8 +11,19 @@
 #include "nanobind/stl/string.h"
 #include "nanobind/stl/unordered_map.h"
 #include "nanobind/stl/vector.h"
+#include "LACT1Calibrator.hh"
 namespace nb = nanobind;
-
+void bind_calibrator(nb::module_ &m) {
+  nb::class_<LACT1Calibrator>(m, "LACT1Calibrator")
+      .def(nb::init<>())
+      .def(nb::init<const std::string &>(), nb::arg("config_str"))
+      .def("__call__",
+           [](LACT1Calibrator &self, ArrayEvent &event) { self(event); })
+      .def("load_calibration_file", &LACT1Calibrator::load_calibration_file)
+      .def("__repr__", [](LACT1Calibrator &self) {
+        return "LACT1Calibrator:\n  Config: " + self.get_config_str();
+      });
+}
 NB_MODULE(_pyeventsource, m) {
   nb::class_<EventSource>(m, "EventSource")
       .def_ro("input_filename", &EventSource::input_filename)
