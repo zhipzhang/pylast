@@ -55,13 +55,13 @@ void LACT1Calibrator::operator()(ArrayEvent &event) {
       auto low_gain_calibration_factor = get_low_gain_calibration_factor(event_mjd);
       auto high_gain_calibration_factor = get_high_gain_calibration_factor(event_mjd);
       for(int i = 0; i < event.c1->tels[0]->area.cols(); i++) {
-        event.c1->tels[0]->pe(0, i) = event.c1->tels[0]->area(0, i) * high_gain_calibration_factor(i);
-        event.c1->tels[0]->pe(1, i) = event.c1->tels[0]->area(1, i) * low_gain_calibration_factor(i);
+        event.c1->tels[0]->pe(0, i) = event.c1->tels[0]->area(0, i) / high_gain_calibration_factor(i);
+        event.c1->tels[0]->pe(1, i) = event.c1->tels[0]->area(1, i) / low_gain_calibration_factor(i);
         if(gain_selector(i) == 0) {
-          dl0_camera.image(i) = event.c1->tels[0]->area(0, i) * high_gain_calibration_factor(i);
+          dl0_camera.image(i) = event.c1->tels[0]->area(0, i) / high_gain_calibration_factor(i);
         }
         else {
-          dl0_camera.image(i) = event.c1->tels[0]->area(1, i) * low_gain_calibration_factor(i);
+          dl0_camera.image(i) = event.c1->tels[0]->area(1, i) / low_gain_calibration_factor(i);
         }
       }
 
