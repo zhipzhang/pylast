@@ -142,4 +142,6 @@ NB_MODULE(_pyeventsource, m) {
 
   m.def("write_statistics", RootHistogram::write_statistics,
         nb::arg("statistics"), nb::arg("filename"));
+
+  bind_calibrator(m);
 }

@@ -49,4 +49,6 @@ private:
   Eigen::Matrix<double, -1, -1, Eigen::RowMajor> calibration_high_gain_area;
 
   Eigen::Index find_nearest_calibration_index(double event_mjd) const;
+
+  double convert_linux_time_to_mjd(double linux_time);
 };

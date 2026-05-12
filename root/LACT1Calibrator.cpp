@@ -3,6 +3,7 @@
 #include "TFile.h"
 #include "TTreeReader.h"
 #include "TTreeReaderValue.h"
+#include "TTreeReaderArray.h"
 #include <algorithm>
 
 Eigen::VectorXi tmp_select_gain_channel_by_threshold(
@@ -86,22 +87,22 @@ void LACT1Calibrator::load_calibration_file(
     auto event_time_reader =
         new TTreeReaderValue<double>(*led_cal_tree_reader, "event_time");
     auto low_gain_area_factor_reader =
-        new TTreeReaderValue<std::vector<double>>(*led_cal_tree_reader,
+        new TTreeReaderArray<double>(*led_cal_tree_reader,
                                                   "GainFactor_AreaL");
     auto high_gain_area_factor_reader =
-        new TTreeReaderValue<std::vector<double>>(*led_cal_tree_reader,
+        new TTreeReaderArray<double>(*led_cal_tree_reader,
                                                   "GainFactor_AreaH");
     calibration_time.resize(n_events);
     calibration_low_gain_area.resize(n_events, 1616);
     calibration_high_gain_area.resize(n_events, 1616);
     for (int i = 0; i < n_events; i++) {
         led_cal_tree_reader->Next();
-        calibration_time(i) = *(*event_time_reader);
+        calibration_time(i) = convert_linux_time_to_mjd(*(*event_time_reader));
         for (int ipix = 0; ipix < 1616; ipix++) {
             calibration_low_gain_area(i, ipix) =
-                (*low_gain_area_factor_reader)->at(ipix);
+                (*low_gain_area_factor_reader)[ipix];
             calibration_high_gain_area(i, ipix) =
-                (*high_gain_area_factor_reader)->at(ipix);
+                (*high_gain_area_factor_reader)[ipix];
         }
     }
     have_calibration_file = true;
@@ -118,6 +119,14 @@ LACT1Calibrator::find_nearest_calibration_index(double event_mjd) const {
     if (n == 0) {
         throw std::runtime_error("No calibration times loaded.");
     }
+
+    // Check if event_mjd is strictly within the calibration range
+    if (event_mjd < calibration_time[0] || event_mjd > calibration_time[n-1]) {
+        throw std::runtime_error("event_mjd (" + std::to_string(event_mjd) +
+            ") is outside the calibration time range [" + std::to_string(calibration_time[0]) +
+            ", " + std::to_string(calibration_time[n-1]) + "]");
+    }
+
     const double *begin = calibration_time.data();
     const double *end = begin + n;
     const double *it = std::lower_bound(begin, end, event_mjd);
@@ -146,4 +155,19 @@ LACT1Calibrator::get_high_gain_calibration_factor(const double event_mjd) {
     const Eigen::Index idx = find_nearest_calibration_index(event_mjd);
     return Eigen::Map<Eigen::VectorXd>(calibration_high_gain_area.row(idx).data(),
                                        calibration_high_gain_area.cols());
+}
+double LACT1Calibrator::convert_linux_time_to_mjd(double linux_time) {
+    // Linux/UNIX epoch is 1970-01-01 00:00:00 UTC
+    // Modified Julian Date is from 1858-11-17 00:00:00 UTC
+    // MJD = JD - 2400000.5
+    // UNIX epoch in MJD is 40587.0
+    // Linux time is in seconds since UNIX epoch
+
+    // Check for pathological input (e.g. negative times)
+    if (linux_time < 0.0) {
+        throw std::invalid_argument("linux_time must be non-negative");
+    }
+    constexpr double seconds_per_day = 86400.0;
+    constexpr double unix_epoch_in_mjd = 40587.0;
+    return linux_time / seconds_per_day + unix_epoch_in_mjd;
 }
