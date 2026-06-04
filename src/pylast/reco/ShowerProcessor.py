@@ -10,17 +10,10 @@ class ShowerProcessor:
         self.c_reconstructor_config = {}
         self.py_reconstructor_configs = {}  # Store Python configs separately
         self.c_shower_processor = None  # Initialize to None
-        self.disp_reconstructor = None
-        self.disp_stereo_reconstructor = None
-        self.mle_reconstructor = None
-        self.hillas_weighted_reconstructor = None
-        self.ml_particle_classifier = None
-        if config_str:
-            self._parse_config(config_str)
 
         # Only initialize c_shower_processor if we have C reconstructor configs
-        if self.c_reconstructor_config:
-            self.c_shower_processor = CShowerProcessor(subarray, config_str)
+    
+        self.c_shower_processor = CShowerProcessor(subarray, config_str)
     def _parse_config(self, config_str):
         try:
             config = json.loads(config_str)
