@@ -891,10 +891,10 @@ class RootPointing
             pointing.array_azimuth = array_azimuth;
             for(size_t i = 0; i < (*tel_id_ptr).size(); ++i)
             {
-                pointing.add_tel((*tel_id_ptr)[i], PointingTelescope{
-                    .azimuth = (*tel_azimuth_ptr)[i],
-                    .altitude = (*tel_alt_ptr)[i]
-                });
+                pointing.add_tel(
+                    (*tel_id_ptr)[i],
+                    PointingTelescope((*tel_azimuth_ptr)[i], (*tel_alt_ptr)[i])
+                );
             }
             return pointing;
         }

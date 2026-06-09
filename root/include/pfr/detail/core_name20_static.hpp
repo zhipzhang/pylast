@@ -175,7 +175,7 @@ consteval auto name_of_field() noexcept {
                     detail::fake_object<core_name_skip>().size_at_begin
                 ))
             >().data()
-        } == "size_at_begin",
+        }.compare("size_at_begin") == 0,
         "====================> Boost.PFR: Extraction of field name is misconfigured for your compiler. "
         "It does not return the proper field name. "
         "Please define PFR_CORE_NAME_PARSING to correct values. See documentation section "
@@ -260,4 +260,3 @@ constexpr void for_each_field_with_name(T&& value, F&& func) {
 }} // namespace pfr::detail
 
 #endif // PFR_DETAIL_CORE_NAME20_STATIC_HPP
-

@@ -63,7 +63,7 @@ void bind_dl2_event(nb::module_ &m) {
         });
     nb::class_<ReconstructedEnergy>(m, "ReconstructedEnergy")
         .def(nb::init<>())
-        .def(nb::init<double, bool>())
+        .def(nb::init<bool, double>())
         .def_rw("estimate_energy", &ReconstructedEnergy::estimate_energy)
         .def_rw("energy_valid", &ReconstructedEnergy::energy_valid)
         .def_ro("estimate_energy_std", &ReconstructedEnergy::estimate_energy_std)
