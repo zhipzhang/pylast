@@ -23,7 +23,8 @@ dependencies = [
     "ibis-framework",
     "duckdb==1.3.2",
     "astropy",
-    "numba"
+    "numba",
+    "matplotlib"
 ]
 
 [tool.scikit-build]
