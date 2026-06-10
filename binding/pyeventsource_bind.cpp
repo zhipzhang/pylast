@@ -8,6 +8,7 @@
 #include "nanobind/make_iterator.h"
 #include "nanobind/stl/optional.h"
 #include "LoggerInitialize.hh"
+#include "LactEventSource.hh"
 #include "RootEventSource.hh"
 #include "SimtelEventSource.hh"
 namespace nb = nanobind;
@@ -96,6 +97,17 @@ NB_MODULE(_pyeventsource, m){
         .def("__getitem__", &RootEventSource::operator[])
         .def("__repr__", [](RootEventSource& self) {
             return fmt::format("RootEventSource(filename={})", self.input_filename);
+        });
+    nb::class_<LactEventSource, EventSource>(m, "LactEventSource")
+        .def(nb::init<const std::string&, int64_t, std::vector<int>, bool>(),
+             nb::arg("filename"),
+             nb::arg("max_events") = -1,
+             nb::arg("subarray") = std::vector<int>{},
+             nb::arg("load_simulated_showers") = false)
+        .def_prop_ro("shower_array", &LactEventSource::get_shower_array)
+        .def("__getitem__", &LactEventSource::operator[])
+        .def("__repr__", [](LactEventSource& self) {
+            return fmt::format("LactEventSource(filename={})", self.input_filename);
         });
     nb::class_<SimtelEventSource, EventSource>(m, "SimtelEventSource")
         .def(nb::init<const std::string&, int64_t, std::vector<int>, bool>(), nb::arg("filename"), nb::arg("max_events") = -1, nb::arg("subarray")=std::vector<int>{}, nb::arg("load_simulated_showers")=false)

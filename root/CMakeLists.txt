@@ -8,6 +8,10 @@ add_library(root_event SHARED RootEventSource.cpp)
 target_include_directories(root_event PUBLIC ${ROOT_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(root_event PUBLIC ${ROOT_LIBRARIES} basic_event root_writer)
 
+add_library(lact_event_source SHARED LactEventSource.cpp)
+target_include_directories(lact_event_source PUBLIC ${ROOT_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(lact_event_source PUBLIC ${ROOT_LIBRARIES} basic_event)
+
 add_executable(test_root_write test_root.cpp RootWriter.cpp)
 target_link_libraries(test_root_write PUBLIC root_writer simtel_event reconstructor image_processor calibrator)
 add_executable(test_root_read test_root_read.cpp)
