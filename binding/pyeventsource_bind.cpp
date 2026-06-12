@@ -106,6 +106,9 @@ NB_MODULE(_pyeventsource, m){
              nb::arg("load_simulated_showers") = false)
         .def_prop_ro("shower_array", &LactEventSource::get_shower_array)
         .def("__getitem__", &LactEventSource::operator[])
+        .def("__len__", [](LactEventSource& self) {
+            return static_cast<size_t>(self.max_events);
+        })
         .def("__repr__", [](LactEventSource& self) {
             return fmt::format("LactEventSource(filename={})", self.input_filename);
         });
