@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
+from os import PathLike
 
 from pylast.io import LactEventSource
 
@@ -11,8 +11,8 @@ from .fast_visualizer import EventVisualizer
 
 
 def plot_lact_root_quicklook(
-    root_file: str,
-    output_dir: str,
+    root_file: str | PathLike[str],
+    output_dir: str | PathLike[str],
     event_index: int = 0,
     max_events: int = -1,
     image_level: str = "dl0",
@@ -50,7 +50,7 @@ def plot_lact_root_quicklook(
     outdir = Path(output_dir)
     outdir.mkdir(parents=True, exist_ok=True)
 
-    source = LactEventSource(root_file, max_events=max_events)
+    source = LactEventSource(str(root_file), max_events=max_events)
     event = source[event_index]
     visualizer = EventVisualizer(source)
 
