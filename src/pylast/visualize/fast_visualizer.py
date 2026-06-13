@@ -22,6 +22,8 @@ from matplotlib.patches import Ellipse
 from matplotlib.ticker import FormatStrFormatter, MaxNLocator
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+from .lhaaso_background import draw_lhaaso_background
+
 
 matplotlib.rcParams["path.simplify"] = True
 matplotlib.rcParams["agg.path.chunksize"] = 20000
@@ -537,6 +539,10 @@ class EventVisualizer:
         highlighted_tel_ids: Optional[Iterable[int]] = None,
         core_position: Optional[Sequence[float]] = None,
         include_non_triggered: bool = False,
+        show_lhaaso_background: bool = True,
+        ed_pos_file: Optional[str] = None,
+        md_pos_file: Optional[str] = None,
+        show_sdp_planes: bool = False,
         show: bool = True,
     ):
         data = read_event_data(event, self.tel_geoms, image_level=image_level)
@@ -563,6 +569,15 @@ class EventVisualizer:
         span = max(float(np.ptp(east)), float(np.ptp(north)), 1.0)
         pad = 0.18 * span
         marker_size = 86
+        background = {}
+        if show_lhaaso_background:
+            background = draw_lhaaso_background(
+                ax,
+                ed_pos_file=ed_pos_file,
+                md_pos_file=md_pos_file,
+                set_limits=False,
+                show_legend=False,
+            )
 
         positive = values[values > 0]
         zero_mask = values <= 0.0
@@ -648,14 +663,31 @@ class EventVisualizer:
         )
         if data.azimuth_deg is not None:
             _add_arrival_arrow(ax, core_x, core_y, data.azimuth_deg, span, mode="incoming")
-
         ax.set_xlabel("x [m]")
         ax.set_ylabel("y [m]")
         ax.set_title(f"LACT array event_id={data.event_id}")
         limit_east = np.concatenate([east, np.asarray([core_x], dtype=float)])
         limit_north = np.concatenate([north, np.asarray([core_y], dtype=float)])
+        if show_lhaaso_background:
+            bg_x = []
+            bg_y = []
+            for key in ("ed", "md"):
+                arr = background.get(key)
+                if arr is not None and np.asarray(arr).size:
+                    bg_x.extend(np.asarray(arr)[:, 0].tolist())
+                    bg_y.extend(np.asarray(arr)[:, 1].tolist())
+            if bg_x and bg_y:
+                limit_east = np.concatenate([limit_east, np.asarray(bg_x, dtype=float)])
+                limit_north = np.concatenate([limit_north, np.asarray(bg_y, dtype=float)])
         ax.set_xlim(float(np.min(limit_east)) - pad, float(np.max(limit_east)) + pad)
         ax.set_ylim(float(np.min(limit_north)) - pad, float(np.max(limit_north)) + pad)
+        if show_sdp_planes:
+            self.draw_event_sdp_planes(
+                ax,
+                event,
+                tel_ids=highlighted_tel_ids,
+                core_position=(core_x, core_y),
+            )
         ax.set_aspect("equal", adjustable="box")
         ax.grid(True, alpha=0.25, linewidth=0.55)
         ax.tick_params(direction="in", top=True, right=True)
@@ -687,6 +719,86 @@ class EventVisualizer:
         fig.tight_layout()
         self._finish(fig, output_path, show)
         return fig, ax
+
+    def draw_event_sdp_planes(
+        self,
+        ax,
+        event,
+        tel_ids: Optional[Iterable[int]] = None,
+        core_position: Optional[Sequence[float]] = None,
+        color: str = "#2563eb",
+        show_labels: bool = True,
+    ) -> Dict[int, Tuple[float, float]]:
+        """Draw ground intersections of telescope-core shower-detector planes."""
+
+        data = read_event_data(event, self.tel_geoms, image_level="dl0")
+        if core_position is None:
+            core_x, core_y = data.core_x, data.core_y
+        else:
+            core_x, core_y = float(core_position[0]), float(core_position[1])
+        if tel_ids is None:
+            tel_ids = _triggered_tel_ids(event, source=self.source)
+        xlim = ax.get_xlim()
+        ylim = ax.get_ylim()
+        span = float(np.hypot(xlim[1] - xlim[0], ylim[1] - ylim[0]))
+        directions: Dict[int, Tuple[float, float]] = {}
+        first_line = True
+        for tel_id in sorted(int(t) for t in tel_ids):
+            geom = self.tel_geoms.get(tel_id)
+            if geom is None:
+                continue
+            dx = core_x - geom.pos_x
+            dy = core_y - geom.pos_y
+            norm = float(np.hypot(dx, dy))
+            if not np.isfinite(norm) or norm <= 0.0:
+                continue
+            ux, uy = dx / norm, dy / norm
+            directions[tel_id] = (ux, uy)
+            ax.plot(
+                [geom.pos_x - span * ux, geom.pos_x + span * ux],
+                [geom.pos_y - span * uy, geom.pos_y + span * uy],
+                color=color,
+                linestyle="-.",
+                linewidth=1.35,
+                alpha=0.82,
+                zorder=5,
+                label="SDP plane" if first_line else None,
+            )
+            first_line = False
+            if show_labels:
+                ax.text(
+                    geom.pos_x + 0.05 * span * ux,
+                    geom.pos_y + 0.05 * span * uy,
+                    f"T{tel_id + 1} SDP",
+                    color=color,
+                    fontsize=7.0,
+                    ha="left",
+                    va="bottom",
+                    zorder=7,
+                    bbox=dict(facecolor="white", edgecolor="none", alpha=0.70, pad=1.5),
+                )
+        ax.set_xlim(xlim)
+        ax.set_ylim(ylim)
+        return directions
+
+    def plot_event_cores(
+        self,
+        event,
+        output_path: Optional[str] = None,
+        image_level: str = "dl0",
+        show_sdp_planes: bool = False,
+        include_non_triggered: bool = False,
+        show: bool = True,
+    ):
+        return self.plot_telescopes(
+            event,
+            output_path=output_path,
+            image_level=image_level,
+            include_non_triggered=include_non_triggered,
+            show_lhaaso_background=True,
+            show_sdp_planes=show_sdp_planes,
+            show=show,
+        )
 
     def plot_event(
         self,
