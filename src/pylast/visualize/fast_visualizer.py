@@ -17,7 +17,9 @@ import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.collections import PolyCollection
+from matplotlib.colors import LogNorm
 from matplotlib.patches import Ellipse
+from matplotlib.ticker import MaxNLocator
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
@@ -79,9 +81,12 @@ def _deg(rad: float) -> float:
     return np.rad2deg(rad)
 
 
-def _azimuth_vector_xy(azimuth_deg: float):
+def _azimuth_vector_xy(azimuth_deg: float, mode: str = "source"):
     azimuth_rad = np.deg2rad(azimuth_deg)
-    return np.sin(azimuth_rad), np.cos(azimuth_rad)
+    dx, dy = np.sin(azimuth_rad), np.cos(azimuth_rad)
+    if mode == "incoming":
+        return -dx, -dy
+    return dx, dy
 
 
 def _add_array_compass(ax, x0: float, y0: float, length: float):
@@ -106,7 +111,7 @@ def _add_array_compass(ax, x0: float, y0: float, length: float):
 
 
 def _add_telescope_direction_inset(ax, x0: float, y0: float, length: float, azimuth_deg: float):
-    dx, dy = _azimuth_vector_xy(azimuth_deg)
+    dx, dy = _azimuth_vector_xy(azimuth_deg, mode="source")
     end_x = x0 + dx * 0.72 * length
     end_y = y0 + dy * 0.72 * length
     ax.annotate(
@@ -130,8 +135,8 @@ def _add_telescope_direction_inset(ax, x0: float, y0: float, length: float, azim
     )
 
 
-def _add_arrival_arrow(ax, core_x: float, core_y: float, azimuth_deg: float, span: float):
-    dx, dy = _azimuth_vector_xy(azimuth_deg)
+def _add_arrival_arrow(ax, core_x: float, core_y: float, azimuth_deg: float, span: float, mode: str = "incoming"):
+    dx, dy = _azimuth_vector_xy(azimuth_deg, mode=mode)
     length = 0.13 * span
     start_x = core_x - dx * length
     start_y = core_y - dy * length
@@ -156,6 +161,23 @@ def _add_arrival_arrow(ax, core_x: float, core_y: float, azimuth_deg: float, spa
         zorder=9,
         bbox=dict(boxstyle="round,pad=0.16", facecolor="white", edgecolor="none", alpha=0.78),
     )
+
+
+def _total_quantity_label(quantity: str) -> str:
+    if quantity == "pe":
+        return "Total p.e."
+    return f"Total {quantity}"
+
+
+def _event_info_text(event_id: int, core_x: Optional[float], core_y: Optional[float], arrival_az: Optional[float]) -> str:
+    lines = []
+    if event_id is not None:
+        lines.append(f"event_id = {event_id}")
+    if core_x is not None and core_y is not None:
+        lines.append(f"core: x = {core_x:.1f} m, y = {core_y:.1f} m")
+    if arrival_az is not None:
+        lines.append(f"event az = {arrival_az:.2f} deg")
+    return "\n".join(lines)
 
 
 def _event_pointing_azimuth_deg(event) -> Optional[float]:
@@ -431,33 +453,61 @@ class EventVisualizer:
     ):
         data = read_event_data(event, self.tel_geoms, image_level=image_level)
         tel_ids = sorted(self.tel_geoms)
-        positions = np.array([(self.tel_geoms[t].pos_x, self.tel_geoms[t].pos_y) for t in tel_ids])
-        image_sums = np.array([data.image_sum_by_tel[t] for t in tel_ids])
-        colors = np.log10(np.clip(image_sums, 1.0, None))
+        east = np.asarray([self.tel_geoms[t].pos_x for t in tel_ids], dtype=float)
+        north = np.asarray([self.tel_geoms[t].pos_y for t in tel_ids], dtype=float)
+        values = np.asarray([data.image_sum_by_tel[t] for t in tel_ids], dtype=float)
 
-        if highlighted_tel_ids is None:
-            highlighted_tel_ids = data.active_tels
-        highlighted_tel_ids = set(int(t) for t in highlighted_tel_ids)
-        highlighted = np.array([t in highlighted_tel_ids for t in tel_ids], dtype=bool)
+        plt.rcParams.update({
+            "font.family": "DejaVu Sans",
+            "font.size": 10,
+            "axes.labelsize": 11,
+            "axes.titlesize": 13,
+            "xtick.labelsize": 9,
+            "ytick.labelsize": 9,
+            "axes.linewidth": 0.8,
+        })
+        fig, ax = plt.subplots(figsize=(7.6, 7.0))
+        span = max(float(np.ptp(east)), float(np.ptp(north)), 1.0)
+        pad = 0.18 * span
+        marker_size = 86
 
-        fig, ax = plt.subplots(figsize=(10, 8))
+        positive = values[values > 0]
+        vmax = float(np.percentile(positive, 98.0)) if positive.size else 1.0
+        vmax = max(vmax, float(positive.max()) if positive.size and positive.max() < vmax else vmax, 1.0)
+        zero_mask = values <= 0.0
+        if np.any(zero_mask):
+            ax.scatter(
+                east[zero_mask],
+                north[zero_mask],
+                s=marker_size,
+                facecolors="none",
+                edgecolors="0.25",
+                linewidth=0.9,
+                zorder=3,
+            )
+        if positive.size:
+            vmin = max(float(np.min(positive)), 1.0e-12)
+            norm = LogNorm(vmin=vmin, vmax=vmax)
+            color_mask = values > 0.0
+        else:
+            norm = LogNorm(vmin=1.0, vmax=vmax)
+            color_mask = np.zeros_like(values, dtype=bool)
         scatter = ax.scatter(
-            positions[:, 0],
-            positions[:, 1],
-            c=colors,
-            cmap="viridis",
-            s=300,
-            edgecolor="k",
-            alpha=0.8,
+            east[color_mask],
+            north[color_mask],
+            s=marker_size,
+            c=values[color_mask],
+            cmap="inferno",
+            norm=norm,
+            edgecolor="0.08",
+            linewidth=0.35,
+            zorder=3,
         )
-        ax.scatter(
-            positions[highlighted, 0],
-            positions[highlighted, 1],
-            facecolors="none",
-            edgecolors="r",
-            s=350,
-            linewidths=2,
-        )
+        cbar = fig.colorbar(scatter, ax=ax, fraction=0.046, pad=0.04)
+        cbar.set_label(_total_quantity_label("pe"), fontsize=11)
+        cbar.ax.tick_params(labelsize=9, direction="in")
+        if not positive.size:
+            cbar.ax.yaxis.set_major_locator(MaxNLocator(nbins=6))
 
         for tel_id in tel_ids:
             geom = self.tel_geoms[tel_id]
@@ -487,8 +537,8 @@ class EventVisualizer:
             label="Core",
             zorder=6,
         )
-        x_offset = -12 if core_x > float(np.mean(positions[:, 0])) else 12
-        y_offset = -12 if core_y > float(np.mean(positions[:, 1])) else 12
+        x_offset = -12 if core_x > float(np.mean(east)) else 12
+        y_offset = -12 if core_y > float(np.mean(north)) else 12
         ax.annotate(
             f"Core\nx={core_x:.1f} m\ny={core_y:.1f} m",
             xy=(core_x, core_y),
@@ -502,16 +552,16 @@ class EventVisualizer:
             arrowprops=dict(arrowstyle="-", color="#d73027", lw=0.9),
             zorder=7,
         )
+        if data.azimuth_deg is not None:
+            _add_arrival_arrow(ax, core_x, core_y, data.azimuth_deg, span, mode="incoming")
 
         ax.set_xlabel("x [m]")
         ax.set_ylabel("y [m]")
-        ax.set_title("Telescope Positions and Shower Core")
-        all_x = np.concatenate([positions[:, 0], np.array([core_x], dtype=float)])
-        all_y = np.concatenate([positions[:, 1], np.array([core_y], dtype=float)])
-        span = max(float(np.ptp(all_x)), float(np.ptp(all_y)), 100.0)
-        pad = max(100.0, 0.12 * span)
-        ax.set_xlim(float(np.min(all_x) - pad), float(np.max(all_x) + pad))
-        ax.set_ylim(float(np.min(all_y) - pad), float(np.max(all_y) + pad))
+        ax.set_title(f"LACT array event_id={data.event_id}")
+        limit_east = np.concatenate([east, np.asarray([core_x], dtype=float)])
+        limit_north = np.concatenate([north, np.asarray([core_y], dtype=float)])
+        ax.set_xlim(float(np.min(limit_east)) - pad, float(np.max(limit_east)) + pad)
+        ax.set_ylim(float(np.min(limit_north)) - pad, float(np.max(limit_north)) + pad)
         ax.set_aspect("equal", adjustable="box")
         ax.grid(True, alpha=0.25, linewidth=0.55)
         ax.tick_params(direction="in", top=True, right=True)
@@ -525,9 +575,20 @@ class EventVisualizer:
         pointing_azimuth_deg = _event_pointing_azimuth_deg(event)
         if pointing_azimuth_deg is not None:
             _add_telescope_direction_inset(ax, compass_x, compass_y, compass_length, pointing_azimuth_deg)
-        _add_arrival_arrow(ax, core_x, core_y, data.azimuth_deg, axis_span)
-        ax.legend()
-        fig.colorbar(scatter, ax=ax, label="log10(image sum)")
+        info = _event_info_text(data.event_id, core_x, core_y, data.azimuth_deg)
+        if info:
+            ax.text(
+                0.99,
+                0.01,
+                info,
+                transform=ax.transAxes,
+                ha="right",
+                va="bottom",
+                fontsize=8.4,
+                color="0.12",
+                bbox=dict(boxstyle="round,pad=0.28", facecolor="white", edgecolor="0.55", alpha=0.94),
+            )
+        fig.tight_layout()
         self._finish(fig, output_path, show)
         return fig, ax
 
