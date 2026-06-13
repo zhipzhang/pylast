@@ -19,7 +19,7 @@ import numpy as np
 from matplotlib.collections import PolyCollection
 from matplotlib.colors import LogNorm
 from matplotlib.patches import Ellipse
-from matplotlib.ticker import MaxNLocator
+from matplotlib.ticker import FormatStrFormatter, MaxNLocator
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
@@ -529,9 +529,11 @@ class EventVisualizer:
             )
         cbar = fig.colorbar(scatter, ax=ax, fraction=0.046, pad=0.04)
         cbar.set_label(_total_quantity_label("pe"), fontsize=11)
-        cbar.ax.tick_params(labelsize=9, direction="in")
-        if not positive.size:
-            cbar.ax.yaxis.set_major_locator(MaxNLocator(nbins=6))
+        cbar.locator = MaxNLocator(nbins=4)
+        cbar.formatter = FormatStrFormatter("%.3g")
+        cbar.update_ticks()
+        cbar.minorticks_off()
+        cbar.ax.tick_params(labelsize=9, direction="out", length=3, width=1)
 
         for tel_id in tel_ids:
             geom = self.tel_geoms[tel_id]
