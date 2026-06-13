@@ -542,8 +542,8 @@ class EventVisualizer:
         show_lhaaso_background: bool = True,
         ed_pos_file: Optional[str] = None,
         md_pos_file: Optional[str] = None,
-        show_sdp_planes: bool = False,
         show: bool = True,
+        finish: bool = True,
     ):
         data = read_event_data(event, self.tel_geoms, image_level=image_level)
         tel_ids = sorted(self.tel_geoms)
@@ -681,13 +681,6 @@ class EventVisualizer:
                 limit_north = np.concatenate([limit_north, np.asarray(bg_y, dtype=float)])
         ax.set_xlim(float(np.min(limit_east)) - pad, float(np.max(limit_east)) + pad)
         ax.set_ylim(float(np.min(limit_north)) - pad, float(np.max(limit_north)) + pad)
-        if show_sdp_planes:
-            self.draw_event_sdp_planes(
-                ax,
-                event,
-                tel_ids=highlighted_tel_ids,
-                core_position=(core_x, core_y),
-            )
         ax.set_aspect("equal", adjustable="box")
         ax.grid(True, alpha=0.25, linewidth=0.55)
         ax.tick_params(direction="in", top=True, right=True)
@@ -717,7 +710,8 @@ class EventVisualizer:
                 bbox=dict(boxstyle="round,pad=0.28", facecolor="white", edgecolor="0.55", alpha=0.94),
             )
         fig.tight_layout()
-        self._finish(fig, output_path, show)
+        if finish:
+            self._finish(fig, output_path, show)
         return fig, ax
 
     def draw_event_sdp_planes(
@@ -786,7 +780,6 @@ class EventVisualizer:
         event,
         output_path: Optional[str] = None,
         image_level: str = "dl0",
-        show_sdp_planes: bool = False,
         include_non_triggered: bool = False,
         show: bool = True,
     ):
@@ -796,9 +789,40 @@ class EventVisualizer:
             image_level=image_level,
             include_non_triggered=include_non_triggered,
             show_lhaaso_background=True,
-            show_sdp_planes=show_sdp_planes,
             show=show,
         )
+
+    def plot_event_sdp_planes(
+        self,
+        event,
+        output_path: Optional[str] = None,
+        image_level: str = "dl0",
+        include_non_triggered: bool = False,
+        show: bool = True,
+    ):
+        fig, ax = self.plot_telescopes(
+            event,
+            output_path=None,
+            image_level=image_level,
+            include_non_triggered=include_non_triggered,
+            show_lhaaso_background=True,
+            show=False,
+            finish=False,
+        )
+        data = read_event_data(event, self.tel_geoms, image_level=image_level)
+        self.draw_event_sdp_planes(
+            ax,
+            event,
+            tel_ids=_triggered_tel_ids(event, source=self.source),
+            core_position=(data.core_x, data.core_y),
+        )
+        ax.set_title(f"LACT SDP planes event_id={data.event_id}")
+        handles, labels = ax.get_legend_handles_labels()
+        if handles:
+            ax.legend(handles, labels, loc="upper right", fontsize=8, frameon=True)
+        fig.tight_layout()
+        self._finish(fig, output_path, show)
+        return fig, ax
 
     def plot_event(
         self,

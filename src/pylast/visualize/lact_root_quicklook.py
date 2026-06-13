@@ -16,7 +16,6 @@ def plot_event_cores(
     max_events: int = -1,
     image_level: str = "dl0",
     output_path: str | PathLike[str] | None = None,
-    show_sdp_planes: bool = False,
     include_non_triggered: bool = False,
     show: bool | None = None,
 ):
@@ -31,7 +30,6 @@ def plot_event_cores(
         event,
         output_path=str(output_path) if output_path is not None else None,
         image_level=image_level,
-        show_sdp_planes=show_sdp_planes,
         include_non_triggered=include_non_triggered,
         show=show,
     )
@@ -46,6 +44,39 @@ def plot_event_cores(
 
 
 plot_event_core = plot_event_cores
+
+
+def plot_event_sdp_planes(
+    root_file: str | PathLike[str],
+    event_index: int = 0,
+    max_events: int = -1,
+    image_level: str = "dl0",
+    output_path: str | PathLike[str] | None = None,
+    include_non_triggered: bool = False,
+    show: bool | None = None,
+):
+    """Draw triggered telescope SDP planes for one event from a LACT ROOT file."""
+
+    if show is None:
+        show = output_path is None
+    source = LactEventSource(str(root_file), max_events=max_events)
+    event = source[event_index]
+    visualizer = EventVisualizer(source)
+    figure, axis = visualizer.plot_event_sdp_planes(
+        event,
+        output_path=str(output_path) if output_path is not None else None,
+        image_level=image_level,
+        include_non_triggered=include_non_triggered,
+        show=show,
+    )
+    return {
+        "source": source,
+        "event": event,
+        "visualizer": visualizer,
+        "figure": figure,
+        "axis": axis,
+        "path": Path(output_path) if output_path is not None else None,
+    }
 
 
 def plot_event_cameras(
