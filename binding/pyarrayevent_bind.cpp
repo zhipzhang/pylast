@@ -354,6 +354,7 @@ void bind_r0_event(nb::module_ &m) {
 void bind_simulated_event(nb::module_ &m) {
     nb::class_<SimulatedEvent>(m, "SimulatedEvent")
         .def_ro("shower", &SimulatedEvent::shower)
+        .def_ro("triggered_tels", &SimulatedEvent::triggered_tels)
         .def_prop_ro("tels", &SimulatedEvent::get_tels)
         .def("__repr__", [](SimulatedEvent& self) {
             std::string repr = "SimulatedEvent:\n";

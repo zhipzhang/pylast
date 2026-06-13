@@ -191,6 +191,14 @@ def _event_pointing_azimuth_deg(event) -> Optional[float]:
     return None
 
 
+def _triggered_tel_ids(event, fallback: Iterable[int] = ()) -> np.ndarray:
+    simulation = getattr(event, "simulation", None)
+    triggered = getattr(simulation, "triggered_tels", None)
+    if triggered is None:
+        return np.asarray(list(fallback), dtype=int)
+    return np.asarray(list(triggered), dtype=int)
+
+
 def _enu_from_az_zd(azimuth_rad: float, zenith_rad: float) -> np.ndarray:
     sin_z, cos_z = np.sin(zenith_rad), np.cos(zenith_rad)
     sin_a, cos_a = np.sin(azimuth_rad), np.cos(azimuth_rad)
@@ -449,13 +457,19 @@ class EventVisualizer:
         image_level: str = "simulation",
         highlighted_tel_ids: Optional[Iterable[int]] = None,
         core_position: Optional[Sequence[float]] = None,
+        include_non_triggered: bool = False,
         show: bool = True,
     ):
         data = read_event_data(event, self.tel_geoms, image_level=image_level)
         tel_ids = sorted(self.tel_geoms)
         east = np.asarray([self.tel_geoms[t].pos_x for t in tel_ids], dtype=float)
         north = np.asarray([self.tel_geoms[t].pos_y for t in tel_ids], dtype=float)
-        values = np.asarray([data.image_sum_by_tel[t] for t in tel_ids], dtype=float)
+        raw_values = np.asarray([data.image_sum_by_tel[t] for t in tel_ids], dtype=float)
+        if highlighted_tel_ids is None:
+            highlighted_tel_ids = _triggered_tel_ids(event, fallback=data.active_tels)
+        highlighted_tel_ids = set(int(t) for t in highlighted_tel_ids)
+        triggered_mask = np.asarray([t in highlighted_tel_ids for t in tel_ids], dtype=bool)
+        values = raw_values if include_non_triggered else np.where(triggered_mask, raw_values, 0.0)
 
         plt.rcParams.update({
             "font.family": "DejaVu Sans",
@@ -503,6 +517,16 @@ class EventVisualizer:
             linewidth=0.35,
             zorder=3,
         )
+        if np.any(triggered_mask):
+            ax.scatter(
+                east[triggered_mask],
+                north[triggered_mask],
+                s=marker_size * 1.35,
+                facecolors="none",
+                edgecolors="#d73027",
+                linewidth=1.8,
+                zorder=6,
+            )
         cbar = fig.colorbar(scatter, ax=ax, fraction=0.046, pad=0.04)
         cbar.set_label(_total_quantity_label("pe"), fontsize=11)
         cbar.ax.tick_params(labelsize=9, direction="in")
@@ -536,21 +560,6 @@ class EventVisualizer:
             linewidth=0.8,
             label="Core",
             zorder=6,
-        )
-        x_offset = -12 if core_x > float(np.mean(east)) else 12
-        y_offset = -12 if core_y > float(np.mean(north)) else 12
-        ax.annotate(
-            f"Core\nx={core_x:.1f} m\ny={core_y:.1f} m",
-            xy=(core_x, core_y),
-            xytext=(x_offset, y_offset),
-            textcoords="offset points",
-            ha="right" if x_offset < 0 else "left",
-            va="top" if y_offset < 0 else "bottom",
-            fontsize=8.5,
-            color="#7f0000",
-            bbox=dict(boxstyle="round,pad=0.25", facecolor="white", edgecolor="#d73027", alpha=0.94),
-            arrowprops=dict(arrowstyle="-", color="#d73027", lw=0.9),
-            zorder=7,
         )
         if data.azimuth_deg is not None:
             _add_arrival_arrow(ax, core_x, core_y, data.azimuth_deg, span, mode="incoming")
@@ -599,13 +608,15 @@ class EventVisualizer:
         image_level: str = "simulation",
         show_hillas: bool = False,
         only_hillas_tels: bool = False,
+        include_non_triggered: bool = False,
         show_ideal_position: bool = False,
         show: bool = True,
     ):
         data = read_event_data(event, self.tel_geoms, image_level=image_level)
         hillas = self._get_hillas_parameters(event)
 
-        tel_ids = sorted(int(tel_id) for tel_id in data.active_tels)
+        selected_tels = data.active_tels if include_non_triggered else _triggered_tel_ids(event, fallback=data.active_tels)
+        tel_ids = sorted(int(tel_id) for tel_id in selected_tels)
         if only_hillas_tels:
             tel_ids = sorted(hillas)
         if not tel_ids:
@@ -675,6 +686,7 @@ class EventVisualizer:
         only_hillas: bool = False,
         only_image: bool = False,
         only_hillas_tels: bool = False,
+        include_non_triggered: bool = False,
         zero_eps: float = 0.0,
         show_colorbar: bool = False,
         show_ideal_position: bool = False,
@@ -685,7 +697,8 @@ class EventVisualizer:
 
         data = read_event_data(event, self.tel_geoms, image_level=image_level)
         hillas = self._get_hillas_parameters(event)
-        tel_ids = sorted(hillas) if only_hillas_tels else sorted(int(tel_id) for tel_id in data.active_tels)
+        selected_tels = data.active_tels if include_non_triggered else _triggered_tel_ids(event, fallback=data.active_tels)
+        tel_ids = sorted(hillas) if only_hillas_tels else sorted(int(tel_id) for tel_id in selected_tels)
         if not tel_ids:
             return None, None
 
