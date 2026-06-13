@@ -10,14 +10,14 @@ PolyCollection and cached pixel vertices.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Iterable, Mapping, Optional, Sequence
+from typing import Dict, Iterable, Mapping, Optional, Sequence, Tuple
 
 import matplotlib
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.collections import PolyCollection
-from matplotlib.colors import LogNorm
+from matplotlib.colors import Normalize
 from matplotlib.patches import Ellipse
 from matplotlib.ticker import FormatStrFormatter, MaxNLocator
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -25,6 +25,10 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 matplotlib.rcParams["path.simplify"] = True
 matplotlib.rcParams["agg.path.chunksize"] = 20000
+
+
+_ROOT_TRIGGERED_CACHE: Dict[Tuple[str, int], Tuple[int, ...]] = {}
+_ROOT_POINTING_CACHE: Dict[str, Optional[float]] = {}
 
 
 @dataclass
@@ -127,7 +131,7 @@ def _add_telescope_direction_inset(ax, x0: float, y0: float, length: float, azim
         "Telescope",
         ha="left" if dx >= 0 else "right",
         va="bottom" if dy >= 0 else "top",
-        fontsize=7.6,
+        fontsize=8.0,
         color="#2166ac",
         weight="bold",
         bbox=dict(boxstyle="round,pad=0.12", facecolor="white", edgecolor="none", alpha=0.78),
@@ -180,23 +184,98 @@ def _event_info_text(event_id: int, core_x: Optional[float], core_y: Optional[fl
     return "\n".join(lines)
 
 
-def _event_pointing_azimuth_deg(event) -> Optional[float]:
-    pointing = getattr(event, "pointing", None)
-    if pointing is None:
+def _root_filename(source) -> Optional[str]:
+    filename = getattr(source, "input_filename", None)
+    if filename is None:
         return None
-    for attr in ("array_azimuth", "azimuth"):
-        value = getattr(pointing, attr, None)
-        if value is not None and np.isfinite(value):
-            return float(np.rad2deg(value))
+    return str(filename)
+
+
+def _root_pointing_azimuth_deg(source) -> Optional[float]:
+    filename = _root_filename(source)
+    if filename is None:
+        return None
+    if filename in _ROOT_POINTING_CACHE:
+        return _ROOT_POINTING_CACHE[filename]
+    try:
+        import ROOT
+
+        root_file = ROOT.TFile.Open(filename)
+        if not root_file or root_file.IsZombie():
+            _ROOT_POINTING_CACHE[filename] = None
+            return None
+        tree = root_file.Get("telescopes")
+        if tree is None or tree.GetEntries() == 0 or tree.GetBranch("pointing_az_deg") is None:
+            root_file.Close()
+            _ROOT_POINTING_CACHE[filename] = None
+            return None
+        tree.GetEntry(0)
+        azimuth = float(tree.pointing_az_deg)
+        root_file.Close()
+    except Exception:
+        azimuth = None
+    _ROOT_POINTING_CACHE[filename] = azimuth
+    return azimuth
+
+
+def _root_triggered_tel_ids(source, event_id: int) -> np.ndarray:
+    filename = _root_filename(source)
+    if filename is None:
+        return np.asarray([], dtype=int)
+    cache_key = (filename, int(event_id))
+    if cache_key in _ROOT_TRIGGERED_CACHE:
+        return np.asarray(_ROOT_TRIGGERED_CACHE[cache_key], dtype=int)
+    triggered_tel_ids = []
+    try:
+        import ROOT
+
+        root_file = ROOT.TFile.Open(filename)
+        if not root_file or root_file.IsZombie():
+            _ROOT_TRIGGERED_CACHE[cache_key] = ()
+            return np.asarray([], dtype=int)
+        tree = root_file.Get("observations")
+        if (
+            tree is None
+            or tree.GetBranch("event_id") is None
+            or tree.GetBranch("telescope_id") is None
+            or tree.GetBranch("triggered") is None
+        ):
+            root_file.Close()
+            _ROOT_TRIGGERED_CACHE[cache_key] = ()
+            return np.asarray([], dtype=int)
+        for entry in range(tree.GetEntries()):
+            tree.GetEntry(entry)
+            if int(tree.event_id) == int(event_id) and bool(tree.triggered):
+                triggered_tel_ids.append(int(tree.telescope_id))
+        root_file.Close()
+    except Exception:
+        triggered_tel_ids = []
+    _ROOT_TRIGGERED_CACHE[cache_key] = tuple(sorted(set(triggered_tel_ids)))
+    return np.asarray(_ROOT_TRIGGERED_CACHE[cache_key], dtype=int)
+
+
+def _event_pointing_azimuth_deg(event, source=None) -> Optional[float]:
+    pointing = getattr(event, "pointing", None)
+    if pointing is not None:
+        for attr in ("array_azimuth", "azimuth"):
+            value = getattr(pointing, attr, None)
+            if value is not None and np.isfinite(value):
+                return float(np.rad2deg(value))
+    if source is not None:
+        return _root_pointing_azimuth_deg(source)
     return None
 
 
-def _triggered_tel_ids(event, fallback: Iterable[int] = ()) -> np.ndarray:
+def _triggered_tel_ids(event, fallback: Iterable[int] = (), source=None) -> np.ndarray:
     simulation = getattr(event, "simulation", None)
     triggered = getattr(simulation, "triggered_tels", None)
-    if triggered is None:
-        return np.asarray(list(fallback), dtype=int)
-    return np.asarray(list(triggered), dtype=int)
+    if triggered is not None:
+        return np.asarray(list(triggered), dtype=int)
+    if source is not None:
+        from_root = _root_triggered_tel_ids(source, _event_id(event))
+        if from_root.size:
+            return from_root
+    return np.asarray(list(fallback), dtype=int)
 
 
 def _enu_from_az_zd(azimuth_rad: float, zenith_rad: float) -> np.ndarray:
@@ -466,7 +545,7 @@ class EventVisualizer:
         north = np.asarray([self.tel_geoms[t].pos_y for t in tel_ids], dtype=float)
         raw_values = np.asarray([data.image_sum_by_tel[t] for t in tel_ids], dtype=float)
         if highlighted_tel_ids is None:
-            highlighted_tel_ids = _triggered_tel_ids(event, fallback=data.active_tels)
+            highlighted_tel_ids = _triggered_tel_ids(event, source=self.source)
         highlighted_tel_ids = set(int(t) for t in highlighted_tel_ids)
         triggered_mask = np.asarray([t in highlighted_tel_ids for t in tel_ids], dtype=bool)
         values = raw_values if include_non_triggered else np.where(triggered_mask, raw_values, 0.0)
@@ -486,8 +565,6 @@ class EventVisualizer:
         marker_size = 86
 
         positive = values[values > 0]
-        vmax = float(np.percentile(positive, 98.0)) if positive.size else 1.0
-        vmax = max(vmax, float(positive.max()) if positive.size and positive.max() < vmax else vmax, 1.0)
         zero_mask = values <= 0.0
         if np.any(zero_mask):
             ax.scatter(
@@ -500,11 +577,16 @@ class EventVisualizer:
                 zorder=3,
             )
         if positive.size:
-            vmin = max(float(np.min(positive)), 1.0e-12)
-            norm = LogNorm(vmin=vmin, vmax=vmax)
+            vmin = float(np.min(positive))
+            vmax = float(np.max(positive))
+            if np.isclose(vmin, vmax):
+                pad_value = max(abs(vmax) * 0.05, 1.0)
+                vmin = max(0.0, vmax - pad_value)
+                vmax = vmax + pad_value
+            norm = Normalize(vmin=vmin, vmax=vmax)
             color_mask = values > 0.0
         else:
-            norm = LogNorm(vmin=1.0, vmax=vmax)
+            norm = Normalize(vmin=0.0, vmax=1.0)
             color_mask = np.zeros_like(values, dtype=bool)
         scatter = ax.scatter(
             east[color_mask],
@@ -527,13 +609,14 @@ class EventVisualizer:
                 linewidth=1.8,
                 zorder=6,
             )
-        cbar = fig.colorbar(scatter, ax=ax, fraction=0.046, pad=0.04)
-        cbar.set_label(_total_quantity_label("pe"), fontsize=11)
-        cbar.locator = MaxNLocator(nbins=4)
-        cbar.formatter = FormatStrFormatter("%.3g")
-        cbar.update_ticks()
-        cbar.minorticks_off()
-        cbar.ax.tick_params(labelsize=9, direction="out", length=3, width=1)
+        if positive.size > 1:
+            cbar = fig.colorbar(scatter, ax=ax, fraction=0.046, pad=0.04)
+            cbar.set_label(_total_quantity_label("pe"), fontsize=11)
+            cbar.locator = MaxNLocator(nbins=4)
+            cbar.formatter = FormatStrFormatter("%.3g")
+            cbar.update_ticks()
+            cbar.minorticks_off()
+            cbar.ax.tick_params(labelsize=9, direction="out", length=3, width=1)
 
         for tel_id in tel_ids:
             geom = self.tel_geoms[tel_id]
@@ -583,9 +666,11 @@ class EventVisualizer:
         compass_x = x_min + 0.070 * (x_max - x_min)
         compass_y = y_min + 0.085 * (y_max - y_min)
         _add_array_compass(ax, compass_x, compass_y, compass_length)
-        pointing_azimuth_deg = _event_pointing_azimuth_deg(event)
+        pointing_azimuth_deg = _event_pointing_azimuth_deg(event, source=self.source)
         if pointing_azimuth_deg is not None:
-            _add_telescope_direction_inset(ax, compass_x, compass_y, compass_length, pointing_azimuth_deg)
+            pointing_x = x_min + 0.075 * (x_max - x_min)
+            pointing_y = y_max - 0.105 * (y_max - y_min)
+            _add_telescope_direction_inset(ax, pointing_x, pointing_y, compass_length, pointing_azimuth_deg)
         info = _event_info_text(data.event_id, core_x, core_y, data.azimuth_deg)
         if info:
             ax.text(
@@ -617,7 +702,7 @@ class EventVisualizer:
         data = read_event_data(event, self.tel_geoms, image_level=image_level)
         hillas = self._get_hillas_parameters(event)
 
-        selected_tels = data.active_tels if include_non_triggered else _triggered_tel_ids(event, fallback=data.active_tels)
+        selected_tels = data.active_tels if include_non_triggered else _triggered_tel_ids(event, source=self.source)
         tel_ids = sorted(int(tel_id) for tel_id in selected_tels)
         if only_hillas_tels:
             tel_ids = sorted(hillas)
@@ -699,7 +784,7 @@ class EventVisualizer:
 
         data = read_event_data(event, self.tel_geoms, image_level=image_level)
         hillas = self._get_hillas_parameters(event)
-        selected_tels = data.active_tels if include_non_triggered else _triggered_tel_ids(event, fallback=data.active_tels)
+        selected_tels = data.active_tels if include_non_triggered else _triggered_tel_ids(event, source=self.source)
         tel_ids = sorted(hillas) if only_hillas_tels else sorted(int(tel_id) for tel_id in selected_tels)
         if not tel_ids:
             return None, None
