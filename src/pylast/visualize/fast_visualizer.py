@@ -79,6 +79,60 @@ def _deg(rad: float) -> float:
     return np.rad2deg(rad)
 
 
+def _azimuth_vector_xy(azimuth_deg: float):
+    azimuth_rad = np.deg2rad(azimuth_deg)
+    return np.sin(azimuth_rad), np.cos(azimuth_rad)
+
+
+def _add_array_compass(ax, x0: float, y0: float, length: float):
+    ax.annotate(
+        "",
+        xy=(x0, y0 + length),
+        xytext=(x0, y0),
+        arrowprops=dict(arrowstyle="-|>", lw=1.2, color="0.08"),
+        zorder=8,
+    )
+    ax.text(x0, y0 + length * 1.12, "N", ha="center", va="bottom", fontsize=11, weight="bold")
+    ax.text(x0, y0 - length * 0.18, "S", ha="center", va="top", fontsize=9, color="0.35")
+    ax.annotate(
+        "",
+        xy=(x0 + length, y0),
+        xytext=(x0, y0),
+        arrowprops=dict(arrowstyle="-|>", lw=1.0, color="0.35"),
+        zorder=8,
+    )
+    ax.text(x0 + length * 1.12, y0, "E", ha="left", va="center", fontsize=9, color="0.35")
+    ax.text(x0 - length * 0.18, y0, "W", ha="right", va="center", fontsize=9, color="0.35")
+
+
+def _add_arrival_arrow(ax, core_x: float, core_y: float, azimuth_deg: float, span: float):
+    dx, dy = _azimuth_vector_xy(azimuth_deg)
+    length = 0.13 * span
+    start_x = core_x - dx * length
+    start_y = core_y - dy * length
+    label_x = start_x - dx * length * 0.07
+    label_y = start_y - dy * length * 0.07
+    ax.annotate(
+        "",
+        xy=(core_x, core_y),
+        xytext=(start_x, start_y),
+        arrowprops=dict(arrowstyle="-|>", lw=1.6, color="#b2182b"),
+        zorder=8,
+    )
+    ax.text(
+        label_x,
+        label_y,
+        "Event",
+        ha="right" if dx >= 0 else "left",
+        va="top" if dy >= 0 else "bottom",
+        fontsize=8.2,
+        color="#b2182b",
+        weight="bold",
+        zorder=9,
+        bbox=dict(boxstyle="round,pad=0.16", facecolor="white", edgecolor="none", alpha=0.78),
+    )
+
+
 def _enu_from_az_zd(azimuth_rad: float, zenith_rad: float) -> np.ndarray:
     sin_z, cos_z = np.sin(zenith_rad), np.cos(zenith_rad)
     sin_a, cos_a = np.sin(azimuth_rad), np.cos(azimuth_rad)
@@ -139,8 +193,8 @@ def _extract_subarray_geometry(source) -> Dict[int, TelescopeGeometry]:
         pix_area = _to_numpy(geometry.pix_area)
         geometries[int(tel_id)] = TelescopeGeometry(
             tel_id=int(tel_id),
-            pos_x=float(tel_position[0]),
-            pos_y=float(tel_position[1]),
+            pos_x=float(-tel_position[1]),
+            pos_y=float(tel_position[0]),
             focal_length=float(optics.equivalent_focal_length) * 100.0,
             pix_x=_to_numpy(geometry.pix_x) * 100.0,
             pix_y=_to_numpy(geometry.pix_y) * 100.0,
@@ -189,7 +243,7 @@ def read_event_data(event, tel_geoms: Mapping[int, TelescopeGeometry], image_lev
     image_by_tel: Dict[int, np.ndarray] = {}
     image_sum_by_tel: Dict[int, float] = {}
 
-    for tel_id in tel_geoms:
+    for tel_id in sorted(tel_geoms):
         image = _image_from_event(event, tel_id, image_level)
         image_by_tel[tel_id] = image
         image_sum_by_tel[tel_id] = float(np.sum(image)) if image.size else 0.0
@@ -204,8 +258,8 @@ def read_event_data(event, tel_geoms: Mapping[int, TelescopeGeometry], image_lev
     return EventData(
         event_id=_event_id(event),
         energy=float(shower.energy),
-        core_x=float(shower.core_x),
-        core_y=float(shower.core_y),
+        core_x=float(-shower.core_y),
+        core_y=float(shower.core_x),
         zenith_deg=float(90.0 - _deg(altitude)),
         azimuth_deg=float(_deg(azimuth)),
         x_max=float(shower.x_max),
@@ -340,7 +394,7 @@ class EventVisualizer:
         show: bool = True,
     ):
         data = read_event_data(event, self.tel_geoms, image_level=image_level)
-        tel_ids = list(self.tel_geoms)
+        tel_ids = sorted(self.tel_geoms)
         positions = np.array([(self.tel_geoms[t].pos_x, self.tel_geoms[t].pos_y) for t in tel_ids])
         image_sums = np.array([data.image_sum_by_tel[t] for t in tel_ids])
         colors = np.log10(np.clip(image_sums, 1.0, None))
@@ -371,28 +425,68 @@ class EventVisualizer:
 
         for tel_id in tel_ids:
             geom = self.tel_geoms[tel_id]
-            ax.text(geom.pos_x, geom.pos_y + 30, str(tel_id), fontsize=12, ha="center", va="center")
+            ax.annotate(
+                f"T{tel_id + 1}",
+                xy=(geom.pos_x, geom.pos_y),
+                xytext=(3.0, 3.0),
+                textcoords="offset points",
+                ha="left",
+                va="bottom",
+                fontsize=7.2,
+                color="0.12",
+            )
 
         if core_position is None:
             core_x, core_y = data.core_x, data.core_y
         else:
             core_x, core_y = core_position
-        ax.scatter(core_x, core_y, color="red", marker="*", s=300, label="Shower Core")
-        direction_x = -np.sin(np.radians(data.azimuth_deg))
-        direction_y = np.cos(np.radians(data.azimuth_deg))
-        ax.plot(
-            [core_x, core_x + direction_x * 800],
-            [core_y, core_y + direction_y * 800],
-            color="red",
-            linestyle="--",
-            label="Shower Direction",
+        ax.scatter(
+            [core_x],
+            [core_y],
+            marker="*",
+            s=230,
+            c="#d73027",
+            edgecolor="white",
+            linewidth=0.8,
+            label="Core",
+            zorder=6,
+        )
+        x_offset = -12 if core_x > float(np.mean(positions[:, 0])) else 12
+        y_offset = -12 if core_y > float(np.mean(positions[:, 1])) else 12
+        ax.annotate(
+            f"Core\nx={core_x:.1f} m\ny={core_y:.1f} m",
+            xy=(core_x, core_y),
+            xytext=(x_offset, y_offset),
+            textcoords="offset points",
+            ha="right" if x_offset < 0 else "left",
+            va="top" if y_offset < 0 else "bottom",
+            fontsize=8.5,
+            color="#7f0000",
+            bbox=dict(boxstyle="round,pad=0.25", facecolor="white", edgecolor="#d73027", alpha=0.94),
+            arrowprops=dict(arrowstyle="-", color="#d73027", lw=0.9),
+            zorder=7,
         )
 
-        ax.set_xlabel("X Position (m)")
-        ax.set_ylabel("Y Position (m)")
+        ax.set_xlabel("x [m]")
+        ax.set_ylabel("y [m]")
         ax.set_title("Telescope Positions and Shower Core")
-        ax.set_xlim(-850, 850)
-        ax.set_ylim(-850, 850)
+        all_x = np.concatenate([positions[:, 0], np.array([core_x], dtype=float)])
+        all_y = np.concatenate([positions[:, 1], np.array([core_y], dtype=float)])
+        span = max(float(np.ptp(all_x)), float(np.ptp(all_y)), 100.0)
+        pad = max(100.0, 0.12 * span)
+        ax.set_xlim(float(np.min(all_x) - pad), float(np.max(all_x) + pad))
+        ax.set_ylim(float(np.min(all_y) - pad), float(np.max(all_y) + pad))
+        ax.set_aspect("equal", adjustable="box")
+        ax.grid(True, alpha=0.25, linewidth=0.55)
+        ax.tick_params(direction="in", top=True, right=True)
+        x_min, x_max = ax.get_xlim()
+        y_min, y_max = ax.get_ylim()
+        axis_span = min(x_max - x_min, y_max - y_min)
+        compass_length = 0.075 * axis_span
+        compass_x = x_min + 0.070 * (x_max - x_min)
+        compass_y = y_min + 0.085 * (y_max - y_min)
+        _add_array_compass(ax, compass_x, compass_y, compass_length)
+        _add_arrival_arrow(ax, core_x, core_y, data.azimuth_deg, axis_span)
         ax.legend()
         fig.colorbar(scatter, ax=ax, label="log10(image sum)")
         self._finish(fig, output_path, show)
@@ -411,9 +505,9 @@ class EventVisualizer:
         data = read_event_data(event, self.tel_geoms, image_level=image_level)
         hillas = self._get_hillas_parameters(event)
 
-        tel_ids = list(data.active_tels)
+        tel_ids = sorted(int(tel_id) for tel_id in data.active_tels)
         if only_hillas_tels:
-            tel_ids = list(hillas)
+            tel_ids = sorted(hillas)
         if not tel_ids:
             return None, None
 
@@ -442,7 +536,7 @@ class EventVisualizer:
             axes[index].text(
                 0.05,
                 0.96,
-                f"Telescope {tel_id}",
+                f"Telescope {tel_id + 1}",
                 transform=axes[index].transAxes,
                 fontsize=11,
                 color="black",
@@ -491,7 +585,7 @@ class EventVisualizer:
 
         data = read_event_data(event, self.tel_geoms, image_level=image_level)
         hillas = self._get_hillas_parameters(event)
-        tel_ids = list(hillas) if only_hillas_tels else list(data.active_tels)
+        tel_ids = sorted(hillas) if only_hillas_tels else sorted(int(tel_id) for tel_id in data.active_tels)
         if not tel_ids:
             return None, None
 
@@ -545,7 +639,7 @@ class EventVisualizer:
                 ax.text(
                     0.02,
                     0.98 - 0.04 * index,
-                    f"Tel {tel_id} (max {max_value:.1f})",
+                    f"Tel {tel_id + 1} (max {max_value:.1f})",
                     transform=ax.transAxes,
                     fontsize=10,
                     color="black",
@@ -556,7 +650,7 @@ class EventVisualizer:
                 if show_colorbar:
                     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
                     sm.set_array([])
-                    plt.colorbar(sm, cax=caxes[index], label=f"Tel {tel_id}", orientation="vertical")
+                    plt.colorbar(sm, cax=caxes[index], label=f"Tel {tel_id + 1}", orientation="vertical")
 
             if show_hillas and not only_image and tel_id in hillas:
                 self._draw_hillas_ellipse(ax, hillas[tel_id])
@@ -579,12 +673,12 @@ class EventVisualizer:
         show: bool = True,
     ):
         data = read_event_data(event, self.tel_geoms, image_level="simulation")
-        tel_ids = list(images.keys())
+        tel_ids = sorted(images.keys())
         if masks is not None:
             tel_ids = [tel_id for tel_id in tel_ids if np.max(masks[tel_id]) > 0]
         if hillas is not None:
             hillas_params = self._hillas_from_mapping(hillas)
-            tel_ids = list(hillas_params)
+            tel_ids = sorted(hillas_params)
         else:
             hillas_params = {}
 
@@ -619,7 +713,7 @@ class EventVisualizer:
             axes[index].text(
                 0.05,
                 0.96,
-                f"Telescope {tel_id}",
+                f"Telescope {tel_id + 1}",
                 transform=axes[index].transAxes,
                 fontsize=11,
                 va="top",
@@ -642,7 +736,7 @@ class EventVisualizer:
     def _event_text(self, data: EventData, n_tel: int) -> str:
         return (
             f"Energy: {data.energy:.2f} TeV\n"
-            f"Core: ({data.core_x:.1f}, {data.core_y:.1f}) m\n"
+            f"Core: (x={data.core_x:.1f}, y={data.core_y:.1f}) m\n"
             f"Direction: (ze={data.zenith_deg:.1f} deg, az={data.azimuth_deg:.1f} deg)\n"
             f"Xmax: {data.x_max:.1f} g/cm2\n"
             f"First Int: {data.first_interaction_height:.1f} m\n"
