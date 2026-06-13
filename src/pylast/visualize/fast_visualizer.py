@@ -105,6 +105,31 @@ def _add_array_compass(ax, x0: float, y0: float, length: float):
     ax.text(x0 - length * 0.18, y0, "W", ha="right", va="center", fontsize=9, color="0.35")
 
 
+def _add_telescope_direction_inset(ax, x0: float, y0: float, length: float, azimuth_deg: float):
+    dx, dy = _azimuth_vector_xy(azimuth_deg)
+    end_x = x0 + dx * 0.72 * length
+    end_y = y0 + dy * 0.72 * length
+    ax.annotate(
+        "",
+        xy=(end_x, end_y),
+        xytext=(x0, y0),
+        arrowprops=dict(arrowstyle="-|>", lw=1.35, color="#2166ac"),
+        zorder=8,
+    )
+    ax.text(
+        end_x,
+        end_y,
+        "Telescope",
+        ha="left" if dx >= 0 else "right",
+        va="bottom" if dy >= 0 else "top",
+        fontsize=7.6,
+        color="#2166ac",
+        weight="bold",
+        bbox=dict(boxstyle="round,pad=0.12", facecolor="white", edgecolor="none", alpha=0.78),
+        zorder=9,
+    )
+
+
 def _add_arrival_arrow(ax, core_x: float, core_y: float, azimuth_deg: float, span: float):
     dx, dy = _azimuth_vector_xy(azimuth_deg)
     length = 0.13 * span
@@ -131,6 +156,17 @@ def _add_arrival_arrow(ax, core_x: float, core_y: float, azimuth_deg: float, spa
         zorder=9,
         bbox=dict(boxstyle="round,pad=0.16", facecolor="white", edgecolor="none", alpha=0.78),
     )
+
+
+def _event_pointing_azimuth_deg(event) -> Optional[float]:
+    pointing = getattr(event, "pointing", None)
+    if pointing is None:
+        return None
+    for attr in ("array_azimuth", "azimuth"):
+        value = getattr(pointing, attr, None)
+        if value is not None and np.isfinite(value):
+            return float(np.rad2deg(value))
+    return None
 
 
 def _enu_from_az_zd(azimuth_rad: float, zenith_rad: float) -> np.ndarray:
@@ -486,6 +522,9 @@ class EventVisualizer:
         compass_x = x_min + 0.070 * (x_max - x_min)
         compass_y = y_min + 0.085 * (y_max - y_min)
         _add_array_compass(ax, compass_x, compass_y, compass_length)
+        pointing_azimuth_deg = _event_pointing_azimuth_deg(event)
+        if pointing_azimuth_deg is not None:
+            _add_telescope_direction_inset(ax, compass_x, compass_y, compass_length, pointing_azimuth_deg)
         _add_arrival_arrow(ax, core_x, core_y, data.azimuth_deg, axis_span)
         ax.legend()
         fig.colorbar(scatter, ax=ax, label="log10(image sum)")

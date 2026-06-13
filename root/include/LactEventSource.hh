@@ -69,6 +69,8 @@ private:
         int telescope_id = 0;
         std::string name = "LACT";
         std::array<double, 3> position = {0.0, 0.0, 0.0};
+        double pointing_az_deg = 0.0;
+        double pointing_el_deg = 90.0;
     };
 
     struct CorsikaEventRow {

@@ -2,6 +2,7 @@
 
 #include "DL0Event.hh"
 #include "R1Event.hh"
+#include "Pointing.hh"
 #include "SimulatedCamera.hh"
 #include "SimulatedEvent.hh"
 #include "SimulatedShower.hh"
@@ -215,6 +216,8 @@ void LactEventSource::load_telescopes()
     set_branch_if_exists(tree, "array_x_north_m", &row.position[0]);
     set_branch_if_exists(tree, "array_y_west_m", &row.position[1]);
     set_branch_if_exists(tree, "array_z_up_m", &row.position[2]);
+    set_branch_if_exists(tree, "pointing_az_deg", &row.pointing_az_deg);
+    set_branch_if_exists(tree, "pointing_el_deg", &row.pointing_el_deg);
     const auto n_entries = tree->GetEntries();
     telescopes.reserve(static_cast<std::size_t>(n_entries));
     for (Long64_t i = 0; i < n_entries; ++i) {
@@ -489,6 +492,26 @@ ArrayEvent LactEventSource::get_event(int index)
     event.simulation->shower.h_max = std::numeric_limits<double>::quiet_NaN();
     event.simulation->shower.starting_grammage = std::numeric_limits<double>::quiet_NaN();
     event.simulation->shower.shower_primary_id = 0;
+    event.pointing = Pointing();
+    bool have_array_pointing = false;
+    double array_pointing_az = 0.0;
+    double array_pointing_alt = 0.0;
+    for (const auto& tel : telescopes) {
+        if (!keep_tel(tel.telescope_id)) {
+            continue;
+        }
+        const double az = deg_to_rad(tel.pointing_az_deg);
+        const double alt = deg_to_rad(tel.pointing_el_deg);
+        event.pointing->add_tel(tel.telescope_id, PointingTelescope(az, alt));
+        if (!have_array_pointing) {
+            array_pointing_az = az;
+            array_pointing_alt = alt;
+            have_array_pointing = true;
+        }
+    }
+    if (have_array_pointing) {
+        event.pointing->set_array_pointing(array_pointing_az, array_pointing_alt);
+    }
 
     const auto truth_it = corsika_by_event.find(event_id);
     if (truth_it != corsika_by_event.end()) {
