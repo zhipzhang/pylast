@@ -11,6 +11,7 @@
 #include "LactEventSource.hh"
 #include "RootEventSource.hh"
 #include "SimtelEventSource.hh"
+#include <stdexcept>
 namespace nb = nanobind;
 
 NB_MODULE(_pyeventsource, m){
@@ -22,7 +23,12 @@ NB_MODULE(_pyeventsource, m){
         .def_ro("simulation_config", &EventSource::simulation_config)
         .def_ro("atmosphere_model", &EventSource::atmosphere_model)
         .def_ro("metaparam", &EventSource::metaparam)
-        .def_ro("subarray", &EventSource::subarray)
+        .def_prop_ro("subarray", [](EventSource& self) -> SubarrayDescription& {
+            if (!self.subarray.has_value()) {
+                throw std::runtime_error("EventSource has no subarray description");
+            }
+            return *self.subarray;
+        }, nb::rv_policy::reference_internal)
         .def_ro("statistics", &EventSource::statistics)
         .def("load_simulated_showers", &EventSource::load_all_simulated_showers)
         .def("__iter__",
@@ -107,7 +113,7 @@ NB_MODULE(_pyeventsource, m){
         .def_prop_ro("shower_array", &LactEventSource::get_shower_array)
         .def("__getitem__", &LactEventSource::operator[])
         .def("__len__", [](LactEventSource& self) {
-            return static_cast<size_t>(self.max_events);
+            return self.event_count();
         })
         .def("__repr__", [](LactEventSource& self) {
             return fmt::format("LactEventSource(filename={})", self.input_filename);

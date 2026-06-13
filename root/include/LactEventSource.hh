@@ -15,6 +15,7 @@
 #include <Eigen/Dense>
 
 #include <array>
+#include <cstddef>
 #include <map>
 #include <memory>
 #include <set>
@@ -47,6 +48,7 @@ public:
         }
         return *shower_array;
     }
+    std::size_t event_count() const { return event_order.size(); }
 
 private:
     struct CameraPixelRow {
