@@ -280,6 +280,29 @@ def _triggered_tel_ids(event, fallback: Iterable[int] = (), source=None) -> np.n
     return np.asarray(list(fallback), dtype=int)
 
 
+def _selected_image_tel_ids(
+    event,
+    data: EventData,
+    hillas: Mapping[int, HillasParameters],
+    image_level: str,
+    include_non_triggered: bool,
+    only_hillas_tels: bool,
+    source=None,
+) -> Sequence[int]:
+    if only_hillas_tels:
+        return sorted(hillas)
+    if include_non_triggered:
+        return sorted(int(tel_id) for tel_id in data.active_tels)
+
+    selected = _triggered_tel_ids(event, source=source)
+    if selected.size == 0 and image_level == "dl1":
+        # ImageProcessor fills event.dl1 but also clears simulation.triggered_tels
+        # while rebuilding simulation-level products. For cleaned-image plots,
+        # use the telescopes that actually survived DL1 cleaning.
+        selected = data.active_tels
+    return sorted(int(tel_id) for tel_id in selected)
+
+
 def _enu_from_az_zd(azimuth_rad: float, zenith_rad: float) -> np.ndarray:
     sin_z, cos_z = np.sin(zenith_rad), np.cos(zenith_rad)
     sin_a, cos_a = np.sin(azimuth_rad), np.cos(azimuth_rad)
@@ -838,10 +861,15 @@ class EventVisualizer:
         data = read_event_data(event, self.tel_geoms, image_level=image_level)
         hillas = self._get_hillas_parameters(event)
 
-        selected_tels = data.active_tels if include_non_triggered else _triggered_tel_ids(event, source=self.source)
-        tel_ids = sorted(int(tel_id) for tel_id in selected_tels)
-        if only_hillas_tels:
-            tel_ids = sorted(hillas)
+        tel_ids = _selected_image_tel_ids(
+            event,
+            data,
+            hillas,
+            image_level,
+            include_non_triggered,
+            only_hillas_tels,
+            source=self.source,
+        )
         if not tel_ids:
             return None, None
 
@@ -920,8 +948,15 @@ class EventVisualizer:
 
         data = read_event_data(event, self.tel_geoms, image_level=image_level)
         hillas = self._get_hillas_parameters(event)
-        selected_tels = data.active_tels if include_non_triggered else _triggered_tel_ids(event, source=self.source)
-        tel_ids = sorted(hillas) if only_hillas_tels else sorted(int(tel_id) for tel_id in selected_tels)
+        tel_ids = _selected_image_tel_ids(
+            event,
+            data,
+            hillas,
+            image_level,
+            include_non_triggered,
+            only_hillas_tels,
+            source=self.source,
+        )
         if not tel_ids:
             return None, None
 
