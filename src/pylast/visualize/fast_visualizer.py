@@ -295,10 +295,11 @@ def _selected_image_tel_ids(
         return sorted(int(tel_id) for tel_id in data.active_tels)
 
     selected = _triggered_tel_ids(event, source=source)
-    if selected.size == 0 and image_level == "dl1":
-        # ImageProcessor fills event.dl1 but also clears simulation.triggered_tels
-        # while rebuilding simulation-level products. For cleaned-image plots,
-        # use the telescopes that actually survived DL1 cleaning.
+    if selected.size == 0 and image_level in {"simulation", "dl1"}:
+        # Some sources do not preserve a triggered-telescope list at every
+        # stage. Simtel true-image plots use simulation.tels directly, and
+        # ImageProcessor fills event.dl1 while rebuilding simulation-level
+        # products. In those cases, use the telescopes with nonzero images.
         selected = data.active_tels
     return sorted(int(tel_id) for tel_id in selected)
 
