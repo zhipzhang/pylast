@@ -1,17 +1,35 @@
-"""Quick-look plotting helpers for LACT_sim ROOT files read through pylast."""
+"""Quick-look plotting helpers for LACT_sim events read through pylast."""
 
 from __future__ import annotations
 
 from pathlib import Path
 from os import PathLike
 
+import numpy as np
+
 from pylast.io import LactEventSource
 
 from .fast_visualizer import EventVisualizer
 
 
+def _looks_like_path(value) -> bool:
+    return isinstance(value, (str, PathLike, Path))
+
+
+def _visualizer_from(source=None, visualizer=None):
+    if visualizer is not None:
+        return visualizer
+    if source is None:
+        raise ValueError("source or visualizer is required when plotting an event")
+    return EventVisualizer(source)
+
+
 def plot_event_cores(
-    root_file: str | PathLike[str],
+    event=None,
+    *,
+    source=None,
+    visualizer=None,
+    root_file: str | PathLike[str] | None = None,
     event_index: int = 0,
     max_events: int = -1,
     image_level: str = "dl0",
@@ -19,13 +37,33 @@ def plot_event_cores(
     include_non_triggered: bool = False,
     show: bool | None = None,
 ):
-    """Draw the LACT array/core view for one event from a LACT ROOT file."""
+    """Draw the LACT array/core view from an already loaded event.
+
+    Pass ``visualizer=EventVisualizer(source)`` or ``source=source``.  The
+    optional ``root_file`` path is retained only as a compatibility shortcut;
+    notebooks that process DL1/DL2 should pass the in-memory event so the plot
+    sees the same calibrated/reconstructed object.
+    """
+
+    if root_file is None and _looks_like_path(event):
+        root_file = event
+        event = None
+    if root_file is not None:
+        return plot_root_event_cores(
+            root_file=root_file,
+            event_index=event_index,
+            max_events=max_events,
+            image_level=image_level,
+            output_path=output_path,
+            include_non_triggered=include_non_triggered,
+            show=show,
+        )
+    if event is None:
+        raise ValueError("event is required")
 
     if show is None:
         show = output_path is None
-    source = LactEventSource(str(root_file), max_events=max_events)
-    event = source[event_index]
-    visualizer = EventVisualizer(source)
+    visualizer = _visualizer_from(source=source, visualizer=visualizer)
     figure, axis = visualizer.plot_event_cores(
         event,
         output_path=str(output_path) if output_path is not None else None,
@@ -34,7 +72,6 @@ def plot_event_cores(
         show=show,
     )
     return {
-        "source": source,
         "event": event,
         "visualizer": visualizer,
         "figure": figure,
@@ -47,7 +84,11 @@ plot_event_core = plot_event_cores
 
 
 def plot_event_sdp_planes(
-    root_file: str | PathLike[str],
+    event=None,
+    *,
+    source=None,
+    visualizer=None,
+    root_file: str | PathLike[str] | None = None,
     event_index: int = 0,
     max_events: int = -1,
     image_level: str = "dl0",
@@ -55,13 +96,27 @@ def plot_event_sdp_planes(
     include_non_triggered: bool = False,
     show: bool | None = None,
 ):
-    """Draw triggered telescope SDP planes for one event from a LACT ROOT file."""
+    """Draw triggered telescope SDP planes from an already loaded event."""
+
+    if root_file is None and _looks_like_path(event):
+        root_file = event
+        event = None
+    if root_file is not None:
+        return plot_root_event_sdp_planes(
+            root_file=root_file,
+            event_index=event_index,
+            max_events=max_events,
+            image_level=image_level,
+            output_path=output_path,
+            include_non_triggered=include_non_triggered,
+            show=show,
+        )
+    if event is None:
+        raise ValueError("event is required")
 
     if show is None:
         show = output_path is None
-    source = LactEventSource(str(root_file), max_events=max_events)
-    event = source[event_index]
-    visualizer = EventVisualizer(source)
+    visualizer = _visualizer_from(source=source, visualizer=visualizer)
     figure, axis = visualizer.plot_event_sdp_planes(
         event,
         output_path=str(output_path) if output_path is not None else None,
@@ -70,7 +125,6 @@ def plot_event_sdp_planes(
         show=show,
     )
     return {
-        "source": source,
         "event": event,
         "visualizer": visualizer,
         "figure": figure,
@@ -80,6 +134,65 @@ def plot_event_sdp_planes(
 
 
 def plot_event_cameras(
+    event=None,
+    *,
+    source=None,
+    visualizer=None,
+    root_file: str | PathLike[str] | None = None,
+    event_index: int = 0,
+    max_events: int = -1,
+    image_level: str = "dl0",
+    show_hillas: bool = False,
+    only_hillas_tels: bool = False,
+    show_ideal_position: bool = False,
+    output_path: str | PathLike[str] | None = None,
+    include_non_triggered: bool = False,
+    show: bool | None = None,
+):
+    """Draw camera images from an already loaded event."""
+
+    if root_file is None and _looks_like_path(event):
+        root_file = event
+        event = None
+    if root_file is not None:
+        return plot_root_event_cameras(
+            root_file=root_file,
+            event_index=event_index,
+            max_events=max_events,
+            image_level=image_level,
+            show_hillas=show_hillas,
+            only_hillas_tels=only_hillas_tels,
+            show_ideal_position=show_ideal_position,
+            output_path=output_path,
+            include_non_triggered=include_non_triggered,
+            show=show,
+        )
+    if event is None:
+        raise ValueError("event is required")
+
+    if show is None:
+        show = output_path is None
+    visualizer = _visualizer_from(source=source, visualizer=visualizer)
+    figure, axes = visualizer.plot_event(
+        event,
+        output_path=str(output_path) if output_path is not None else None,
+        image_level=image_level,
+        show_hillas=show_hillas,
+        only_hillas_tels=only_hillas_tels,
+        include_non_triggered=include_non_triggered,
+        show_ideal_position=show_ideal_position,
+        show=show,
+    )
+    return {
+        "event": event,
+        "visualizer": visualizer,
+        "figure": figure,
+        "axes": axes,
+        "path": Path(output_path) if output_path is not None else None,
+    }
+
+
+def plot_root_event_cores(
     root_file: str | PathLike[str],
     event_index: int = 0,
     max_events: int = -1,
@@ -88,29 +201,159 @@ def plot_event_cameras(
     include_non_triggered: bool = False,
     show: bool | None = None,
 ):
-    """Draw triggered telescope camera images for one event from a LACT ROOT file."""
+    """Read one LACT ROOT event and draw the array/core view."""
 
-    if show is None:
-        show = output_path is None
     source = LactEventSource(str(root_file), max_events=max_events)
     event = source[event_index]
-    visualizer = EventVisualizer(source)
-    figure, axes = visualizer.plot_event(
+    result = plot_event_cores(
         event,
-        output_path=str(output_path) if output_path is not None else None,
+        source=source,
         image_level=image_level,
-        show_hillas=False,
+        output_path=output_path,
         include_non_triggered=include_non_triggered,
         show=show,
     )
-    return {
-        "source": source,
-        "event": event,
-        "visualizer": visualizer,
-        "figure": figure,
-        "axes": axes,
-        "path": Path(output_path) if output_path is not None else None,
+    result["source"] = source
+    return result
+
+
+def plot_root_event_sdp_planes(
+    root_file: str | PathLike[str],
+    event_index: int = 0,
+    max_events: int = -1,
+    image_level: str = "dl0",
+    output_path: str | PathLike[str] | None = None,
+    include_non_triggered: bool = False,
+    show: bool | None = None,
+):
+    """Read one LACT ROOT event and draw triggered telescope SDP planes."""
+
+    source = LactEventSource(str(root_file), max_events=max_events)
+    event = source[event_index]
+    result = plot_event_sdp_planes(
+        event,
+        source=source,
+        image_level=image_level,
+        output_path=output_path,
+        include_non_triggered=include_non_triggered,
+        show=show,
+    )
+    result["source"] = source
+    return result
+
+
+def plot_root_event_cameras(
+    root_file: str | PathLike[str],
+    event_index: int = 0,
+    max_events: int = -1,
+    image_level: str = "dl0",
+    show_hillas: bool = False,
+    only_hillas_tels: bool = False,
+    show_ideal_position: bool = False,
+    output_path: str | PathLike[str] | None = None,
+    include_non_triggered: bool = False,
+    show: bool | None = None,
+):
+    """Read one LACT ROOT event and draw camera images."""
+
+    source = LactEventSource(str(root_file), max_events=max_events)
+    event = source[event_index]
+    result = plot_event_cameras(
+        event,
+        source=source,
+        image_level=image_level,
+        show_hillas=show_hillas,
+        only_hillas_tels=only_hillas_tels,
+        show_ideal_position=show_ideal_position,
+        output_path=output_path,
+        include_non_triggered=include_non_triggered,
+        show=show,
+    )
+    result["source"] = source
+    return result
+
+
+def hillas_parameter_rows(event):
+    """Return per-telescope Hillas parameters already stored on ``event.dl1``."""
+
+    rows = []
+    dl1 = getattr(event, "dl1", None)
+    tels = getattr(dl1, "tels", {}) if dl1 is not None else {}
+    for tel_id, tel in sorted(tels.items()):
+        image_parameters = getattr(tel, "image_parameters", None)
+        hillas = getattr(image_parameters, "hillas", None)
+        if hillas is None:
+            continue
+        image = np.asarray(getattr(tel, "image", []), dtype=float)
+        mask = np.asarray(getattr(tel, "mask", np.ones_like(image)), dtype=bool)
+        rows.append(
+            {
+                "tel_id": int(tel_id),
+                "intensity": float(np.sum(image[mask])) if image.size else np.nan,
+                "length_rad": float(getattr(hillas, "length", np.nan)),
+                "width_rad": float(getattr(hillas, "width", np.nan)),
+                "psi_rad": float(getattr(hillas, "psi", np.nan)),
+                "x_rad": float(getattr(hillas, "x", getattr(hillas, "cog_x", np.nan))),
+                "y_rad": float(getattr(hillas, "y", getattr(hillas, "cog_y", np.nan))),
+            }
+        )
+    return rows
+
+
+def _angular_separation_rad(alt_a, az_a, alt_b, az_b):
+    sin_alt_a, sin_alt_b = np.sin(alt_a), np.sin(alt_b)
+    cos_alt_a, cos_alt_b = np.cos(alt_a), np.cos(alt_b)
+    cos_angle = sin_alt_a * sin_alt_b + cos_alt_a * cos_alt_b * np.cos(az_a - az_b)
+    return float(np.arccos(np.clip(cos_angle, -1.0, 1.0)))
+
+
+def reconstruction_summary(event, reconstructor: str = "HillasReconstructor"):
+    """Return truth and DL2 geometry reconstruction values from an event."""
+
+    shower = getattr(getattr(event, "simulation", None), "shower", None)
+    geometry = getattr(getattr(event, "dl2", None), "geometry", {}) or {}
+    reco = geometry.get(reconstructor)
+    summary = {
+        "event_id": getattr(event, "event_id", getattr(event, "count", None)),
+        "reconstructor": reconstructor,
+        "is_valid": bool(getattr(reco, "is_valid", False)) if reco is not None else False,
+        "n_hillas_telescopes": len(hillas_parameter_rows(event)),
     }
+
+    if shower is not None:
+        true_alt = float(getattr(shower, "alt", np.nan))
+        true_az = float(getattr(shower, "az", np.nan))
+        true_core_x = float(getattr(shower, "core_x", np.nan))
+        true_core_y = float(getattr(shower, "core_y", np.nan))
+        summary.update(
+            {
+                "true_alt_deg": float(np.degrees(true_alt)),
+                "true_az_deg": float(np.degrees(true_az)),
+                "true_zenith_deg": float(90.0 - np.degrees(true_alt)),
+                "true_core_x_m": true_core_x,
+                "true_core_y_m": true_core_y,
+            }
+        )
+    else:
+        true_alt = true_az = np.nan
+
+    if reco is not None:
+        reco_alt = float(getattr(reco, "alt", np.nan))
+        reco_az = float(getattr(reco, "az", np.nan))
+        summary.update(
+            {
+                "reco_alt_deg": float(np.degrees(reco_alt)) if np.isfinite(reco_alt) else np.nan,
+                "reco_az_deg": float(np.degrees(reco_az)) if np.isfinite(reco_az) else np.nan,
+                "reco_zenith_deg": float(90.0 - np.degrees(reco_alt)) if np.isfinite(reco_alt) else np.nan,
+                "reco_core_x_m": float(getattr(reco, "core_x", np.nan)),
+                "reco_core_y_m": float(getattr(reco, "core_y", np.nan)),
+                "direction_error_deg": float(np.degrees(getattr(reco, "direction_error", np.nan))),
+            }
+        )
+        if all(np.isfinite(v) for v in (true_alt, true_az, reco_alt, reco_az)):
+            summary["truth_reco_sep_deg"] = float(np.degrees(_angular_separation_rad(reco_alt, reco_az, true_alt, true_az)))
+
+    return summary
 
 
 def plot_lact_root_quicklook(
