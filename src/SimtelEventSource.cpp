@@ -22,6 +22,7 @@
 #include "Utils.hh"
 #include <cstdint>
 #include <thread>
+#include <vector>
 #include "Utils.hh"
 SimtelEventSource::SimtelEventSource(const std::string& filename, int64_t max_events, std::vector<int> subarray, bool load_simulated_showers, int gain_selector_threshold):
     EventSource(filename, max_events, subarray, load_simulated_showers),
@@ -154,9 +155,15 @@ CameraGeometry SimtelEventSource::get_telescope_camera_geometry(int tel_index)
     double* pix_x = simtel_file_handler->hsdata->camera_set[tel_index].xpix;
     double* pix_y = simtel_file_handler->hsdata->camera_set[tel_index].ypix;
     double* pix_area = simtel_file_handler->hsdata->camera_set[tel_index].area;
-    int* pix_type = simtel_file_handler->hsdata->camera_set[tel_index].pixel_shape;
+    int* simtel_pix_type = simtel_file_handler->hsdata->camera_set[tel_index].pixel_shape;
+    std::vector<int> pix_type(static_cast<std::size_t>(num_pixels));
+    for (int i = 0; i < num_pixels; ++i) {
+        // sim_telarray uses 0: circle, 1/3: hexagon, 2: square.
+        // pylast CameraGeometry uses 0: circle, 1: hexagon, 2: square.
+        pix_type[static_cast<std::size_t>(i)] = simtel_pix_type[i] == 3 ? 1 : simtel_pix_type[i];
+    }
     double cam_rotation = simtel_file_handler->hsdata->camera_set[tel_index].cam_rot;
-    return CameraGeometry(camera_name, num_pixels, pix_x, pix_y, pix_area, pix_type, cam_rotation);
+    return CameraGeometry(camera_name, num_pixels, pix_x, pix_y, pix_area, pix_type.data(), cam_rotation);
 }
 
 CameraReadout SimtelEventSource::get_telescope_camera_readout(int tel_index)

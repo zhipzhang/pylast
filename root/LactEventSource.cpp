@@ -248,6 +248,15 @@ void LactEventSource::load_telescopes()
     for (std::size_t i = 0; i < camera_pixels.size(); ++i) {
         geometry.pix_id[static_cast<int>(i)] = camera_pixels[i].pixel_id;
     }
+    const double focal_length = std::isfinite(optics.effective_focal_length_m) &&
+            optics.effective_focal_length_m > 0.0
+        ? optics.effective_focal_length_m
+        : optics.equivalent_focal_length_m;
+    if (std::isfinite(focal_length) && focal_length > 0.0) {
+        geometry.pix_x_fov = geometry.pix_x / focal_length;
+        geometry.pix_y_fov = geometry.pix_y / focal_length;
+        geometry.pix_width_fov = geometry.pix_width / focal_length;
+    }
 
     CameraReadout readout;
     readout.camera_name = "LACT";
