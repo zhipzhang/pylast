@@ -331,6 +331,9 @@ void SimtelEventSource::apply_simtel_calibration(ArrayEvent& event)
             }
         }
         event.r1->add_tel(tel_id, R1Camera{n_pixels, n_samples, std::move(r1_waveform), std::move(gain_selection)});
+        if(event.simulation) {
+            event.simulation->triggered_tels.push_back(tel_id);
+        }
     }
 }
 void SimtelEventSource::read_monitor(ArrayEvent& event)

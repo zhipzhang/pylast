@@ -280,14 +280,14 @@ def _triggered_tel_ids(event, fallback: Iterable[int] = (), source=None) -> np.n
         triggered_array = np.asarray(list(triggered), dtype=int)
         if triggered_array.size:
             return triggered_array
-    r1 = getattr(event, "r1", None)
-    r1_tels = getattr(r1, "tels", None) if r1 is not None else None
-    if r1_tels:
-        return np.asarray(sorted(int(tel_id) for tel_id in r1_tels), dtype=int)
     if source is not None:
         from_root = _root_triggered_tel_ids(source, _event_id(event))
         if from_root.size:
             return from_root
+    r1 = getattr(event, "r1", None)
+    r1_tels = getattr(r1, "tels", None) if r1 is not None else None
+    if r1_tels:
+        return np.asarray(sorted(int(tel_id) for tel_id in r1_tels), dtype=int)
     return np.asarray(list(fallback), dtype=int)
 
 
