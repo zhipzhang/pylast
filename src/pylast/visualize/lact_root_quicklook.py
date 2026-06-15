@@ -133,6 +133,65 @@ def plot_event_sdp_planes(
     }
 
 
+def plot_event_sdp_planes_3d(
+    event=None,
+    *,
+    source=None,
+    visualizer=None,
+    root_file: str | PathLike[str] | None = None,
+    event_index: int = 0,
+    max_events: int = -1,
+    image_level: str = "dl0",
+    output_path: str | PathLike[str] | None = None,
+    include_non_triggered: bool = False,
+    z_max: float = 1200.0,
+    show_reco: bool = True,
+    reconstructor: str = "HillasReconstructor",
+    show: bool | None = None,
+):
+    """Draw a 3D SDP diagnostic from an already loaded event."""
+
+    if root_file is None and _looks_like_path(event):
+        root_file = event
+        event = None
+    if root_file is not None:
+        return plot_root_event_sdp_planes_3d(
+            root_file=root_file,
+            event_index=event_index,
+            max_events=max_events,
+            image_level=image_level,
+            output_path=output_path,
+            include_non_triggered=include_non_triggered,
+            z_max=z_max,
+            show_reco=show_reco,
+            reconstructor=reconstructor,
+            show=show,
+        )
+    if event is None:
+        raise ValueError("event is required")
+
+    if show is None:
+        show = output_path is None
+    visualizer = _visualizer_from(source=source, visualizer=visualizer)
+    figure, axis = visualizer.plot_event_sdp_planes_3d(
+        event,
+        output_path=str(output_path) if output_path is not None else None,
+        image_level=image_level,
+        include_non_triggered=include_non_triggered,
+        z_max=z_max,
+        show_reco=show_reco,
+        reconstructor=reconstructor,
+        show=show,
+    )
+    return {
+        "event": event,
+        "visualizer": visualizer,
+        "figure": figure,
+        "axis": axis,
+        "path": Path(output_path) if output_path is not None else None,
+    }
+
+
 def plot_event_cameras(
     event=None,
     *,
@@ -236,6 +295,37 @@ def plot_root_event_sdp_planes(
         image_level=image_level,
         output_path=output_path,
         include_non_triggered=include_non_triggered,
+        show=show,
+    )
+    result["source"] = source
+    return result
+
+
+def plot_root_event_sdp_planes_3d(
+    root_file: str | PathLike[str],
+    event_index: int = 0,
+    max_events: int = -1,
+    image_level: str = "dl0",
+    output_path: str | PathLike[str] | None = None,
+    include_non_triggered: bool = False,
+    z_max: float = 1200.0,
+    show_reco: bool = True,
+    reconstructor: str = "HillasReconstructor",
+    show: bool | None = None,
+):
+    """Read one LACT ROOT event and draw a 3D SDP diagnostic."""
+
+    source = LactEventSource(str(root_file), max_events=max_events)
+    event = source[event_index]
+    result = plot_event_sdp_planes_3d(
+        event,
+        source=source,
+        image_level=image_level,
+        output_path=output_path,
+        include_non_triggered=include_non_triggered,
+        z_max=z_max,
+        show_reco=show_reco,
+        reconstructor=reconstructor,
         show=show,
     )
     result["source"] = source

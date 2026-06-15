@@ -848,6 +848,162 @@ class EventVisualizer:
         self._finish(fig, output_path, show)
         return fig, ax
 
+    def plot_event_sdp_planes_3d(
+        self,
+        event,
+        output_path: Optional[str] = None,
+        image_level: str = "dl0",
+        include_non_triggered: bool = False,
+        z_max: float = 1200.0,
+        show_reco: bool = True,
+        reconstructor: str = "HillasReconstructor",
+        show: bool = True,
+    ):
+        """Draw a 3D SDP diagnostic using telescope positions and shower axis.
+
+        The plane for each telescope is defined by the telescope ground
+        position and the true shower axis through the true core. When a valid
+        DL2 geometry reconstruction is present, the reconstructed axis is
+        overlaid for comparison.
+        """
+
+        data = read_event_data(event, self.tel_geoms, image_level=image_level)
+        hillas = self._get_hillas_parameters(event)
+        tel_ids = _selected_image_tel_ids(
+            event,
+            data,
+            hillas,
+            image_level,
+            include_non_triggered,
+            only_hillas_tels=False,
+            source=self.source,
+        )
+        if not tel_ids:
+            tel_ids = sorted(self.tel_geoms)
+
+        shower = _shower(event)
+        core = np.array([data.core_x, data.core_y, 0.0], dtype=float)
+        truth_axis = _enu_from_az_zd(float(shower.az), np.pi / 2 - float(shower.alt))
+        if truth_axis[2] < 0:
+            truth_axis = -truth_axis
+        if abs(truth_axis[2]) < 1.0e-6:
+            truth_axis[2] = 1.0e-6
+        axis_top = core + truth_axis * (z_max / truth_axis[2])
+
+        fig = plt.figure(figsize=(11, 8))
+        ax = fig.add_subplot(111, projection="3d")
+
+        all_x = [core[0], axis_top[0]]
+        all_y = [core[1], axis_top[1]]
+        colors = plt.cm.tab20(np.linspace(0, 1, max(len(tel_ids), 1)))
+        plane_half_width = max(80.0, 0.12 * max(1.0, np.ptp([g.pos_x for g in self.tel_geoms.values()])))
+        axis_samples = np.linspace(0.0, z_max / truth_axis[2], 2)
+        offset_samples = np.linspace(-plane_half_width, plane_half_width, 2)
+
+        for index, tel_id in enumerate(tel_ids):
+            geom = self.tel_geoms.get(int(tel_id))
+            if geom is None:
+                continue
+            tel_ground = np.array([geom.pos_x, geom.pos_y, 0.0], dtype=float)
+            ground_vec = tel_ground - core
+            ground_norm = float(np.linalg.norm(ground_vec[:2]))
+            if ground_norm <= 0 or not np.isfinite(ground_norm):
+                continue
+            u = ground_vec / ground_norm
+            line_ground = np.vstack([core - u * plane_half_width * 1.6, tel_ground + u * plane_half_width * 1.6])
+            color = colors[index]
+            ax.plot(
+                line_ground[:, 0],
+                line_ground[:, 1],
+                np.zeros(line_ground.shape[0]),
+                color=color,
+                linewidth=1.2,
+                alpha=0.95,
+            )
+            aa, bb = np.meshgrid(offset_samples, axis_samples)
+            surf = core[None, None, :] + aa[..., None] * u[None, None, :] + bb[..., None] * truth_axis[None, None, :]
+            ax.plot_surface(
+                surf[..., 0],
+                surf[..., 1],
+                surf[..., 2],
+                color=color,
+                alpha=0.13,
+                linewidth=0,
+                shade=False,
+            )
+            ax.scatter([geom.pos_x], [geom.pos_y], [0.0], color=color, s=45, edgecolor="black", linewidth=0.4)
+            ax.text(geom.pos_x, geom.pos_y, 0.0, f"T{int(tel_id) + 1}", fontsize=8, color=color)
+            all_x.extend([geom.pos_x, line_ground[0, 0], line_ground[1, 0], surf[..., 0].min(), surf[..., 0].max()])
+            all_y.extend([geom.pos_y, line_ground[0, 1], line_ground[1, 1], surf[..., 1].min(), surf[..., 1].max()])
+
+        ax.scatter([core[0]], [core[1]], [0.0], marker="*", s=180, color="#b2182b", label="True core")
+        ax.plot(
+            [core[0], axis_top[0]],
+            [core[1], axis_top[1]],
+            [core[2], axis_top[2]],
+            color="#b2182b",
+            linewidth=2.4,
+            label="True shower axis / SDP intersection",
+        )
+
+        if show_reco:
+            geometry = getattr(getattr(event, "dl2", None), "geometry", {}) or {}
+            reco = geometry.get(reconstructor)
+            if reco is not None and bool(getattr(reco, "is_valid", False)):
+                reco_alt = float(getattr(reco, "alt", np.nan))
+                reco_az = float(getattr(reco, "az", np.nan))
+                if np.isfinite(reco_alt) and np.isfinite(reco_az):
+                    reco_core = np.array(
+                        [
+                            float(getattr(reco, "core_x", core[0])),
+                            float(getattr(reco, "core_y", core[1])),
+                            0.0,
+                        ],
+                        dtype=float,
+                    )
+                    reco_axis = _enu_from_az_zd(reco_az, np.pi / 2 - reco_alt)
+                    if reco_axis[2] < 0:
+                        reco_axis = -reco_axis
+                    if abs(reco_axis[2]) >= 1.0e-6:
+                        reco_top = reco_core + reco_axis * (z_max / reco_axis[2])
+                        ax.scatter(
+                            [reco_core[0]],
+                            [reco_core[1]],
+                            [0.0],
+                            marker="x",
+                            s=90,
+                            color="#2166ac",
+                            label="Reco core",
+                        )
+                        ax.plot(
+                            [reco_core[0], reco_top[0]],
+                            [reco_core[1], reco_top[1]],
+                            [reco_core[2], reco_top[2]],
+                            color="#2166ac",
+                            linewidth=2.0,
+                            linestyle="--",
+                            label=f"{reconstructor} axis",
+                        )
+                        all_x.extend([reco_core[0], reco_top[0]])
+                        all_y.extend([reco_core[1], reco_top[1]])
+
+        ax.set_xlabel("East (m)")
+        ax.set_ylabel("North (m)")
+        ax.set_zlabel("Height (m)")
+        ax.set_title(f"LACT 3D SDP planes event_id={data.event_id}")
+        ax.set_zlim(0.0, z_max)
+        x_mid = 0.5 * (float(np.min(all_x)) + float(np.max(all_x)))
+        y_mid = 0.5 * (float(np.min(all_y)) + float(np.max(all_y)))
+        xy_span = max(float(np.ptp(all_x)), float(np.ptp(all_y)), 1.0)
+        pad = 0.08 * xy_span
+        ax.set_xlim(x_mid - xy_span / 2 - pad, x_mid + xy_span / 2 + pad)
+        ax.set_ylim(y_mid - xy_span / 2 - pad, y_mid + xy_span / 2 + pad)
+        ax.view_init(elev=24, azim=-58)
+        ax.legend(loc="upper left", fontsize=8)
+        fig.tight_layout()
+        self._finish(fig, output_path, show)
+        return fig, ax
+
     def plot_event(
         self,
         event,
