@@ -861,10 +861,10 @@ class EventVisualizer:
     ):
         """Draw a 3D SDP diagnostic using telescope positions and shower axis.
 
-        The plane for each telescope is defined by the telescope ground
+        The truth plane for each telescope is defined by the telescope ground
         position and the true shower axis through the true core. When a valid
-        DL2 geometry reconstruction is present, the reconstructed axis is
-        overlaid for comparison.
+        DL2 geometry reconstruction is present, reconstructed SDP planes,
+        reconstructed core, and reconstructed axis are overlaid for comparison.
         """
 
         data = read_event_data(event, self.tel_geoms, image_level=image_level)
@@ -900,41 +900,68 @@ class EventVisualizer:
         axis_samples = np.linspace(0.0, z_max / truth_axis[2], 2)
         offset_samples = np.linspace(-plane_half_width, plane_half_width, 2)
 
+        def draw_plane_family(axis, base_core, line_color, surface_color, line_style, alpha, label_prefix):
+            family_any = False
+            axis_samples_local = np.linspace(0.0, z_max / axis[2], 2)
+            for index, tel_id in enumerate(tel_ids):
+                geom = self.tel_geoms.get(int(tel_id))
+                if geom is None:
+                    continue
+                tel_ground = np.array([geom.pos_x, geom.pos_y, 0.0], dtype=float)
+                ground_vec = tel_ground - base_core
+                ground_norm = float(np.linalg.norm(ground_vec[:2]))
+                if ground_norm <= 0 or not np.isfinite(ground_norm):
+                    continue
+                u = ground_vec / ground_norm
+                line_ground = np.vstack(
+                    [base_core - u * plane_half_width * 1.6, tel_ground + u * plane_half_width * 1.6]
+                )
+                color = colors[index] if surface_color is None else surface_color
+                ax.plot(
+                    line_ground[:, 0],
+                    line_ground[:, 1],
+                    np.zeros(line_ground.shape[0]),
+                    color=line_color if line_color is not None else color,
+                    linestyle=line_style,
+                    linewidth=1.2,
+                    alpha=0.95,
+                    label=label_prefix if not family_any else None,
+                )
+                aa, bb = np.meshgrid(offset_samples, axis_samples_local)
+                surf = base_core[None, None, :] + aa[..., None] * u[None, None, :] + bb[..., None] * axis[None, None, :]
+                ax.plot_surface(
+                    surf[..., 0],
+                    surf[..., 1],
+                    surf[..., 2],
+                    color=color,
+                    alpha=alpha,
+                    linewidth=0,
+                    shade=False,
+                )
+                all_x.extend([line_ground[0, 0], line_ground[1, 0], surf[..., 0].min(), surf[..., 0].max()])
+                all_y.extend([line_ground[0, 1], line_ground[1, 1], surf[..., 1].min(), surf[..., 1].max()])
+                family_any = True
+
         for index, tel_id in enumerate(tel_ids):
             geom = self.tel_geoms.get(int(tel_id))
             if geom is None:
                 continue
             tel_ground = np.array([geom.pos_x, geom.pos_y, 0.0], dtype=float)
-            ground_vec = tel_ground - core
-            ground_norm = float(np.linalg.norm(ground_vec[:2]))
-            if ground_norm <= 0 or not np.isfinite(ground_norm):
-                continue
-            u = ground_vec / ground_norm
-            line_ground = np.vstack([core - u * plane_half_width * 1.6, tel_ground + u * plane_half_width * 1.6])
             color = colors[index]
-            ax.plot(
-                line_ground[:, 0],
-                line_ground[:, 1],
-                np.zeros(line_ground.shape[0]),
-                color=color,
-                linewidth=1.2,
-                alpha=0.95,
-            )
-            aa, bb = np.meshgrid(offset_samples, axis_samples)
-            surf = core[None, None, :] + aa[..., None] * u[None, None, :] + bb[..., None] * truth_axis[None, None, :]
-            ax.plot_surface(
-                surf[..., 0],
-                surf[..., 1],
-                surf[..., 2],
-                color=color,
-                alpha=0.13,
-                linewidth=0,
-                shade=False,
-            )
             ax.scatter([geom.pos_x], [geom.pos_y], [0.0], color=color, s=45, edgecolor="black", linewidth=0.4)
             ax.text(geom.pos_x, geom.pos_y, 0.0, f"T{int(tel_id)}", fontsize=8, color=color)
-            all_x.extend([geom.pos_x, line_ground[0, 0], line_ground[1, 0], surf[..., 0].min(), surf[..., 0].max()])
-            all_y.extend([geom.pos_y, line_ground[0, 1], line_ground[1, 1], surf[..., 1].min(), surf[..., 1].max()])
+            all_x.append(geom.pos_x)
+            all_y.append(geom.pos_y)
+
+        draw_plane_family(
+            truth_axis,
+            core,
+            line_color=None,
+            surface_color=None,
+            line_style="-",
+            alpha=0.13,
+            label_prefix="True SDP planes",
+        )
 
         ax.scatter([core[0]], [core[1]], [0.0], marker="*", s=180, color="#b2182b", label="True core")
         ax.plot(
@@ -984,13 +1011,22 @@ class EventVisualizer:
                             linestyle="--",
                             label=f"{reconstructor} axis",
                         )
+                        draw_plane_family(
+                            reco_axis,
+                            reco_core,
+                            line_color="#2166ac",
+                            surface_color="#2166ac",
+                            line_style="--",
+                            alpha=0.075,
+                            label_prefix=f"{reconstructor} SDP planes",
+                        )
                         all_x.extend([reco_core[0], reco_top[0]])
                         all_y.extend([reco_core[1], reco_top[1]])
 
         ax.set_xlabel("East (m)")
         ax.set_ylabel("North (m)")
         ax.set_zlabel("Height (m)")
-        ax.set_title(f"LACT 3D SDP planes event_id={data.event_id}")
+        ax.set_title(f"3D SDP planes event_id={data.event_id}")
         ax.set_zlim(0.0, z_max)
         x_mid = 0.5 * (float(np.min(all_x)) + float(np.max(all_x)))
         y_mid = 0.5 * (float(np.min(all_y)) + float(np.max(all_y)))

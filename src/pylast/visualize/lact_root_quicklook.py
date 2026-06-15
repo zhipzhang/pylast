@@ -251,6 +251,77 @@ def plot_event_cameras(
     }
 
 
+def plot_raw_images(
+    event=None,
+    *,
+    source=None,
+    visualizer=None,
+    root_file: str | PathLike[str] | None = None,
+    event_index: int = 0,
+    max_events: int = -1,
+    output_path: str | PathLike[str] | None = None,
+    include_non_triggered: bool = False,
+    show: bool | None = None,
+):
+    """Draw raw integrated camera images from an event.
+
+    Internally this reads pylast's calibrated image layer. For simtelarray
+    inputs, run ``Calibrator(event)`` first; LACT ROOT inputs already provide
+    this image.
+    """
+
+    return plot_event_cameras(
+        event,
+        source=source,
+        visualizer=visualizer,
+        root_file=root_file,
+        event_index=event_index,
+        max_events=max_events,
+        image_level="dl0",
+        show_hillas=False,
+        output_path=output_path,
+        include_non_triggered=include_non_triggered,
+        show=show,
+    )
+
+
+def plot_clean_images(
+    event=None,
+    *,
+    source=None,
+    visualizer=None,
+    root_file: str | PathLike[str] | None = None,
+    event_index: int = 0,
+    max_events: int = -1,
+    output_path: str | PathLike[str] | None = None,
+    include_non_triggered: bool = False,
+    show_hillas: bool = True,
+    only_hillas_tels: bool = False,
+    show_ideal_position: bool = False,
+    show: bool | None = None,
+):
+    """Draw cleaned camera images from an event.
+
+    Run ``ImageProcessor(event)`` before calling this helper.
+    """
+
+    return plot_event_cameras(
+        event,
+        source=source,
+        visualizer=visualizer,
+        root_file=root_file,
+        event_index=event_index,
+        max_events=max_events,
+        image_level="dl1",
+        show_hillas=show_hillas,
+        only_hillas_tels=only_hillas_tels,
+        show_ideal_position=show_ideal_position,
+        output_path=output_path,
+        include_non_triggered=include_non_triggered,
+        show=show,
+    )
+
+
 def plot_root_event_cores(
     root_file: str | PathLike[str],
     event_index: int = 0,
