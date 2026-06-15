@@ -544,15 +544,6 @@ ArrayEvent LactEventSource::get_event(int index)
         }
         const Eigen::VectorXd image = dense_image(obs);
         const Eigen::VectorXd peak_time = dense_peak_time(obs);
-        Eigen::Matrix<double, -1, -1, Eigen::RowMajor> waveform = dense_waveform(obs);
-        Eigen::VectorXi gain_selection = Eigen::VectorXi::Zero(waveform.rows());
-        event.r1->add_tel(obs.telescope_id,
-                          R1Camera{static_cast<int>(waveform.rows()),
-                                   static_cast<int>(waveform.cols()),
-                                   std::move(waveform),
-                                   std::move(gain_selection)});
-        event.dl0->add_tel(obs.telescope_id,
-                           DL0Camera{.image = image, .peak_time = peak_time});
         SimulatedCamera sim_camera;
         sim_camera.fake_image = image;
         sim_camera.pe_amplitude = image;
@@ -563,6 +554,15 @@ ArrayEvent LactEventSource::get_event(int index)
         event.simulation->add_tel(obs.telescope_id, std::move(sim_camera));
         if (obs.triggered) {
             event.simulation->triggered_tels.push_back(obs.telescope_id);
+            Eigen::Matrix<double, -1, -1, Eigen::RowMajor> waveform = dense_waveform(obs);
+            Eigen::VectorXi gain_selection = Eigen::VectorXi::Zero(waveform.rows());
+            event.r1->add_tel(obs.telescope_id,
+                              R1Camera{static_cast<int>(waveform.rows()),
+                                       static_cast<int>(waveform.cols()),
+                                       std::move(waveform),
+                                       std::move(gain_selection)});
+            event.dl0->add_tel(obs.telescope_id,
+                               DL0Camera{.image = image, .peak_time = peak_time});
         }
     }
 
