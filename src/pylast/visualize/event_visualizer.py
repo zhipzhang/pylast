@@ -1180,9 +1180,9 @@ class EventVisualizer:
                 surf = core[None, None, :] + aa[..., None] * u[None, None, :] + bb[..., None] * axis[None, None, :]
                 traces.append(
                     go.Surface(
-                        x=surf[..., 0],
-                        y=surf[..., 1],
-                        z=surf[..., 2],
+                        x=surf[..., 0].tolist(),
+                        y=surf[..., 1].tolist(),
+                        z=surf[..., 2].tolist(),
                         name=f"{legend_prefix} T{int(tel_id)}",
                         legendgroup=group_prefix,
                         showscale=False,
