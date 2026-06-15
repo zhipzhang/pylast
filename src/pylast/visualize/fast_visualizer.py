@@ -932,7 +932,7 @@ class EventVisualizer:
                 shade=False,
             )
             ax.scatter([geom.pos_x], [geom.pos_y], [0.0], color=color, s=45, edgecolor="black", linewidth=0.4)
-            ax.text(geom.pos_x, geom.pos_y, 0.0, f"T{int(tel_id) + 1}", fontsize=8, color=color)
+            ax.text(geom.pos_x, geom.pos_y, 0.0, f"T{int(tel_id)}", fontsize=8, color=color)
             all_x.extend([geom.pos_x, line_ground[0, 0], line_ground[1, 0], surf[..., 0].min(), surf[..., 0].max()])
             all_y.extend([geom.pos_y, line_ground[0, 1], line_ground[1, 1], surf[..., 1].min(), surf[..., 1].max()])
 
