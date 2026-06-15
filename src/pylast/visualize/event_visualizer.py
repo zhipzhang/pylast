@@ -272,7 +272,13 @@ def _triggered_tel_ids(event, fallback: Iterable[int] = (), source=None) -> np.n
     simulation = getattr(event, "simulation", None)
     triggered = getattr(simulation, "triggered_tels", None)
     if triggered is not None:
-        return np.asarray(list(triggered), dtype=int)
+        triggered_array = np.asarray(list(triggered), dtype=int)
+        if triggered_array.size:
+            return triggered_array
+    r1 = getattr(event, "r1", None)
+    r1_tels = getattr(r1, "tels", None) if r1 is not None else None
+    if r1_tels:
+        return np.asarray(sorted(int(tel_id) for tel_id in r1_tels), dtype=int)
     if source is not None:
         from_root = _root_triggered_tel_ids(source, _event_id(event))
         if from_root.size:
@@ -878,8 +884,6 @@ class EventVisualizer:
             only_hillas_tels=False,
             source=self.source,
         )
-        if not tel_ids:
-            tel_ids = sorted(self.tel_geoms)
 
         shower = _shower(event)
         core = np.array([data.core_x, data.core_y, 0.0], dtype=float)
@@ -899,6 +903,15 @@ class EventVisualizer:
         plane_half_width = max(80.0, 0.12 * max(1.0, np.ptp([g.pos_x for g in self.tel_geoms.values()])))
         axis_samples = np.linspace(0.0, z_max / truth_axis[2], 2)
         offset_samples = np.linspace(-plane_half_width, plane_half_width, 2)
+        if not tel_ids:
+            ax.text2D(
+                0.02,
+                0.96,
+                "No triggered telescopes found for this event.",
+                transform=ax.transAxes,
+                fontsize=10,
+                color="#7f1d1d",
+            )
 
         def draw_plane_family(axis, base_core, line_color, surface_color, line_style, alpha, label_prefix):
             family_any = False
@@ -1074,8 +1087,6 @@ class EventVisualizer:
             only_hillas_tels=False,
             source=self.source,
         )
-        if not tel_ids:
-            tel_ids = sorted(self.tel_geoms)
 
         shower = _shower(event)
         true_core = np.array([data.core_x, data.core_y, 0.0], dtype=float)
@@ -1097,6 +1108,8 @@ class EventVisualizer:
         all_tel_x = [geom.pos_x for geom in self.tel_geoms.values()]
         all_tel_y = [geom.pos_y for geom in self.tel_geoms.values()]
         all_tel_names = [f"T{tel_id}" for tel_id in self.tel_geoms]
+        all_x.extend(all_tel_x)
+        all_y.extend(all_tel_y)
         traces.append(
             go.Scatter3d(
                 x=all_tel_x,
@@ -1122,19 +1135,20 @@ class EventVisualizer:
             active_color.append(palette[index % len(palette)])
             all_x.append(geom.pos_x)
             all_y.append(geom.pos_y)
-        traces.append(
-            go.Scatter3d(
-                x=active_x,
-                y=active_y,
-                z=[0.0] * len(active_x),
-                mode="markers+text",
-                name="Triggered telescopes",
-                text=active_text,
-                textposition="top center",
-                hovertemplate="%{text}<br>East=%{x:.1f} m<br>North=%{y:.1f} m<extra></extra>",
-                marker=dict(size=7, color=active_color, line=dict(color="black", width=1.2)),
+        if active_x:
+            traces.append(
+                go.Scatter3d(
+                    x=active_x,
+                    y=active_y,
+                    z=[0.0] * len(active_x),
+                    mode="markers+text",
+                    name="Triggered telescopes",
+                    text=active_text,
+                    textposition="top center",
+                    hovertemplate="%{text}<br>East=%{x:.1f} m<br>North=%{y:.1f} m<extra></extra>",
+                    marker=dict(size=7, color=active_color, line=dict(color="black", width=1.2)),
+                )
             )
-        )
 
         def add_axis(core, top, color, name, dash="solid"):
             traces.append(
@@ -1214,15 +1228,16 @@ class EventVisualizer:
                 all_y.extend([line_a[1], line_b[1], float(np.min(surf[..., 1])), float(np.max(surf[..., 1]))])
                 family_added = True
 
-        add_plane_family(
-            true_axis,
-            true_core,
-            palette,
-            surface_opacity=0.18,
-            line_dash="solid",
-            legend_prefix="Truth SDP",
-            group_prefix="truth_sdp",
-        )
+        if tel_ids:
+            add_plane_family(
+                true_axis,
+                true_core,
+                palette,
+                surface_opacity=0.18,
+                line_dash="solid",
+                legend_prefix="Truth SDP",
+                group_prefix="truth_sdp",
+            )
         add_core(true_core, "#b2182b", "diamond", "True core", 8)
         add_axis(true_core, true_top, "#b2182b", "True shower axis", dash="solid")
 
@@ -1279,6 +1294,21 @@ class EventVisualizer:
                 aspectmode="data",
                 camera=dict(eye=dict(x=1.55, y=-1.85, z=1.15), up=dict(x=0, y=0, z=1)),
             ),
+            annotations=[
+                dict(
+                    text="No triggered telescopes found; only array layout and shower axis are shown.",
+                    showarrow=False,
+                    x=0.02,
+                    y=0.02,
+                    xref="paper",
+                    yref="paper",
+                    font=dict(color="#7f1d1d", size=12),
+                    bgcolor="rgba(255,255,255,0.82)",
+                    bordercolor="#fecaca",
+                )
+            ]
+            if not tel_ids
+            else [],
         )
         if output_html:
             fig.write_html(output_html, include_plotlyjs="cdn", full_html=True)

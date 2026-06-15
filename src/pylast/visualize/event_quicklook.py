@@ -207,7 +207,11 @@ def plot_event_sdp_planes_3d_interactive(
     show_reco: bool = True,
     reconstructor: str = "HillasReconstructor",
 ):
-    """Draw an interactive 3D SDP diagnostic from an already loaded event."""
+    """Draw an interactive 3D SDP diagnostic from an already loaded event.
+
+    Returns a Plotly ``Figure`` directly so using this helper as the last line
+    of a notebook cell displays the interactive plot instead of a wrapper dict.
+    """
 
     if root_file is None and _looks_like_path(event):
         root_file = event
@@ -228,7 +232,7 @@ def plot_event_sdp_planes_3d_interactive(
         raise ValueError("event is required")
 
     visualizer = _visualizer_from(source=source, visualizer=visualizer)
-    figure = visualizer.plot_event_sdp_planes_3d_interactive(
+    return visualizer.plot_event_sdp_planes_3d_interactive(
         event,
         output_html=str(output_html) if output_html is not None else None,
         image_level=image_level,
@@ -237,12 +241,6 @@ def plot_event_sdp_planes_3d_interactive(
         show_reco=show_reco,
         reconstructor=reconstructor,
     )
-    return {
-        "event": event,
-        "visualizer": visualizer,
-        "figure": figure,
-        "path": Path(output_html) if output_html is not None else None,
-    }
 
 
 def plot_event_cameras(
@@ -471,7 +469,7 @@ def plot_root_event_sdp_planes_3d_interactive(
 
     source = LactEventSource(str(root_file), max_events=max_events)
     event = source[event_index]
-    result = plot_event_sdp_planes_3d_interactive(
+    return plot_event_sdp_planes_3d_interactive(
         event,
         source=source,
         image_level=image_level,
@@ -481,8 +479,6 @@ def plot_root_event_sdp_planes_3d_interactive(
         show_reco=show_reco,
         reconstructor=reconstructor,
     )
-    result["source"] = source
-    return result
 
 
 def plot_root_event_cameras(
