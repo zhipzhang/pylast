@@ -269,6 +269,11 @@ def _event_pointing_azimuth_deg(event, source=None) -> Optional[float]:
 
 
 def _triggered_tel_ids(event, fallback: Iterable[int] = (), source=None) -> np.ndarray:
+    original_triggered = getattr(event, "_pylast_original_triggered_tels", None)
+    if original_triggered is not None:
+        original_array = np.asarray(list(original_triggered), dtype=int)
+        if original_array.size:
+            return original_array
     simulation = getattr(event, "simulation", None)
     triggered = getattr(simulation, "triggered_tels", None)
     if triggered is not None:
