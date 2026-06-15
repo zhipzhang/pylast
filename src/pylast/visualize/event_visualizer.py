@@ -1040,6 +1040,250 @@ class EventVisualizer:
         self._finish(fig, output_path, show)
         return fig, ax
 
+    def plot_event_sdp_planes_3d_interactive(
+        self,
+        event,
+        output_html: Optional[str] = None,
+        image_level: str = "dl0",
+        include_non_triggered: bool = False,
+        z_max: float = 1200.0,
+        show_reco: bool = True,
+        reconstructor: str = "HillasReconstructor",
+    ):
+        """Draw an interactive 3D SDP diagnostic with Plotly.
+
+        This is intended for notebooks and HTML reports. It uses the same event
+        information as :meth:`plot_event_sdp_planes_3d`, but keeps each axis,
+        telescope, ground intersection, and SDP plane as a separately hoverable
+        object so the event geometry can be inspected by rotating the view.
+        """
+
+        try:
+            import plotly.graph_objects as go
+        except ImportError as exc:
+            raise ImportError("plot_event_sdp_planes_3d_interactive requires plotly") from exc
+
+        data = read_event_data(event, self.tel_geoms, image_level=image_level)
+        hillas = self._get_hillas_parameters(event)
+        tel_ids = _selected_image_tel_ids(
+            event,
+            data,
+            hillas,
+            image_level,
+            include_non_triggered,
+            only_hillas_tels=False,
+            source=self.source,
+        )
+        if not tel_ids:
+            tel_ids = sorted(self.tel_geoms)
+
+        shower = _shower(event)
+        true_core = np.array([data.core_x, data.core_y, 0.0], dtype=float)
+        true_axis = _enu_from_az_zd(float(shower.az), np.pi / 2 - float(shower.alt))
+        if true_axis[2] < 0:
+            true_axis = -true_axis
+        if abs(true_axis[2]) < 1.0e-6:
+            true_axis[2] = 1.0e-6
+        true_top = true_core + true_axis * (z_max / true_axis[2])
+
+        all_x = [true_core[0], true_top[0]]
+        all_y = [true_core[1], true_top[1]]
+        traces = []
+        palette = [mcolors.to_hex(c) for c in plt.cm.tab20(np.linspace(0, 1, max(len(tel_ids), 1)))]
+        plane_half_width = max(100.0, 0.16 * max(1.0, np.ptp([g.pos_x for g in self.tel_geoms.values()])))
+        axis_samples = np.linspace(0.0, 1.0, 2)
+        offset_samples = np.linspace(-plane_half_width, plane_half_width, 2)
+
+        all_tel_x = [geom.pos_x for geom in self.tel_geoms.values()]
+        all_tel_y = [geom.pos_y for geom in self.tel_geoms.values()]
+        all_tel_names = [f"T{tel_id}" for tel_id in self.tel_geoms]
+        traces.append(
+            go.Scatter3d(
+                x=all_tel_x,
+                y=all_tel_y,
+                z=[0.0] * len(all_tel_x),
+                mode="markers",
+                name="All telescopes",
+                text=all_tel_names,
+                hovertemplate="%{text}<br>East=%{x:.1f} m<br>North=%{y:.1f} m<extra></extra>",
+                marker=dict(size=3, color="rgba(120,120,120,0.45)"),
+                showlegend=True,
+            )
+        )
+
+        active_x, active_y, active_text, active_color = [], [], [], []
+        for index, tel_id in enumerate(tel_ids):
+            geom = self.tel_geoms.get(int(tel_id))
+            if geom is None:
+                continue
+            active_x.append(geom.pos_x)
+            active_y.append(geom.pos_y)
+            active_text.append(f"T{int(tel_id)}")
+            active_color.append(palette[index % len(palette)])
+            all_x.append(geom.pos_x)
+            all_y.append(geom.pos_y)
+        traces.append(
+            go.Scatter3d(
+                x=active_x,
+                y=active_y,
+                z=[0.0] * len(active_x),
+                mode="markers+text",
+                name="Triggered telescopes",
+                text=active_text,
+                textposition="top center",
+                hovertemplate="%{text}<br>East=%{x:.1f} m<br>North=%{y:.1f} m<extra></extra>",
+                marker=dict(size=7, color=active_color, line=dict(color="black", width=1.2)),
+            )
+        )
+
+        def add_axis(core, top, color, name, dash="solid"):
+            traces.append(
+                go.Scatter3d(
+                    x=[core[0], top[0]],
+                    y=[core[1], top[1]],
+                    z=[core[2], top[2]],
+                    mode="lines",
+                    name=name,
+                    line=dict(color=color, width=8, dash=dash),
+                    hovertemplate=f"{name}<br>East=%{{x:.1f}} m<br>North=%{{y:.1f}} m<br>Height=%{{z:.1f}} m<extra></extra>",
+                )
+            )
+
+        def add_core(core, color, symbol, name, size):
+            traces.append(
+                go.Scatter3d(
+                    x=[core[0]],
+                    y=[core[1]],
+                    z=[0.0],
+                    mode="markers",
+                    name=name,
+                    marker=dict(size=size, color=color, symbol=symbol, line=dict(color="black", width=1.0)),
+                    hovertemplate=f"{name}<br>East=%{{x:.1f}} m<br>North=%{{y:.1f}} m<extra></extra>",
+                )
+            )
+
+        def add_plane_family(axis, core, colors, surface_opacity, line_dash, legend_prefix, group_prefix):
+            family_added = False
+            scale = z_max / axis[2]
+            for index, tel_id in enumerate(tel_ids):
+                geom = self.tel_geoms.get(int(tel_id))
+                if geom is None:
+                    continue
+                tel_ground = np.array([geom.pos_x, geom.pos_y, 0.0], dtype=float)
+                ground_vec = tel_ground - core
+                ground_norm = float(np.linalg.norm(ground_vec[:2]))
+                if ground_norm <= 0 or not np.isfinite(ground_norm):
+                    continue
+                u = ground_vec / ground_norm
+                color = colors[index % len(colors)] if isinstance(colors, list) else colors
+                aa, bb = np.meshgrid(offset_samples, axis_samples * scale)
+                surf = core[None, None, :] + aa[..., None] * u[None, None, :] + bb[..., None] * axis[None, None, :]
+                traces.append(
+                    go.Surface(
+                        x=surf[..., 0],
+                        y=surf[..., 1],
+                        z=surf[..., 2],
+                        name=f"{legend_prefix} T{int(tel_id)}",
+                        legendgroup=group_prefix,
+                        showscale=False,
+                        showlegend=not family_added,
+                        opacity=surface_opacity,
+                        colorscale=[[0.0, color], [1.0, color]],
+                        hovertemplate=(
+                            f"{legend_prefix} T{int(tel_id)}<br>"
+                            "East=%{x:.1f} m<br>North=%{y:.1f} m<br>Height=%{z:.1f} m<extra></extra>"
+                        ),
+                    )
+                )
+                line_a = core - u * plane_half_width * 1.8
+                line_b = tel_ground + u * plane_half_width * 1.8
+                traces.append(
+                    go.Scatter3d(
+                        x=[line_a[0], line_b[0]],
+                        y=[line_a[1], line_b[1]],
+                        z=[0.0, 0.0],
+                        mode="lines",
+                        name=f"{legend_prefix} ground lines",
+                        legendgroup=group_prefix,
+                        showlegend=False,
+                        line=dict(color=color, width=4, dash=line_dash),
+                        hovertemplate=f"{legend_prefix} T{int(tel_id)} ground line<extra></extra>",
+                    )
+                )
+                all_x.extend([line_a[0], line_b[0], float(np.min(surf[..., 0])), float(np.max(surf[..., 0]))])
+                all_y.extend([line_a[1], line_b[1], float(np.min(surf[..., 1])), float(np.max(surf[..., 1]))])
+                family_added = True
+
+        add_plane_family(
+            true_axis,
+            true_core,
+            palette,
+            surface_opacity=0.18,
+            line_dash="solid",
+            legend_prefix="Truth SDP",
+            group_prefix="truth_sdp",
+        )
+        add_core(true_core, "#b2182b", "diamond", "True core", 8)
+        add_axis(true_core, true_top, "#b2182b", "True shower axis", dash="solid")
+
+        if show_reco:
+            geometry = getattr(getattr(event, "dl2", None), "geometry", {}) or {}
+            reco = geometry.get(reconstructor)
+            if reco is not None and bool(getattr(reco, "is_valid", False)):
+                reco_alt = float(getattr(reco, "alt", np.nan))
+                reco_az = float(getattr(reco, "az", np.nan))
+                if np.isfinite(reco_alt) and np.isfinite(reco_az):
+                    reco_core = np.array(
+                        [
+                            float(getattr(reco, "core_x", true_core[0])),
+                            float(getattr(reco, "core_y", true_core[1])),
+                            0.0,
+                        ],
+                        dtype=float,
+                    )
+                    reco_axis = _enu_from_az_zd(reco_az, np.pi / 2 - reco_alt)
+                    if reco_axis[2] < 0:
+                        reco_axis = -reco_axis
+                    if abs(reco_axis[2]) >= 1.0e-6:
+                        reco_top = reco_core + reco_axis * (z_max / reco_axis[2])
+                        add_plane_family(
+                            reco_axis,
+                            reco_core,
+                            "#2166ac",
+                            surface_opacity=0.10,
+                            line_dash="dash",
+                            legend_prefix=f"{reconstructor} SDP",
+                            group_prefix="reco_sdp",
+                        )
+                        add_core(reco_core, "#2166ac", "x", "Reco core", 8)
+                        add_axis(reco_core, reco_top, "#2166ac", f"{reconstructor} axis", dash="dash")
+                        all_x.extend([reco_core[0], reco_top[0]])
+                        all_y.extend([reco_core[1], reco_top[1]])
+
+        xy_span = max(float(np.ptp(all_x)), float(np.ptp(all_y)), 1.0)
+        x_mid = 0.5 * (float(np.min(all_x)) + float(np.max(all_x)))
+        y_mid = 0.5 * (float(np.min(all_y)) + float(np.max(all_y)))
+        pad = 0.10 * xy_span
+        fig = go.Figure(data=traces)
+        fig.update_layout(
+            title=f"3D SDP geometry event_id={data.event_id}",
+            template="plotly_white",
+            width=1000,
+            height=760,
+            legend=dict(x=0.02, y=0.98, bgcolor="rgba(255,255,255,0.72)"),
+            margin=dict(l=0, r=0, t=50, b=0),
+            scene=dict(
+                xaxis=dict(title="East (m)", range=[x_mid - xy_span / 2 - pad, x_mid + xy_span / 2 + pad]),
+                yaxis=dict(title="North (m)", range=[y_mid - xy_span / 2 - pad, y_mid + xy_span / 2 + pad]),
+                zaxis=dict(title="Height (m)", range=[0.0, z_max]),
+                aspectmode="data",
+                camera=dict(eye=dict(x=1.55, y=-1.85, z=1.15), up=dict(x=0, y=0, z=1)),
+            ),
+        )
+        if output_html:
+            fig.write_html(output_html, include_plotlyjs="cdn", full_html=True)
+        return fig
+
     def plot_event(
         self,
         event,
