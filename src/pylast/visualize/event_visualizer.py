@@ -29,7 +29,6 @@ matplotlib.rcParams["path.simplify"] = True
 matplotlib.rcParams["agg.path.chunksize"] = 20000
 
 
-_ROOT_TRIGGERED_CACHE: Dict[Tuple[str, int], Tuple[int, ...]] = {}
 _ROOT_POINTING_CACHE: Dict[str, Optional[float]] = {}
 
 
@@ -189,6 +188,8 @@ def _event_info_text(event_id: int, core_x: Optional[float], core_y: Optional[fl
 def _root_filename(source) -> Optional[str]:
     filename = getattr(source, "input_filename", None)
     if filename is None:
+        filename = getattr(source, "_input_filename", None)
+    if filename is None:
         return None
     return str(filename)
 
@@ -220,42 +221,6 @@ def _root_pointing_azimuth_deg(source) -> Optional[float]:
     return azimuth
 
 
-def _root_triggered_tel_ids(source, event_id: int) -> np.ndarray:
-    filename = _root_filename(source)
-    if filename is None:
-        return np.asarray([], dtype=int)
-    cache_key = (filename, int(event_id))
-    if cache_key in _ROOT_TRIGGERED_CACHE:
-        return np.asarray(_ROOT_TRIGGERED_CACHE[cache_key], dtype=int)
-    triggered_tel_ids = []
-    try:
-        import ROOT
-
-        root_file = ROOT.TFile.Open(filename)
-        if not root_file or root_file.IsZombie():
-            _ROOT_TRIGGERED_CACHE[cache_key] = ()
-            return np.asarray([], dtype=int)
-        tree = root_file.Get("observations")
-        if (
-            tree is None
-            or tree.GetBranch("event_id") is None
-            or tree.GetBranch("telescope_id") is None
-            or tree.GetBranch("triggered") is None
-        ):
-            root_file.Close()
-            _ROOT_TRIGGERED_CACHE[cache_key] = ()
-            return np.asarray([], dtype=int)
-        for entry in range(tree.GetEntries()):
-            tree.GetEntry(entry)
-            if int(tree.event_id) == int(event_id) and bool(tree.triggered):
-                triggered_tel_ids.append(int(tree.telescope_id))
-        root_file.Close()
-    except Exception:
-        triggered_tel_ids = []
-    _ROOT_TRIGGERED_CACHE[cache_key] = tuple(sorted(set(triggered_tel_ids)))
-    return np.asarray(_ROOT_TRIGGERED_CACHE[cache_key], dtype=int)
-
-
 def _event_pointing_azimuth_deg(event, source=None) -> Optional[float]:
     pointing = getattr(event, "pointing", None)
     if pointing is not None:
@@ -274,16 +239,16 @@ def _triggered_tel_ids(event, fallback: Iterable[int] = (), source=None) -> np.n
         original_array = np.asarray(list(original_triggered), dtype=int)
         if original_array.size:
             return original_array
+    if source is not None and hasattr(source, "get_triggered_tels"):
+        source_triggered = np.asarray(source.get_triggered_tels(event), dtype=int)
+        if source_triggered.size:
+            return source_triggered
     simulation = getattr(event, "simulation", None)
     triggered = getattr(simulation, "triggered_tels", None)
     if triggered is not None:
         triggered_array = np.asarray(list(triggered), dtype=int)
         if triggered_array.size:
             return triggered_array
-    if source is not None:
-        from_root = _root_triggered_tel_ids(source, _event_id(event))
-        if from_root.size:
-            return from_root
     r1 = getattr(event, "r1", None)
     r1_tels = getattr(r1, "tels", None) if r1 is not None else None
     if r1_tels:
