@@ -1,6 +1,7 @@
 #include "LactEventSource.hh"
 
 #include "DL0Event.hh"
+#include "R0Event.hh"
 #include "R1Event.hh"
 #include "Pointing.hh"
 #include "SimulatedCamera.hh"
@@ -320,6 +321,7 @@ void LactEventSource::load_observations()
     ObservationRow row;
     std::vector<int>* pixel_id = nullptr;
     std::vector<float>* image_pe = nullptr;
+    std::vector<float>* image_cherenkov_pe = nullptr;
     std::vector<float>* peak_time = nullptr;
     set_branch_if_exists(tree, "event_id", &row.event_id);
     set_branch_if_exists(tree, "telescope_id", &row.telescope_id);
@@ -327,6 +329,7 @@ void LactEventSource::load_observations()
     set_branch_if_exists(tree, "n_pixels_camera", &row.n_pixels_camera);
     set_branch_if_exists(tree, "pixel_id", &pixel_id);
     set_branch_if_exists(tree, "image_pe", &image_pe);
+    set_branch_if_exists(tree, "image_cherenkov_pe", &image_cherenkov_pe);
     set_branch_if_exists(tree, "image_time_peak_ns", &peak_time);
     const auto n_entries = tree->GetEntries();
     observations.reserve(static_cast<std::size_t>(n_entries));
@@ -337,6 +340,8 @@ void LactEventSource::load_observations()
         }
         row.pixel_id = pixel_id ? *pixel_id : std::vector<int>{};
         row.image_pe = image_pe ? *image_pe : std::vector<float>{};
+        row.image_cherenkov_pe =
+            image_cherenkov_pe ? *image_cherenkov_pe : std::vector<float>{};
         row.image_time_peak_ns = peak_time ? *peak_time : std::vector<float>{};
         observation_index[{row.event_id, row.telescope_id}] = observations.size();
         observations.push_back(row);
@@ -430,6 +435,19 @@ Eigen::VectorXd LactEventSource::dense_image(const ObservationRow& obs) const
     return image;
 }
 
+Eigen::VectorXd LactEventSource::dense_cherenkov_image(const ObservationRow& obs) const
+{
+    Eigen::VectorXd image = Eigen::VectorXd::Zero(camera_pixels.size());
+    const auto n = std::min(obs.pixel_id.size(), obs.image_cherenkov_pe.size());
+    for (std::size_t i = 0; i < n; ++i) {
+        const int idx = pixel_index(obs.pixel_id[i]);
+        if (idx >= 0) {
+            image[idx] = static_cast<double>(obs.image_cherenkov_pe[i]);
+        }
+    }
+    return image;
+}
+
 Eigen::VectorXd LactEventSource::dense_peak_time(const ObservationRow& obs) const
 {
     Eigen::VectorXd peak_time =
@@ -489,8 +507,8 @@ ArrayEvent LactEventSource::get_event(int index)
     event.event_id = static_cast<int>(event_id);
     event.run_id = run_id;
     event.simulation = SimulatedEvent();
+    event.r0 = R0Event();
     event.r1 = R1Event();
-    event.dl0 = DL0Event();
     event.simulation->shower.energy = std::numeric_limits<double>::quiet_NaN();
     event.simulation->shower.alt = std::numeric_limits<double>::quiet_NaN();
     event.simulation->shower.az = std::numeric_limits<double>::quiet_NaN();
@@ -538,31 +556,48 @@ ArrayEvent LactEventSource::get_event(int index)
         event.simulation->shower.shower_primary_id = truth.primary_type;
     }
 
+    bool use_waveform_readout = false;
+    for (const auto& obs : observations) {
+        if (obs.event_id != event_id || !keep_tel(obs.telescope_id) || !obs.triggered) {
+            continue;
+        }
+        if (waveforms.find({obs.event_id, obs.telescope_id}) != waveforms.end()) {
+            use_waveform_readout = true;
+            break;
+        }
+    }
+    if (!use_waveform_readout) {
+        event.dl0 = DL0Event();
+    }
+
     for (const auto& obs : observations) {
         if (obs.event_id != event_id || !keep_tel(obs.telescope_id)) {
             continue;
         }
         const Eigen::VectorXd image = dense_image(obs);
         const Eigen::VectorXd peak_time = dense_peak_time(obs);
-        SimulatedCamera sim_camera;
-        sim_camera.fake_image = image;
-        sim_camera.pe_amplitude = image;
-        sim_camera.pe_time = peak_time;
-        sim_camera.true_image_sum = static_cast<int>(std::lround(image.sum()));
-        sim_camera.true_image = image.cast<int>();
-        sim_camera.impact_parameter = std::numeric_limits<double>::quiet_NaN();
-        event.simulation->add_tel(obs.telescope_id, std::move(sim_camera));
+        const Eigen::VectorXd cherenkov_image = dense_cherenkov_image(obs);
+        if (cherenkov_image.sum() > 0.0) {
+            SimulatedCamera sim_camera;
+            sim_camera.true_image_sum = static_cast<int>(std::lround(cherenkov_image.sum()));
+            sim_camera.true_image = cherenkov_image.array().round().cast<int>();
+            sim_camera.impact_parameter = std::numeric_limits<double>::quiet_NaN();
+            event.simulation->add_tel(obs.telescope_id, std::move(sim_camera));
+        }
         if (obs.triggered) {
-            event.simulation->triggered_tels.push_back(obs.telescope_id);
-            Eigen::Matrix<double, -1, -1, Eigen::RowMajor> waveform = dense_waveform(obs);
-            Eigen::VectorXi gain_selection = Eigen::VectorXi::Zero(waveform.rows());
-            event.r1->add_tel(obs.telescope_id,
-                              R1Camera{static_cast<int>(waveform.rows()),
-                                       static_cast<int>(waveform.cols()),
-                                       std::move(waveform),
-                                       std::move(gain_selection)});
-            event.dl0->add_tel(obs.telescope_id,
-                               DL0Camera{.image = image, .peak_time = peak_time});
+            if (use_waveform_readout) {
+                Eigen::Matrix<double, -1, -1, Eigen::RowMajor> waveform = dense_waveform(obs);
+                Eigen::VectorXi gain_selection = Eigen::VectorXi::Zero(waveform.rows());
+                event.r1->add_tel(obs.telescope_id,
+                                  R1Camera{static_cast<int>(waveform.rows()),
+                                           static_cast<int>(waveform.cols()),
+                                           std::move(waveform),
+                                           std::move(gain_selection)});
+            }
+            else {
+                event.dl0->add_tel(obs.telescope_id,
+                                   DL0Camera{.image = image, .peak_time = peak_time});
+            }
         }
     }
 

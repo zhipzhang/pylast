@@ -253,6 +253,10 @@ def _triggered_tel_ids(event, fallback: Iterable[int] = (), source=None) -> np.n
     r1_tels = getattr(r1, "tels", None) if r1 is not None else None
     if r1_tels:
         return np.asarray(sorted(int(tel_id) for tel_id in r1_tels), dtype=int)
+    dl0 = getattr(event, "dl0", None)
+    dl0_tels = getattr(dl0, "tels", None) if dl0 is not None else None
+    if dl0_tels:
+        return np.asarray(sorted(int(tel_id) for tel_id in dl0_tels), dtype=int)
     return np.asarray(list(fallback), dtype=int)
 
 

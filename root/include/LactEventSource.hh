@@ -99,6 +99,7 @@ private:
         int n_pixels_camera = 0;
         std::vector<int> pixel_id;
         std::vector<float> image_pe;
+        std::vector<float> image_cherenkov_pe;
         std::vector<float> image_time_peak_ns;
     };
 
@@ -130,6 +131,7 @@ private:
     bool keep_tel(int tel_id) const;
     int pixel_index(int pixel_id) const;
     Eigen::VectorXd dense_image(const ObservationRow& obs) const;
+    Eigen::VectorXd dense_cherenkov_image(const ObservationRow& obs) const;
     Eigen::VectorXd dense_peak_time(const ObservationRow& obs) const;
     Eigen::Matrix<double, -1, -1, Eigen::RowMajor>
     dense_waveform(const ObservationRow& obs) const;

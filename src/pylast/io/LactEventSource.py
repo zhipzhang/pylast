@@ -21,9 +21,10 @@ def _native_triggered_tels(event):
 class LactEventSource:
     """Python adapter around the native LACT ROOT event source.
 
-    Exposes a uniform ``get_triggered_tels`` helper. Newer native bindings
-    expose ``event.simulation.triggered_tels`` directly; older local builds may
-    not, so LACT ROOT observations are used as a source-level fallback.
+    Exposes a uniform ``get_triggered_tels`` helper. LACT ROOT readout images
+    are detector-level data, so the native adapter does not need to put them in
+    ``event.simulation`` just to carry trigger state. The observations tree is
+    used as the source-level trigger table.
     """
 
     def __init__(self, *args, **kwargs):
