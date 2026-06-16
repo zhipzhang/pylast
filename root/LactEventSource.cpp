@@ -266,7 +266,7 @@ void LactEventSource::load_telescopes()
     readout.n_channels = 1;
     readout.reference_pulse_sample_width = waveform_config.time_bin_width_ns;
     readout.sampling_rate = waveform_config.time_bin_width_ns > 0.0
-        ? 1.0e9 / waveform_config.time_bin_width_ns
+        ? 1.0 / waveform_config.time_bin_width_ns
         : 0.0;
 
     for (const auto& tel : telescopes) {
