@@ -257,6 +257,8 @@ def plot_event_cameras(
     show_ideal_position: bool = False,
     ideal: bool | None = None,
     show_reco_position: bool = False,
+    show_reco_sdp: bool = False,
+    reco_sdp: bool | None = None,
     reco: bool | None = None,
     reconstructor: str = "HillasReconstructor",
     output_path: str | PathLike[str] | None = None,
@@ -269,6 +271,9 @@ def plot_event_cameras(
         show_ideal_position = bool(ideal)
     if reco is not None:
         show_reco_position = bool(reco)
+        show_reco_sdp = bool(reco)
+    if reco_sdp is not None:
+        show_reco_sdp = bool(reco_sdp)
     if root_file is None and _looks_like_path(event):
         root_file = event
         event = None
@@ -282,6 +287,7 @@ def plot_event_cameras(
             only_hillas_tels=only_hillas_tels,
             show_ideal_position=show_ideal_position,
             show_reco_position=show_reco_position,
+            show_reco_sdp=show_reco_sdp,
             reconstructor=reconstructor,
             output_path=output_path,
             include_non_triggered=include_non_triggered,
@@ -302,6 +308,7 @@ def plot_event_cameras(
         include_non_triggered=include_non_triggered,
         show_ideal_position=show_ideal_position,
         show_reco_position=show_reco_position,
+        show_reco_sdp=show_reco_sdp,
         reconstructor=reconstructor,
         show=show,
     )
@@ -327,6 +334,8 @@ def plot_raw_images(
     ideal: bool | None = None,
     show_ideal_position: bool = False,
     reco: bool | None = None,
+    show_reco_sdp: bool = False,
+    reco_sdp: bool | None = None,
     show_reco_position: bool = False,
     reconstructor: str = "HillasReconstructor",
     show: bool | None = None,
@@ -351,6 +360,8 @@ def plot_raw_images(
         show_ideal_position=show_ideal_position,
         reco=reco,
         show_reco_position=show_reco_position,
+        show_reco_sdp=show_reco_sdp,
+        reco_sdp=reco_sdp,
         reconstructor=reconstructor,
         output_path=output_path,
         include_non_triggered=include_non_triggered,
@@ -374,6 +385,8 @@ def plot_clean_images(
     ideal: bool | None = None,
     show_reco_position: bool = False,
     reco: bool | None = None,
+    show_reco_sdp: bool = False,
+    reco_sdp: bool | None = None,
     reconstructor: str = "HillasReconstructor",
     show: bool | None = None,
 ):
@@ -396,6 +409,8 @@ def plot_clean_images(
         ideal=ideal,
         show_reco_position=show_reco_position,
         reco=reco,
+        show_reco_sdp=show_reco_sdp,
+        reco_sdp=reco_sdp,
         reconstructor=reconstructor,
         output_path=output_path,
         include_non_triggered=include_non_triggered,
@@ -522,6 +537,8 @@ def plot_root_event_cameras(
     ideal: bool | None = None,
     show_reco_position: bool = False,
     reco: bool | None = None,
+    show_reco_sdp: bool = False,
+    reco_sdp: bool | None = None,
     reconstructor: str = "HillasReconstructor",
     output_path: str | PathLike[str] | None = None,
     include_non_triggered: bool = False,
@@ -533,6 +550,9 @@ def plot_root_event_cameras(
         show_ideal_position = bool(ideal)
     if reco is not None:
         show_reco_position = bool(reco)
+        show_reco_sdp = bool(reco)
+    if reco_sdp is not None:
+        show_reco_sdp = bool(reco_sdp)
     source = LactEventSource(str(root_file), max_events=max_events)
     event = source[event_index]
     result = plot_event_cameras(
@@ -543,6 +563,7 @@ def plot_root_event_cameras(
         only_hillas_tels=only_hillas_tels,
         show_ideal_position=show_ideal_position,
         show_reco_position=show_reco_position,
+        show_reco_sdp=show_reco_sdp,
         reconstructor=reconstructor,
         output_path=output_path,
         include_non_triggered=include_non_triggered,

@@ -65,6 +65,7 @@ class HillasParameters:
     psi: float
     cog_x: float
     cog_y: float
+    focal_length: float
 
 
 def _to_numpy(value, dtype=float) -> np.ndarray:
@@ -1466,6 +1467,7 @@ class EventVisualizer:
         include_non_triggered: bool = False,
         show_ideal_position: bool = False,
         show_reco_position: bool = False,
+        show_reco_sdp: bool = False,
         reconstructor: str = "HillasReconstructor",
         show: bool = True,
     ):
@@ -1523,6 +1525,8 @@ class EventVisualizer:
                 self._draw_ideal_position(axes[index], event)
             if show_reco_position:
                 self._draw_reco_position(axes[index], event, reconstructor=reconstructor)
+            if show_reco_sdp:
+                self._draw_reco_sdp_line(axes[index], event, tel_id, reconstructor=reconstructor)
 
         for ax in axes[len(tel_ids) + 1 :]:
             ax.axis("off")
@@ -1555,6 +1559,7 @@ class EventVisualizer:
         show_colorbar: bool = False,
         show_ideal_position: bool = False,
         show_reco_position: bool = False,
+        show_reco_sdp: bool = False,
         reconstructor: str = "HillasReconstructor",
         show: bool = True,
     ):
@@ -1645,6 +1650,9 @@ class EventVisualizer:
             self._draw_ideal_position(ax, event)
         if show_reco_position:
             self._draw_reco_position(ax, event, reconstructor=reconstructor)
+        if show_reco_sdp:
+            for tel_id in tel_ids:
+                self._draw_reco_sdp_line(ax, event, tel_id, reconstructor=reconstructor)
 
         fig.tight_layout(pad=1.0)
         self._finish(fig, output_path, show)
@@ -1855,6 +1863,7 @@ class EventVisualizer:
             psi=float(params.psi) * 180.0 / np.pi,
             cog_x=float(cog_x) * geom.focal_length,
             cog_y=float(cog_y) * geom.focal_length,
+            focal_length=geom.focal_length,
         )
 
     def _draw_hillas_ellipse(self, ax, hillas: HillasParameters):
@@ -1870,6 +1879,25 @@ class EventVisualizer:
         )
         ax.add_patch(ellipse)
         ax.plot(hillas.cog_x, hillas.cog_y, marker="o", linestyle="None", color="r", ms=3, zorder=10000)
+        angular_half_len = float(np.tan(np.deg2rad(3.5)) * hillas.focal_length)
+        try:
+            xlim = ax.get_xlim()
+            ylim = ax.get_ylim()
+            extent_half_len = 0.65 * float(np.hypot(xlim[1] - xlim[0], ylim[1] - ylim[0]))
+            half_len = min(max(angular_half_len, 8.0 * hillas.length), extent_half_len)
+        except Exception:
+            half_len = max(angular_half_len, 8.0 * hillas.length)
+        psi = np.deg2rad(hillas.psi)
+        dx = half_len * np.cos(psi)
+        dy = half_len * np.sin(psi)
+        ax.plot(
+            [hillas.cog_x - dx, hillas.cog_x + dx],
+            [hillas.cog_y - dy, hillas.cog_y + dy],
+            color="r",
+            lw=1.4,
+            ls="--",
+            zorder=10000,
+        )
 
     def _draw_ideal_position(self, ax, event):
         if not hasattr(event, "pointing") or event.pointing is None:
@@ -1926,6 +1954,66 @@ class EventVisualizer:
                 mew=1.8,
                 zorder=10001,
             )
+
+    def _draw_reco_sdp_line(self, ax, event, tel_id: int, reconstructor: str = "HillasReconstructor"):
+        if not hasattr(event, "pointing") or event.pointing is None or tel_id not in self.tel_geoms:
+            return
+        reco = _reco_geometry(event, reconstructor=reconstructor)
+        reco_core = _reco_core_xy(reco)
+        if reco is None or reco_core is None:
+            return
+        reco_alt = float(getattr(reco, "alt", np.nan))
+        reco_az = float(getattr(reco, "az", np.nan))
+        if not np.isfinite(reco_alt) or not np.isfinite(reco_az):
+            return
+
+        geom = self.tel_geoms[tel_id]
+        tel_az = float(event.pointing.array_azimuth)
+        tel_zenith = np.pi / 2 - float(event.pointing.array_altitude)
+        source = _enu_from_az_zd(reco_az, np.pi / 2 - reco_alt)
+        core_vector = np.array([reco_core[0] - geom.pos_x, reco_core[1] - geom.pos_y, 0.0], dtype=float)
+        normal = np.cross(source, core_vector)
+        if not np.all(np.isfinite(normal)) or np.linalg.norm(normal) <= 0.0:
+            return
+
+        e_az, e_el, optical_axis = _camera_basis(tel_az, tel_zenith)
+        direction = np.cross(normal, optical_axis)
+        dx_camera = float(direction @ e_az)
+        dy_camera = float(direction @ e_el)
+        norm = float(np.hypot(dx_camera, dy_camera))
+        if not np.isfinite(norm) or norm <= 0.0:
+            return
+        dx_camera /= norm
+        dy_camera /= norm
+
+        _, _, x_camera, y_camera = incident_point_on_camera(
+            source_azimuth_rad=reco_az,
+            source_zenith_rad=np.pi / 2 - reco_alt,
+            telescope_azimuth_rad=tel_az,
+            telescope_zenith_rad=tel_zenith,
+            focal_length=geom.focal_length,
+        )
+        if x_camera is None or y_camera is None or not np.all(np.isfinite([x_camera, y_camera])):
+            return
+
+        xlim = ax.get_xlim()
+        ylim = ax.get_ylim()
+        half_len = 0.55 * float(np.hypot(xlim[1] - xlim[0], ylim[1] - ylim[0]))
+        # The camera image plotting convention swaps camera x/y, so the line
+        # direction is swapped in the same way as the ideal/reco markers.
+        plot_x = float(y_camera)
+        plot_y = float(x_camera)
+        plot_dx = dy_camera
+        plot_dy = dx_camera
+        ax.plot(
+            [plot_x - half_len * plot_dx, plot_x + half_len * plot_dx],
+            [plot_y - half_len * plot_dy, plot_y + half_len * plot_dy],
+            color="#2166ac",
+            lw=1.8,
+            ls="--",
+            alpha=0.95,
+            zorder=10000,
+        )
 
     def _finish(self, fig, output_path: Optional[str], show: bool):
         if output_path:
