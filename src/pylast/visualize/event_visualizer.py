@@ -140,7 +140,17 @@ def _add_telescope_direction_inset(ax, x0: float, y0: float, length: float, azim
     )
 
 
-def _add_arrival_arrow(ax, core_x: float, core_y: float, azimuth_deg: float, span: float, mode: str = "incoming"):
+def _add_arrival_arrow(
+    ax,
+    core_x: float,
+    core_y: float,
+    azimuth_deg: float,
+    span: float,
+    mode: str = "incoming",
+    color: str = "#b2182b",
+    label: str = "True direction",
+    line_style: str = "-",
+):
     dx, dy = _azimuth_vector_xy(azimuth_deg, mode=mode)
     length = 0.13 * span
     start_x = core_x - dx * length
@@ -151,17 +161,17 @@ def _add_arrival_arrow(ax, core_x: float, core_y: float, azimuth_deg: float, spa
         "",
         xy=(core_x, core_y),
         xytext=(start_x, start_y),
-        arrowprops=dict(arrowstyle="-|>", lw=1.6, color="#b2182b"),
+        arrowprops=dict(arrowstyle="-|>", lw=1.6, color=color, linestyle=line_style),
         zorder=8,
     )
     ax.text(
         label_x,
         label_y,
-        "Event",
+        label,
         ha="right" if dx >= 0 else "left",
         va="top" if dy >= 0 else "bottom",
         fontsize=8.2,
-        color="#b2182b",
+        color=color,
         weight="bold",
         zorder=9,
         bbox=dict(boxstyle="round,pad=0.16", facecolor="white", edgecolor="none", alpha=0.78),
@@ -174,14 +184,60 @@ def _total_quantity_label(quantity: str) -> str:
     return f"Total {quantity}"
 
 
-def _event_info_text(event_id: int, core_x: Optional[float], core_y: Optional[float], arrival_az: Optional[float]) -> str:
+def _format_count(value) -> str:
+    if value is None or not np.isfinite(value):
+        return "n/a"
+    if abs(value - round(value)) < 1.0e-6 and abs(value) < 1.0e9:
+        return f"{int(round(value))}"
+    return f"{value:.3g}"
+
+
+def _event_ground_counts(event, source=None) -> Dict[str, float]:
+    keys = ("ground_gammas", "ground_electrons", "ground_hadrons", "ground_muons")
+    counts = {}
+    shower = getattr(getattr(event, "simulation", None), "shower", None)
+    if shower is not None:
+        for key in keys:
+            value = getattr(shower, key, None)
+            if value is not None:
+                try:
+                    counts[key] = float(value)
+                except Exception:
+                    pass
+    if source is not None and hasattr(source, "get_ground_counts"):
+        for key, value in source.get_ground_counts(event).items():
+            try:
+                counts[key] = float(value)
+            except Exception:
+                pass
+    return counts
+
+
+def _event_info_text(
+    event_id: int,
+    core_x: Optional[float],
+    core_y: Optional[float],
+    arrival_az: Optional[float],
+    ground_counts: Optional[Mapping[str, float]] = None,
+) -> str:
     lines = []
     if event_id is not None:
         lines.append(f"event_id = {event_id}")
     if core_x is not None and core_y is not None:
         lines.append(f"core: x = {core_x:.1f} m, y = {core_y:.1f} m")
     if arrival_az is not None:
-        lines.append(f"event az = {arrival_az:.2f} deg")
+        lines.append(f"truth az = {arrival_az:.2f} deg")
+    if ground_counts:
+        lines.append(
+            "ground: "
+            f"gamma={_format_count(ground_counts.get('ground_gammas'))}, "
+            f"e={_format_count(ground_counts.get('ground_electrons'))}"
+        )
+        lines.append(
+            "        "
+            f"had={_format_count(ground_counts.get('ground_hadrons'))}, "
+            f"mu={_format_count(ground_counts.get('ground_muons'))}"
+        )
     return "\n".join(lines)
 
 
@@ -258,6 +314,33 @@ def _triggered_tel_ids(event, fallback: Iterable[int] = (), source=None) -> np.n
     if dl0_tels:
         return np.asarray(sorted(int(tel_id) for tel_id in dl0_tels), dtype=int)
     return np.asarray(list(fallback), dtype=int)
+
+
+def _reco_geometry(event, reconstructor: str = "HillasReconstructor"):
+    geometry = getattr(getattr(event, "dl2", None), "geometry", {}) or {}
+    reco = geometry.get(reconstructor)
+    if reco is None or not bool(getattr(reco, "is_valid", False)):
+        return None
+    return reco
+
+
+def _reco_core_xy(reco) -> Optional[Tuple[float, float]]:
+    if reco is None:
+        return None
+    core_x = float(getattr(reco, "core_x", np.nan))
+    core_y = float(getattr(reco, "core_y", np.nan))
+    if np.isfinite(core_x) and np.isfinite(core_y):
+        return core_x, core_y
+    return None
+
+
+def _reco_azimuth_deg(reco) -> Optional[float]:
+    if reco is None:
+        return None
+    azimuth = float(getattr(reco, "az", np.nan))
+    if np.isfinite(azimuth):
+        return float(np.rad2deg(azimuth))
+    return None
 
 
 def _selected_image_tel_ids(
@@ -546,6 +629,9 @@ class EventVisualizer:
         show_lhaaso_background: bool = True,
         ed_pos_file: Optional[str] = None,
         md_pos_file: Optional[str] = None,
+        show_truth_direction: bool = True,
+        show_reco_direction: bool = True,
+        reconstructor: str = "HillasReconstructor",
         show: bool = True,
         finish: bool = True,
     ):
@@ -662,16 +748,57 @@ class EventVisualizer:
             c="#d73027",
             edgecolor="white",
             linewidth=0.8,
-            label="Core",
+            label="True core",
             zorder=6,
         )
-        if data.azimuth_deg is not None:
-            _add_arrival_arrow(ax, core_x, core_y, data.azimuth_deg, span, mode="incoming")
+        if show_truth_direction and data.azimuth_deg is not None:
+            _add_arrival_arrow(
+                ax,
+                core_x,
+                core_y,
+                data.azimuth_deg,
+                span,
+                mode="incoming",
+                color="#b2182b",
+                label="True direction",
+                line_style="-",
+            )
+        reco = _reco_geometry(event, reconstructor=reconstructor)
+        reco_core = _reco_core_xy(reco)
+        reco_azimuth_deg = _reco_azimuth_deg(reco)
+        if show_reco_direction and reco_core is not None:
+            ax.scatter(
+                [reco_core[0]],
+                [reco_core[1]],
+                marker="x",
+                s=110,
+                c="#2166ac",
+                linewidth=2.2,
+                label="Reco core",
+                zorder=7,
+            )
+            if reco_azimuth_deg is not None:
+                _add_arrival_arrow(
+                    ax,
+                    reco_core[0],
+                    reco_core[1],
+                    reco_azimuth_deg,
+                    span,
+                    mode="incoming",
+                    color="#2166ac",
+                    label="Reco direction",
+                    line_style="--",
+                )
         ax.set_xlabel("x [m]")
         ax.set_ylabel("y [m]")
         ax.set_title(f"LACT array event_id={data.event_id}")
-        limit_east = np.concatenate([east, np.asarray([core_x], dtype=float)])
-        limit_north = np.concatenate([north, np.asarray([core_y], dtype=float)])
+        extra_x = [core_x]
+        extra_y = [core_y]
+        if reco_core is not None:
+            extra_x.append(reco_core[0])
+            extra_y.append(reco_core[1])
+        limit_east = np.concatenate([east, np.asarray(extra_x, dtype=float)])
+        limit_north = np.concatenate([north, np.asarray(extra_y, dtype=float)])
         if show_lhaaso_background:
             bg_x = []
             bg_y = []
@@ -700,7 +827,13 @@ class EventVisualizer:
             pointing_x = x_min + 0.075 * (x_max - x_min)
             pointing_y = y_max - 0.105 * (y_max - y_min)
             _add_telescope_direction_inset(ax, pointing_x, pointing_y, compass_length, pointing_azimuth_deg)
-        info = _event_info_text(data.event_id, core_x, core_y, data.azimuth_deg)
+        info = _event_info_text(
+            data.event_id,
+            core_x,
+            core_y,
+            data.azimuth_deg,
+            ground_counts=_event_ground_counts(event, source=self.source),
+        )
         if info:
             ax.text(
                 0.99,
@@ -713,6 +846,10 @@ class EventVisualizer:
                 color="0.12",
                 bbox=dict(boxstyle="round,pad=0.28", facecolor="white", edgecolor="0.55", alpha=0.94),
             )
+        handles, labels = ax.get_legend_handles_labels()
+        if handles and finish:
+            by_label = dict(zip(labels, handles))
+            ax.legend(by_label.values(), by_label.keys(), loc="upper right", fontsize=8, frameon=True)
         fig.tight_layout()
         if finish:
             self._finish(fig, output_path, show)
@@ -725,6 +862,8 @@ class EventVisualizer:
         tel_ids: Optional[Iterable[int]] = None,
         core_position: Optional[Sequence[float]] = None,
         color: str = "#2563eb",
+        label: str = "SDP plane",
+        line_style: str = "-.",
         show_labels: bool = True,
     ) -> Dict[int, Tuple[float, float]]:
         """Draw ground intersections of telescope-core shower-detector planes."""
@@ -756,11 +895,11 @@ class EventVisualizer:
                 [geom.pos_x - span * ux, geom.pos_x + span * ux],
                 [geom.pos_y - span * uy, geom.pos_y + span * uy],
                 color=color,
-                linestyle="-.",
+                linestyle=line_style,
                 linewidth=1.35,
                 alpha=0.82,
                 zorder=5,
-                label="SDP plane" if first_line else None,
+                label=label if first_line else None,
             )
             first_line = False
             if show_labels:
@@ -785,6 +924,9 @@ class EventVisualizer:
         output_path: Optional[str] = None,
         image_level: str = "dl0",
         include_non_triggered: bool = False,
+        show_truth_direction: bool = True,
+        show_reco_direction: bool = True,
+        reconstructor: str = "HillasReconstructor",
         show: bool = True,
     ):
         return self.plot_telescopes(
@@ -793,6 +935,9 @@ class EventVisualizer:
             image_level=image_level,
             include_non_triggered=include_non_triggered,
             show_lhaaso_background=True,
+            show_truth_direction=show_truth_direction,
+            show_reco_direction=show_reco_direction,
+            reconstructor=reconstructor,
             show=show,
         )
 
@@ -802,6 +947,8 @@ class EventVisualizer:
         output_path: Optional[str] = None,
         image_level: str = "dl0",
         include_non_triggered: bool = False,
+        show_reco: bool = True,
+        reconstructor: str = "HillasReconstructor",
         show: bool = True,
     ):
         fig, ax = self.plot_telescopes(
@@ -810,6 +957,9 @@ class EventVisualizer:
             image_level=image_level,
             include_non_triggered=include_non_triggered,
             show_lhaaso_background=True,
+            show_truth_direction=True,
+            show_reco_direction=show_reco,
+            reconstructor=reconstructor,
             show=False,
             finish=False,
         )
@@ -819,7 +969,25 @@ class EventVisualizer:
             event,
             tel_ids=_triggered_tel_ids(event, source=self.source),
             core_position=(data.core_x, data.core_y),
+            color="#6a51a3",
+            label="Truth SDP",
+            line_style="-.",
+            show_labels=True,
         )
+        if show_reco:
+            reco = _reco_geometry(event, reconstructor=reconstructor)
+            reco_core = _reco_core_xy(reco)
+            if reco_core is not None:
+                self.draw_event_sdp_planes(
+                    ax,
+                    event,
+                    tel_ids=_triggered_tel_ids(event, source=self.source),
+                    core_position=reco_core,
+                    color="#2166ac",
+                    label="Reco SDP",
+                    line_style="--",
+                    show_labels=False,
+                )
         ax.set_title(f"LACT SDP planes event_id={data.event_id}")
         handles, labels = ax.get_legend_handles_labels()
         if handles:
