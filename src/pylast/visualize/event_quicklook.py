@@ -255,12 +255,20 @@ def plot_event_cameras(
     show_hillas: bool = False,
     only_hillas_tels: bool = False,
     show_ideal_position: bool = False,
+    ideal: bool | None = None,
+    show_reco_position: bool = False,
+    reco: bool | None = None,
+    reconstructor: str = "HillasReconstructor",
     output_path: str | PathLike[str] | None = None,
     include_non_triggered: bool = False,
     show: bool | None = None,
 ):
     """Draw camera images from an already loaded event."""
 
+    if ideal is not None:
+        show_ideal_position = bool(ideal)
+    if reco is not None:
+        show_reco_position = bool(reco)
     if root_file is None and _looks_like_path(event):
         root_file = event
         event = None
@@ -273,6 +281,8 @@ def plot_event_cameras(
             show_hillas=show_hillas,
             only_hillas_tels=only_hillas_tels,
             show_ideal_position=show_ideal_position,
+            show_reco_position=show_reco_position,
+            reconstructor=reconstructor,
             output_path=output_path,
             include_non_triggered=include_non_triggered,
             show=show,
@@ -291,6 +301,8 @@ def plot_event_cameras(
         only_hillas_tels=only_hillas_tels,
         include_non_triggered=include_non_triggered,
         show_ideal_position=show_ideal_position,
+        show_reco_position=show_reco_position,
+        reconstructor=reconstructor,
         show=show,
     )
     return {
@@ -312,6 +324,11 @@ def plot_raw_images(
     max_events: int = -1,
     output_path: str | PathLike[str] | None = None,
     include_non_triggered: bool = False,
+    ideal: bool | None = None,
+    show_ideal_position: bool = False,
+    reco: bool | None = None,
+    show_reco_position: bool = False,
+    reconstructor: str = "HillasReconstructor",
     show: bool | None = None,
 ):
     """Draw raw integrated camera images from an event.
@@ -330,6 +347,11 @@ def plot_raw_images(
         max_events=max_events,
         image_level="dl0",
         show_hillas=False,
+        ideal=ideal,
+        show_ideal_position=show_ideal_position,
+        reco=reco,
+        show_reco_position=show_reco_position,
+        reconstructor=reconstructor,
         output_path=output_path,
         include_non_triggered=include_non_triggered,
         show=show,
@@ -349,6 +371,10 @@ def plot_clean_images(
     show_hillas: bool = True,
     only_hillas_tels: bool = False,
     show_ideal_position: bool = False,
+    ideal: bool | None = None,
+    show_reco_position: bool = False,
+    reco: bool | None = None,
+    reconstructor: str = "HillasReconstructor",
     show: bool | None = None,
 ):
     """Draw cleaned camera images from an event.
@@ -367,6 +393,10 @@ def plot_clean_images(
         show_hillas=show_hillas,
         only_hillas_tels=only_hillas_tels,
         show_ideal_position=show_ideal_position,
+        ideal=ideal,
+        show_reco_position=show_reco_position,
+        reco=reco,
+        reconstructor=reconstructor,
         output_path=output_path,
         include_non_triggered=include_non_triggered,
         show=show,
@@ -489,12 +519,20 @@ def plot_root_event_cameras(
     show_hillas: bool = False,
     only_hillas_tels: bool = False,
     show_ideal_position: bool = False,
+    ideal: bool | None = None,
+    show_reco_position: bool = False,
+    reco: bool | None = None,
+    reconstructor: str = "HillasReconstructor",
     output_path: str | PathLike[str] | None = None,
     include_non_triggered: bool = False,
     show: bool | None = None,
 ):
     """Read one LACT ROOT event and draw camera images."""
 
+    if ideal is not None:
+        show_ideal_position = bool(ideal)
+    if reco is not None:
+        show_reco_position = bool(reco)
     source = LactEventSource(str(root_file), max_events=max_events)
     event = source[event_index]
     result = plot_event_cameras(
@@ -504,6 +542,8 @@ def plot_root_event_cameras(
         show_hillas=show_hillas,
         only_hillas_tels=only_hillas_tels,
         show_ideal_position=show_ideal_position,
+        show_reco_position=show_reco_position,
+        reconstructor=reconstructor,
         output_path=output_path,
         include_non_triggered=include_non_triggered,
         show=show,

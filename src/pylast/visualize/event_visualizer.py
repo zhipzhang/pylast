@@ -1465,6 +1465,8 @@ class EventVisualizer:
         only_hillas_tels: bool = False,
         include_non_triggered: bool = False,
         show_ideal_position: bool = False,
+        show_reco_position: bool = False,
+        reconstructor: str = "HillasReconstructor",
         show: bool = True,
     ):
         data = read_event_data(event, self.tel_geoms, image_level=image_level)
@@ -1519,6 +1521,8 @@ class EventVisualizer:
                 self._draw_hillas_ellipse(axes[index], hillas[tel_id])
             if show_ideal_position:
                 self._draw_ideal_position(axes[index], event)
+            if show_reco_position:
+                self._draw_reco_position(axes[index], event, reconstructor=reconstructor)
 
         for ax in axes[len(tel_ids) + 1 :]:
             ax.axis("off")
@@ -1550,6 +1554,8 @@ class EventVisualizer:
         zero_eps: float = 0.0,
         show_colorbar: bool = False,
         show_ideal_position: bool = False,
+        show_reco_position: bool = False,
+        reconstructor: str = "HillasReconstructor",
         show: bool = True,
     ):
         if only_hillas and only_image:
@@ -1637,6 +1643,8 @@ class EventVisualizer:
 
         if show_ideal_position:
             self._draw_ideal_position(ax, event)
+        if show_reco_position:
+            self._draw_reco_position(ax, event, reconstructor=reconstructor)
 
         fig.tight_layout(pad=1.0)
         self._finish(fig, output_path, show)
@@ -1877,7 +1885,47 @@ class EventVisualizer:
             focal_length=focal_length,
         )
         if x_camera is not None and y_camera is not None:
-            ax.plot(y_camera, x_camera, marker="x", linestyle="None", color="magenta", ms=6, zorder=10000)
+            ax.plot(
+                y_camera,
+                x_camera,
+                marker="x",
+                linestyle="None",
+                color="magenta",
+                ms=6,
+                mew=1.5,
+                zorder=10000,
+            )
+
+    def _draw_reco_position(self, ax, event, reconstructor: str = "HillasReconstructor"):
+        if not hasattr(event, "pointing") or event.pointing is None:
+            return
+        reco = _reco_geometry(event, reconstructor=reconstructor)
+        if reco is None:
+            return
+        reco_alt = float(getattr(reco, "alt", np.nan))
+        reco_az = float(getattr(reco, "az", np.nan))
+        if not np.isfinite(reco_alt) or not np.isfinite(reco_az):
+            return
+        first_tel = next(iter(self.tel_geoms))
+        focal_length = self.tel_geoms[first_tel].focal_length
+        _, _, x_camera, y_camera = incident_point_on_camera(
+            source_azimuth_rad=reco_az,
+            source_zenith_rad=np.pi / 2 - reco_alt,
+            telescope_azimuth_rad=float(event.pointing.array_azimuth),
+            telescope_zenith_rad=np.pi / 2 - float(event.pointing.array_altitude),
+            focal_length=focal_length,
+        )
+        if x_camera is not None and y_camera is not None:
+            ax.plot(
+                y_camera,
+                x_camera,
+                marker="+",
+                linestyle="None",
+                color="#2166ac",
+                ms=8,
+                mew=1.8,
+                zorder=10001,
+            )
 
     def _finish(self, fig, output_path: Optional[str], show: bool):
         if output_path:
