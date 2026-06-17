@@ -87,6 +87,12 @@ def _deg(rad: float) -> float:
     return np.rad2deg(rad)
 
 
+def _ground_to_plot_xy(north: float, west: float) -> Tuple[float, float]:
+    """Convert pylast/sim_telarray ground coordinates to plot East/North."""
+
+    return -float(west), float(north)
+
+
 def _azimuth_vector_xy(azimuth_deg: float, mode: str = "source"):
     azimuth_rad = np.deg2rad(azimuth_deg)
     dx, dy = np.sin(azimuth_rad), np.cos(azimuth_rad)
@@ -225,7 +231,7 @@ def _event_info_text(
     if event_id is not None:
         lines.append(f"event_id = {event_id}")
     if core_x is not None and core_y is not None:
-        lines.append(f"core: x = {core_x:.1f} m, y = {core_y:.1f} m")
+        lines.append(f"core: east = {core_x:.1f} m, north = {core_y:.1f} m")
     if arrival_az is not None:
         lines.append(f"truth az = {arrival_az:.2f} deg")
     if ground_counts:
@@ -328,10 +334,10 @@ def _reco_geometry(event, reconstructor: str = "HillasReconstructor"):
 def _reco_core_xy(reco) -> Optional[Tuple[float, float]]:
     if reco is None:
         return None
-    core_x = float(getattr(reco, "core_x", np.nan))
-    core_y = float(getattr(reco, "core_y", np.nan))
-    if np.isfinite(core_x) and np.isfinite(core_y):
-        return core_x, core_y
+    north = float(getattr(reco, "core_x", np.nan))
+    west = float(getattr(reco, "core_y", np.nan))
+    if np.isfinite(north) and np.isfinite(west):
+        return _ground_to_plot_xy(north, west)
     return None
 
 
@@ -426,10 +432,11 @@ def _extract_subarray_geometry(source) -> Dict[int, TelescopeGeometry]:
         geometry = _first_attr(camera, "geometry", "camera_geometry")
 
         pix_area = _to_numpy(geometry.pix_area)
+        pos_x, pos_y = _ground_to_plot_xy(tel_position[0], tel_position[1])
         geometries[int(tel_id)] = TelescopeGeometry(
             tel_id=int(tel_id),
-            pos_x=float(-tel_position[1]),
-            pos_y=float(tel_position[0]),
+            pos_x=pos_x,
+            pos_y=pos_y,
             focal_length=float(optics.equivalent_focal_length) * 100.0,
             pix_x=_to_numpy(geometry.pix_x) * 100.0,
             pix_y=_to_numpy(geometry.pix_y) * 100.0,
@@ -490,11 +497,12 @@ def read_event_data(event, tel_geoms: Mapping[int, TelescopeGeometry], image_lev
 
     altitude = float(shower.alt)
     azimuth = float(shower.az)
+    core_x, core_y = _ground_to_plot_xy(shower.core_x, shower.core_y)
     return EventData(
         event_id=_event_id(event),
         energy=float(shower.energy),
-        core_x=float(-shower.core_y),
-        core_y=float(shower.core_x),
+        core_x=core_x,
+        core_y=core_y,
         zenith_deg=float(90.0 - _deg(altitude)),
         azimuth_deg=float(_deg(azimuth)),
         x_max=float(shower.x_max),
@@ -790,8 +798,8 @@ class EventVisualizer:
                     label="Reco direction",
                     line_style="--",
                 )
-        ax.set_xlabel("x [m]")
-        ax.set_ylabel("y [m]")
+        ax.set_xlabel("East (m)")
+        ax.set_ylabel("North (m)")
         ax.set_title(f"LACT array event_id={data.event_id}")
         extra_x = [core_x]
         extra_y = [core_y]
@@ -1136,14 +1144,10 @@ class EventVisualizer:
                 reco_alt = float(getattr(reco, "alt", np.nan))
                 reco_az = float(getattr(reco, "az", np.nan))
                 if np.isfinite(reco_alt) and np.isfinite(reco_az):
-                    reco_core = np.array(
-                        [
-                            float(getattr(reco, "core_x", core[0])),
-                            float(getattr(reco, "core_y", core[1])),
-                            0.0,
-                        ],
-                        dtype=float,
-                    )
+                    reco_core_xy = _reco_core_xy(reco)
+                    if reco_core_xy is None:
+                        reco_core_xy = (core[0], core[1])
+                    reco_core = np.array([reco_core_xy[0], reco_core_xy[1], 0.0], dtype=float)
                     reco_axis = _enu_from_az_zd(reco_az, np.pi / 2 - reco_alt)
                     if reco_axis[2] < 0:
                         reco_axis = -reco_axis
@@ -1391,14 +1395,10 @@ class EventVisualizer:
                 reco_alt = float(getattr(reco, "alt", np.nan))
                 reco_az = float(getattr(reco, "az", np.nan))
                 if np.isfinite(reco_alt) and np.isfinite(reco_az):
-                    reco_core = np.array(
-                        [
-                            float(getattr(reco, "core_x", true_core[0])),
-                            float(getattr(reco, "core_y", true_core[1])),
-                            0.0,
-                        ],
-                        dtype=float,
-                    )
+                    reco_core_xy = _reco_core_xy(reco)
+                    if reco_core_xy is None:
+                        reco_core_xy = (true_core[0], true_core[1])
+                    reco_core = np.array([reco_core_xy[0], reco_core_xy[1], 0.0], dtype=float)
                     reco_axis = _enu_from_az_zd(reco_az, np.pi / 2 - reco_alt)
                     if reco_axis[2] < 0:
                         reco_axis = -reco_axis
@@ -1732,7 +1732,7 @@ class EventVisualizer:
     def _event_text(self, data: EventData, n_tel: int) -> str:
         return (
             f"Energy: {data.energy:.2f} TeV\n"
-            f"Core: (x={data.core_x:.1f}, y={data.core_y:.1f}) m\n"
+            f"Core: (east={data.core_x:.1f}, north={data.core_y:.1f}) m\n"
             f"Direction: (ze={data.zenith_deg:.1f} deg, az={data.azimuth_deg:.1f} deg)\n"
             f"Xmax: {data.x_max:.1f} g/cm2\n"
             f"First Int: {data.first_interaction_height:.1f} m\n"
