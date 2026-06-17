@@ -383,7 +383,7 @@ void SimtelEventSource::read_pointing(ArrayEvent& event)
             // Have raw pointing information
             double azimuth = simtel_file_handler->hsdata->event.trackdata[tel_index].azimuth_raw;
             double altitude = simtel_file_handler->hsdata->event.trackdata[tel_index].altitude_raw;
-            event.pointing->add_tel(tel_id, PointingTelescope{.azimuth = azimuth, .altitude = altitude});
+            event.pointing->add_tel(tel_id, PointingTelescope(azimuth, altitude));
         }
     }
     event.pointing->set_array_pointing(simtel_file_handler->hsdata->run_header.direction[0], simtel_file_handler->hsdata->run_header.direction[1]);

@@ -63,7 +63,7 @@ void bind_dl2_event(nb::module_ &m) {
         });
     nb::class_<ReconstructedEnergy>(m, "ReconstructedEnergy")
         .def(nb::init<>())
-        .def(nb::init<double, bool>())
+        .def(nb::init<bool, double>())
         .def_rw("estimate_energy", &ReconstructedEnergy::estimate_energy)
         .def_rw("energy_valid", &ReconstructedEnergy::energy_valid)
         .def_ro("estimate_energy_std", &ReconstructedEnergy::estimate_energy_std)
@@ -354,6 +354,7 @@ void bind_r0_event(nb::module_ &m) {
 void bind_simulated_event(nb::module_ &m) {
     nb::class_<SimulatedEvent>(m, "SimulatedEvent")
         .def_ro("shower", &SimulatedEvent::shower)
+        .def_ro("triggered_tels", &SimulatedEvent::triggered_tels)
         .def_prop_ro("tels", &SimulatedEvent::get_tels)
         .def("__repr__", [](SimulatedEvent& self) {
             std::string repr = "SimulatedEvent:\n";

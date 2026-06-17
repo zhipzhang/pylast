@@ -15,6 +15,9 @@
  class PointingTelescope
  {
     public:
+        PointingTelescope() = default;
+        PointingTelescope(double azimuth, double altitude)
+            : azimuth(azimuth), altitude(altitude) {}
         double azimuth;
         double altitude;
  };

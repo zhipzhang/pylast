@@ -23,7 +23,9 @@ dependencies = [
     "ibis-framework",
     "duckdb==1.3.2",
     "astropy",
-    "numba"
+    "numba",
+    "matplotlib",
+    "plotly"
 ]
 
 [tool.scikit-build]
@@ -35,8 +37,8 @@ build-dir = "build/{wheel_tag}"
 # Build stable ABI wheels for CPython 3.12+
 wheel.py-api = "cp312"
 
-# Include model files in the package
-sdist.include = ["model/*"]
+# Include model files and bundled LHAASO ED/MD layout files in source archives.
+sdist.include = ["model/*", "src/pylast/visualize/data/*"]
 [project.scripts]
 hillas_reco = "pylast.ulities.hillas_reco:main"
 merge_source = "pylast.ulities.merge_source:main"
