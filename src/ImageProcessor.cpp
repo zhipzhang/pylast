@@ -436,10 +436,16 @@ void ImageProcessor::handle_simulation_level(ArrayEvent &event) {
     spdlog::warn("Simulation data is not available in the event");
     return;
   }
-  event.simulation->triggered_tels.clear();
+  const bool recompute_trigger = poisson_noise > 0;
+  if (recompute_trigger) {
+    event.simulation->triggered_tels.clear();
+  }
   for (auto &[tel_id, simulated_camera] : event.simulation->tels) {
-    if (simulated_camera->true_image_sum >= 10) {
-      if (poisson_noise > 0) {
+    if (simulated_camera->true_image.size() > 0) {
+      if (recompute_trigger) {
+        if (simulated_camera->true_image_sum < 10) {
+          continue;
+        }
         auto noise_image =
             adding_poisson_noise(simulated_camera->true_image, poisson_noise);
         if (fake_trigger(

@@ -1,13 +1,13 @@
 #ifndef TTREE_SERIALIZER_H
 #define TTREE_SERIALIZER_H
 
-#include <TTree.h>
-#include <string_view>
-#include <utility>
-
 // Include the header-only Boost.PFR library
 // You'll need to have Boost installed and in your include path.
 #include <pfr.hpp>
+
+#include <TTree.h>
+#include <string_view>
+#include <utility>
 
 /**
  * @brief A generic serializer for plain C++ structs to ROOT TTree branches.
