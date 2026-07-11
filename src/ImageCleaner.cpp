@@ -55,3 +55,33 @@ Eigen::Vector<bool, -1> TailcutsCleaner::tailcuts_clean(const CameraGeometry& ca
         return (pixel_above_boundary.array() && pixel_with_picture_neighbors.array()) || (pixel_in_picture.array() && pixel_with_boundary_neighbors.array());
     }
 }
+
+//dilation 膨胀，可以扩一圈，增加低能图像完整性
+Eigen::Vector<bool, -1> dilate(const CameraGeometry& camera_geometry,
+                               const Eigen::Vector<bool, -1>& mask)
+{
+    Eigen::VectorXi neigh_true_count = camera_geometry.neigh_matrix * mask.cast<int>();
+    Eigen::Vector<bool, -1> has_true_neighbor = (neigh_true_count.array() > 0).matrix();
+    return (mask.array() || has_true_neighbor.array()).matrix();
+}
+
+// 自适应清理
+Eigen::Vector<bool, -1> TailcutsCleaner::tailcuts_clean2(
+    const CameraGeometry& camera_geometry,
+    const Eigen::VectorXd& image) const
+{
+
+    const double maxval = (image.size() > 0) ? image.maxCoeff() : 0.0;
+
+    const double picture_auto  = std::max(10.0, maxval / 10.0);
+    const double boundary_auto = std::max(5.0,  maxval / 20.0);
+
+    return tailcuts_clean(
+        camera_geometry,
+        image,
+        picture_auto,
+        boundary_auto,
+        keep_isolated_pixels,
+        min_number_picture_neighbors
+    );
+}
